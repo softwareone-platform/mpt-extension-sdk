@@ -1,0 +1,120 @@
+[tool.poetry]
+name = "Extensions SDK for SWO Marketplace Platform"
+version = "0.1.0"
+description = ""
+authors = ["SoftwareOne AG"]
+packages = [
+    { include = "mpt_extension_sdk" }
+]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+debugpy = "^1.8.12"
+django = "^5.1.6"
+urllib3 = "^2.3.0"
+typing-extensions = "^4.12.2"
+django-ninja = "^1.3.0"
+click = "^8.1.8"
+opentelemetry-api = "^1.30.0"
+rich = "^13.9.4"
+pyfiglet = "^1.0.2"
+gunicorn = "^23.0.0"
+flake8 = "^7.1.2"
+pytest = "^8.3.5"
+ruff = "^0.9.9"
+watchfiles = "^1.0.4"
+setuptools = "^75.8.2"
+pytest-cov = "^6.0.0"
+pytest-deadfixtures = "^2.2.1"
+pytest-django = "^4.10.0"
+pytest-mock = "^3.14.0"
+pytest-randomly = "^3.16.0"
+pytest-xdist = "^3.6.1"
+azure-core = "^1.32.0"
+azure-monitor-opentelemetry-exporter = "^1.0.0b35"
+opentelemetry-instrumentation = "^0.51b0"
+opentelemetry-instrumentation-django = "^0.51b0"
+opentelemetry-instrumentation-logging = "^0.51b0"
+opentelemetry-instrumentation-requests = "^0.51b0"
+freezegun = "^1.5.1"
+responses = "^0.25.7"
+datetime = "^5.5"
+python-dateutil = "^2.9.0.post0"
+
+[tool.poetry.scripts]
+swoext = 'mpt_extension_sdk.runtime.swoext:main'
+
+
+[tool.poetry.plugins."swo.mpt.ext"]
+"app_config" = "mpt_extension_sdk.runtime.djapp.apps:ExtensionConfig"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+testpaths = "tests"
+pythonpath = "."
+addopts = "--cov=mpt_extension_sdk --cov-report=term-missing --cov-report=html --cov-report=xml"
+DJANGO_SETTINGS_MODULE = "tests.django.settings"
+log_cli = false
+filterwarnings = [
+    "ignore:Support for class-based `config` is deprecated:DeprecationWarning",
+    "ignore:pkg_resources is deprecated as an API:DeprecationWarning",
+]
+
+[tool.coverage.run]
+branch = true
+
+[tool.ruff]
+extend-exclude = [".vscode", ".devcontainer", "swo"]
+output-format = "full"
+
+[tool.ruff.lint]
+
+select = [
+    "E",  # w errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade,
+    "PT",  # flake8-pytest-style
+    "T10",  # flake8-pytest-style
+]
+ignore = [
+    "PT004", # fixture '{name}' does not return anything, add leading underscore
+    "PT011", # pytest.raises({exception}) is too broad, set the match parameter or use a more specific exception
+    "B008",  # do not perform function calls in argument defaults
+    "B904",  # Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+    "C408",  # Unnecessary `dict()` call (rewrite as a literal)
+    "T100",  # Import for `debugpy` found
+]
+
+[tool.ruff.lint.isort]
+known-third-party = ["swo"]
+
+[tool.ruff.lint.pycodestyle]
+max-line-length = 100
+
+[tool.mypy]
+warn_no_return = false
+
+[[tool.mypy.overrides]]
+module = "django.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "pyfiglet.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "gunicorn.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "pymsteams.*"
+ignore_missing_imports = true
