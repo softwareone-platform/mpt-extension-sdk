@@ -1,0 +1,32 @@
+services:
+  bash:
+    container_name: mpt_extension_sdk_bash
+    build:
+      context: .
+      dockerfile: dev.Dockerfile
+    working_dir: /extension_sdk
+    command: bash
+    stdin_open: true
+    tty: true
+    volumes:
+      - .:/extension_sdk
+
+  app_test:
+    container_name: mpt_extension_sdk_test
+    build:
+      context: .
+      dockerfile: dev.Dockerfile
+    working_dir: /extension_sdk
+    command: bash -c "ruff check . && pytest"
+    volumes:
+      - .:/extension_sdk
+
+  format:
+    container_name: mpt_extension_sdk_format
+    build:
+      context: .
+      dockerfile: dev.Dockerfile
+    working_dir: /extension_sdk
+    command: bash -c "ruff check . --select I --fix && ruff format ."
+    volumes:
+      - .:/extension_sdk

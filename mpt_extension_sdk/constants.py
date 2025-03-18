@@ -1,0 +1,6 @@
+EVENT_TYPES = "orders"
+SECURITY_ALGORITHM = "HS256"
+USER_AGENT = "swo-extensions/1.0"
+CONSUME_EVENTS_HELP_TEXT = "Consume events from the MPT platform"
+DEFAULT_APP_CONFIG_GROUP = "swo.mpt.ext"
+DEFAULT_APP_CONFIG_NAME = "app_config"
