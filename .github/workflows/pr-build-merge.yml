@@ -1,0 +1,32 @@
+
+name: PR build and merge
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches:
+      - main
+      - "release/**"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: 'Build test containers'
+      run: docker compose build app_test
+
+    - name: 'Stop containers'
+      if: always()
+      run: docker compose down

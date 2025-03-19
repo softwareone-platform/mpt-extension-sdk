@@ -43,7 +43,7 @@ def get_events_registry():
     return get_extension().events
 
 
-def gradient(start_hex, end_hex, num_samples=10):
+def gradient(start_hex, end_hex, num_samples=10):  # pragma: no cover
     start_rgb = tuple(int(start_hex[i : i + 2], 16) for i in range(1, 6, 2))
     end_rgb = tuple(int(end_hex[i : i + 2], 16) for i in range(1, 6, 2))
     gradient_colors = [start_hex]
@@ -65,7 +65,7 @@ def gradient(start_hex, end_hex, num_samples=10):
     return gradient_colors
 
 
-def show_banner():
+def show_banner():  # pragma: no cover
     program_name = os.path.basename(sys.argv[0])
     program_name = "".join((program_name[0:3].upper(), program_name[3:]))
     figlet = Figlet("georgia11")

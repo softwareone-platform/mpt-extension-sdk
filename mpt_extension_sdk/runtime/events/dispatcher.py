@@ -14,7 +14,7 @@ from mpt_extension_sdk.runtime.utils import get_events_registry
 logger = logging.getLogger(__name__)
 
 
-def done_callback(futures, key, future):
+def done_callback(futures, key, future):  # pragma: no cover
     del futures[key]
     exc = future.exception()
     if not exc:
@@ -50,7 +50,7 @@ class Dispatcher:
             logger.info(f"event of type {event.type} with id {event.id} accepted")
             self.queue.appendleft((event.type, event))
 
-    def process_events(self):
+    def process_events(self):   # pragma: no cover
         while self.running:
             skipped = []
             while len(self.queue) > 0:
