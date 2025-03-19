@@ -27,8 +27,8 @@ class JWTAuth(HttpBearer):
             claims = jwt.decode(
                 token,
                 options={
-                    "verify_signature": True,
-                    "verify_aud": True,
+                    "verify_signature": False,
+                    "verify_aud": False,
                 },
                 algorithms=self.JWT_ALGOS,
             )
@@ -39,7 +39,7 @@ class JWTAuth(HttpBearer):
                 token,
                 secret,
                 options={
-                    "verify_aud": True,
+                    "verify_aud": False,
                 },
                 algorithms=self.JWT_ALGOS,
             )
