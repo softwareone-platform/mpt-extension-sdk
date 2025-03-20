@@ -9,4 +9,4 @@ ADD . /extension_sdk
 
 RUN poetry update && poetry install
 
-CMD ["swoext", "run", "--no-color"]
+CMD ["swoext"]

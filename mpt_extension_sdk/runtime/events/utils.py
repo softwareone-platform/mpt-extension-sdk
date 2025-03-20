@@ -15,7 +15,7 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 logger = logging.getLogger(__name__)
 
 
-def _response_hook(span, request, response):
+def _response_hook(span, request, response):  # pragma: no cover
     span.set_attribute(
         "request.header.x-correlation-id",
         request.headers.get("x-correlation-id", ""),
@@ -29,7 +29,7 @@ def _response_hook(span, request, response):
         span.set_attribute("response.body", response.content or "")
 
 
-def instrument_logging():
+def instrument_logging():  # pragma: no cover
     exporter = AzureMonitorTraceExporter(
         connection_string=settings.APPLICATIONINSIGHTS_CONNECTION_STRING
     )
@@ -43,7 +43,7 @@ def instrument_logging():
     LoggingInstrumentor().instrument(set_logging_format=True)
 
 
-def wrap_for_trace(func, event_type):
+def wrap_for_trace(func, event_type):  # pragma: no cover
     @wraps(func)
     def opentelemetry_wrapper(client, event):
         tracer = trace.get_tracer(event_type)

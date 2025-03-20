@@ -7,4 +7,6 @@ WORKDIR /extension_sdk
 
 ADD . /extension_sdk
 
-RUN poetry update && poetry install
+RUN poetry update && poetry install --with dev
+
+CMD ["swoext", "run", "--no-color"]
