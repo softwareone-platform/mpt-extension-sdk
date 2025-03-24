@@ -35,7 +35,7 @@ jobs:
       run: echo  "VERSION=${GITHUB_REF/refs\/tags\//}" >> "$GITHUB_OUTPUT"
 
     - name: 'Build'
-      run:
+      run: |
         poetry version ${{ steps.get_version.outputs.VERSION }}
         poetry build
 
