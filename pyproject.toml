@@ -1,12 +1,10 @@
 [tool.poetry]
-name = "Extensions SDK for SWO Marketplace Platform"
+name = "mpt-extension-sdk"
 version = "0.1.0"
-description = ""
+description = "Extensions SDK for SoftwareONE Marketplace Platform"
 authors = ["SoftwareOne AG"]
-packages = [
-    { include = "mpt_extension_sdk" }
-]
 readme = "README.md"
+license = "Apache-2.0"
 
 [tool.poetry.dependencies]
 python = ">=3.12,<4"
