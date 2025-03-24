@@ -1,4 +1,3 @@
-
 from mpt_extension_sdk.core.events.registry import EventsRegistry
 from mpt_extension_sdk.runtime.utils import get_events_registry
 
