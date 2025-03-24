@@ -234,6 +234,7 @@ def mock_worker_select_entry_point(
         return_value=mock_select_entry_point,
     )
 
+
 @pytest.fixture()
 def mock_select_entry_point():
     return EntryPoint(

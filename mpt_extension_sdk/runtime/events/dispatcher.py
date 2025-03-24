@@ -50,7 +50,7 @@ class Dispatcher:
             logger.info(f"event of type {event.type} with id {event.id} accepted")
             self.queue.appendleft((event.type, event))
 
-    def process_events(self):   # pragma: no cover
+    def process_events(self):  # pragma: no cover
         while self.running:
             skipped = []
             while len(self.queue) > 0:

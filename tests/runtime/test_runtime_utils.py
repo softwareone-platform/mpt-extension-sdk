@@ -1,4 +1,3 @@
-
 import pytest
 from ninja import NinjaAPI
 
@@ -51,9 +50,7 @@ def test_get_extension_variables_valid(
 
 
 def test_get_extension_variables_json_error(
-    monkeypatch,
-    mock_invalid_env_values,
-    mock_json_ext_variables
+    monkeypatch, mock_invalid_env_values, mock_json_ext_variables
 ):
     for key, value in mock_invalid_env_values.items():
         monkeypatch.setenv(key, value)
@@ -62,4 +59,3 @@ def test_get_extension_variables_json_error(
         get_extension_variables(mock_json_ext_variables)
 
     assert "Variable EXT_PRODUCT_SEGMENT not well formatted" in str(e.value)
-
