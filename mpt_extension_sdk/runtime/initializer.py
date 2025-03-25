@@ -3,6 +3,11 @@ import os
 import rich
 from rich.theme import Theme
 
+from mpt_extension_sdk.constants import (
+    DEFAULT_APP_CONFIG_GROUP,
+    DEFAULT_APP_CONFIG_NAME,
+    DJANGO_SETTINGS_MODULE,
+)
 from mpt_extension_sdk.runtime.djapp.conf import extract_product_ids
 from mpt_extension_sdk.runtime.events.utils import instrument_logging
 from mpt_extension_sdk.runtime.utils import (
@@ -21,9 +26,11 @@ JSON_EXT_VARIABLES = {
 
 def initialize(options):
     rich.reconfigure(theme=Theme({"repr.mpt_id": "bold light_salmon3"}))
-
+    group = options.get("app_config_group", DEFAULT_APP_CONFIG_GROUP)
+    name = options.get("app_config_name", DEFAULT_APP_CONFIG_NAME)
+    django_settings_module = options.get("django_settings_module", DJANGO_SETTINGS_MODULE)
     os.environ.setdefault(
-        "DJANGO_SETTINGS_MODULE", "mpt_extension_sdk.runtime.djapp.conf.default"
+        "DJANGO_SETTINGS_MODULE", django_settings_module
     )
     import django
     from django.conf import settings
@@ -36,7 +43,7 @@ def initialize(options):
 
     logging_level = "DEBUG" if options.get("debug") else "INFO"
 
-    app_config_name = get_extension_app_config_name()
+    app_config_name = get_extension_app_config_name(group=group, name=name)
     app_root_module, _ = app_config_name.split(".", 1)
     settings.DEBUG = options.get("debug", False)
     settings.INSTALLED_APPS.append(app_config_name)
