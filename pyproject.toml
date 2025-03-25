@@ -58,7 +58,7 @@ types-requests = "2.31.*"
 swoext = 'mpt_extension_sdk.runtime.swoext:main'
 
 
-[tool.poetry.plugins."swo.mpt.ext"]
+[tool.poetry.plugins."swo.mpt.sdk"]
 "app_config" = "mpt_extension_sdk.runtime.djapp.apps:ExtensionConfig"
 
 

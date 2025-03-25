@@ -14,17 +14,21 @@ from mpt_extension_sdk.constants import (
 )
 
 
-def get_extension_app_config_name():
+def get_extension_app_config_name(
+    group=DEFAULT_APP_CONFIG_GROUP,
+    name=DEFAULT_APP_CONFIG_NAME
+):
     eps = entry_points()
-    (app_config_ep,) = eps.select(
-        group=DEFAULT_APP_CONFIG_GROUP, name=DEFAULT_APP_CONFIG_NAME
-    )
+    (app_config_ep,) = eps.select(group=group, name=name)
     app_config = app_config_ep.load()
     return f"{app_config.__module__}.{app_config.__name__}"
 
 
-def get_extension_app_config():
-    app_config_name = get_extension_app_config_name()
+def get_extension_app_config(
+    group=DEFAULT_APP_CONFIG_GROUP,
+    name=DEFAULT_APP_CONFIG_NAME
+):
+    app_config_name = get_extension_app_config_name(group=group, name=name)
     return next(
         filter(
             lambda app: app_config_name
@@ -35,12 +39,18 @@ def get_extension_app_config():
     )
 
 
-def get_extension():
-    return get_extension_app_config().extension
+def get_extension(
+    group=DEFAULT_APP_CONFIG_GROUP,
+    name=DEFAULT_APP_CONFIG_NAME
+):
+    return get_extension_app_config(group=group, name=name).extension
 
 
-def get_events_registry():
-    return get_extension().events
+def get_events_registry(
+    group=DEFAULT_APP_CONFIG_GROUP,
+    name=DEFAULT_APP_CONFIG_NAME
+):
+    return get_extension(group=group, name=name).events
 
 
 def gradient(start_hex, end_hex, num_samples=10):  # pragma: no cover
