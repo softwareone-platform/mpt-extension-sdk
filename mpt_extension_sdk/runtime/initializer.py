@@ -28,10 +28,10 @@ def initialize(options):
     rich.reconfigure(theme=Theme({"repr.mpt_id": "bold light_salmon3"}))
     group = options.get("app_config_group", DEFAULT_APP_CONFIG_GROUP)
     name = options.get("app_config_name", DEFAULT_APP_CONFIG_NAME)
-    django_settings_module = options.get("django_settings_module", DJANGO_SETTINGS_MODULE)
-    os.environ.setdefault(
-        "DJANGO_SETTINGS_MODULE", django_settings_module
+    django_settings_module = options.get(
+        "django_settings_module", DJANGO_SETTINGS_MODULE
     )
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", django_settings_module)
     import django
     from django.conf import settings
 
