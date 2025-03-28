@@ -12,6 +12,8 @@ from opentelemetry.instrumentation.requests import RequestsInstrumentor
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
+from mpt_extension_sdk.flows.context import Context
+
 logger = logging.getLogger(__name__)
 
 
@@ -68,3 +70,16 @@ def wrap_for_trace(func, event_type):  # pragma: no cover
             logger.exception("Unhandled exception!")
 
     return opentelemetry_wrapper if settings.USE_APPLICATIONINSIGHTS else wrapper
+
+
+def setup_contexts(mpt_client, orders):
+    """
+    List of contexts from orders
+    Args:
+        mpt_client (MPTClient): MPT client
+        orders (list): List of orders
+
+    Returns: List of contexts
+
+    """
+    return [Context(order=order) for order in orders]

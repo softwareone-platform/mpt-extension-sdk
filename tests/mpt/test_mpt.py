@@ -19,6 +19,7 @@ from mpt_extension_sdk.mpt_http.mpt import (
     get_agreements_by_query,
     get_all_agreements,
     get_authorizations_by_currency_and_seller_id,
+    get_buyer,
     get_gc_price_list_by_currency,
     get_licensee,
     get_listing_by_id,
@@ -989,3 +990,13 @@ def test_get_agreements_by_next_sync(mocker):
         {"id": "AGR-0001"}
     ]
     mocked_get_by_query.assert_called_once_with(mocked_client, rql_query)
+
+
+def test_get_buyer(mpt_client, requests_mocker):
+    buyer_id = "buyer_id"
+    requests_mocker.get(
+        urljoin(mpt_client.base_url, f"accounts/buyers/{buyer_id}"),
+        json={"data": []},
+    )
+
+    assert get_buyer(mpt_client, buyer_id) == {"data": []}

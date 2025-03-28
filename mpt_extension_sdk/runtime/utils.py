@@ -15,8 +15,7 @@ from mpt_extension_sdk.constants import (
 
 
 def get_extension_app_config_name(
-    group=DEFAULT_APP_CONFIG_GROUP,
-    name=DEFAULT_APP_CONFIG_NAME
+    group=DEFAULT_APP_CONFIG_GROUP, name=DEFAULT_APP_CONFIG_NAME
 ):
     eps = entry_points()
     (app_config_ep,) = eps.select(group=group, name=name)
@@ -25,8 +24,7 @@ def get_extension_app_config_name(
 
 
 def get_extension_app_config(
-    group=DEFAULT_APP_CONFIG_GROUP,
-    name=DEFAULT_APP_CONFIG_NAME
+    group=DEFAULT_APP_CONFIG_GROUP, name=DEFAULT_APP_CONFIG_NAME
 ):
     app_config_name = get_extension_app_config_name(group=group, name=name)
     return next(
@@ -39,17 +37,11 @@ def get_extension_app_config(
     )
 
 
-def get_extension(
-    group=DEFAULT_APP_CONFIG_GROUP,
-    name=DEFAULT_APP_CONFIG_NAME
-):
+def get_extension(group=DEFAULT_APP_CONFIG_GROUP, name=DEFAULT_APP_CONFIG_NAME):
     return get_extension_app_config(group=group, name=name).extension
 
 
-def get_events_registry(
-    group=DEFAULT_APP_CONFIG_GROUP,
-    name=DEFAULT_APP_CONFIG_NAME
-):
+def get_events_registry(group=DEFAULT_APP_CONFIG_GROUP, name=DEFAULT_APP_CONFIG_NAME):
     return get_extension(group=group, name=name).events
 
 

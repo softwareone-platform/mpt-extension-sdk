@@ -60,3 +60,9 @@ class ValidationError:
             "id": self.id,
             "message": self.message.format(**kwargs),
         }
+
+
+ERR_EXT_UNHANDLED_EXCEPTION = ValidationError(
+    "EXT001",
+    "Order can't be processed. Failure reason: {error}",
+)

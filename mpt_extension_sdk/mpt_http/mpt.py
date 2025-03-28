@@ -367,3 +367,10 @@ def get_agreements_by_customer_deployments(
     url = f"/commerce/agreements?{rql_query}"
 
     return _paginated(mpt_client, url)
+
+
+@wrap_mpt_http_error
+def get_buyer(mpt_client, buyer_id):
+    response = mpt_client.get(f"/accounts/buyers/{buyer_id}")
+    response.raise_for_status()
+    return response.json()

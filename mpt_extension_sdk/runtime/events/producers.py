@@ -43,6 +43,10 @@ class EventProducer(ABC):
     def produce_events(self):
         pass
 
+    @abstractmethod
+    def produce_events_with_context(self):
+        pass
+
 
 class OrderEventProducer(EventProducer):
     def __init__(self, dispatcher):
@@ -57,13 +61,24 @@ class OrderEventProducer(EventProducer):
                 for order in orders:
                     self.dispatcher.dispatch_event(Event(order["id"], "orders", order))
 
+    def produce_events_with_context(self):
+        while self.running:
+            with self.sleep(settings.MPT_ORDERS_API_POLLING_INTERVAL_SECS):
+                orders = self.get_processing_orders()
+                orders, contexts = self.filter_and_enrich(self.client, orders)
+                logger.info(f"{len(orders)} orders found for processing...")
+                for order, context in zip(orders, contexts):
+                    self.dispatcher.dispatch_event(
+                        Event(order["id"], "orders", order, context)
+                    )
+
     def get_processing_orders(self):
         products = ",".join(settings.MPT_PRODUCTS_IDS)
         orders = []
         rql_query = f"and(in(agreement.product.id,({products})),eq(status,processing))"
         url = (
-            f"/commerce/orders?{rql_query}"
-            "&select=audit,parameters,lines,subscriptions,subscriptions.lines&order=audit.created.at"
+            f"/commerce/orders?{rql_query}&select=audit,parameters,lines,subscriptions,"
+            f"subscriptions.lines,agreement,buyer&order=audit.created.at"
         )
         page = None
         limit = 10
