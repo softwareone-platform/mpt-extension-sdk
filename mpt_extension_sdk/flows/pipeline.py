@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Callable
 
-from swo.mpt.client import MPTClient
-from swo.mpt.extensions.flows.context import Context
+from mpt_extension_sdk.mpt_http.base import MPTClient
+from mpt_extension_sdk.flows.context import Context
 
 NextStep = Callable[[MPTClient, Context], None]
 
