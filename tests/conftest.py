@@ -748,3 +748,18 @@ def mock_meta_with_pagination_has_no_more_pages():
             },
         },
     }
+
+
+@pytest.fixture()
+def mock_key_vault_name():
+    return "test-key-vault-name"
+
+
+@pytest.fixture()
+def mock_secret_name():
+    return "test-secret-name"
+
+
+@pytest.fixture()
+def mock_key_vault_url():
+    return "https://test-key-vault-name"
