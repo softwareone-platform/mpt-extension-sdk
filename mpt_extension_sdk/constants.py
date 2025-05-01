@@ -1,3 +1,7 @@
+from enum import Enum, unique
+
+from django.conf import settings
+
 EVENT_TYPES = "orders"
 SECURITY_ALGORITHM = "HS256"
 USER_AGENT = "swo-extensions/1.0"
@@ -5,3 +9,6 @@ CONSUME_EVENTS_HELP_TEXT = "Consume events from the MPT platform"
 DEFAULT_APP_CONFIG_GROUP = "swo.mpt.sdk"
 DEFAULT_APP_CONFIG_NAME = "app_config"
 DJANGO_SETTINGS_MODULE = "mpt_extension_sdk.runtime.djapp.conf.default"
+
+
+NotifyCategories = unique(Enum("NotifyCategories", settings.MPT_NOTIFY_CATEGORIES))
