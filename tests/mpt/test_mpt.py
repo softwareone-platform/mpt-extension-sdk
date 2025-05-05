@@ -62,7 +62,7 @@ def test_fail_order(
         ],
     )
 
-    failed_order = fail_order(mpt_client, "ORD-0000", "a-reason", mock_status_notes)
+    failed_order = fail_order(mpt_client, "ORD-0000", mock_status_notes)
     assert failed_order == order
 
 
