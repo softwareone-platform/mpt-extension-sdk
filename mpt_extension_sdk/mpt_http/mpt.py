@@ -68,7 +68,7 @@ def query_order(mpt_client, order_id, **kwargs):
 
 
 @wrap_mpt_http_error
-def fail_order(mpt_client, order_id, reason, status_notes, **kwargs):
+def fail_order(mpt_client, order_id, status_notes, **kwargs):
     response = mpt_client.post(
         f"/commerce/orders/{order_id}/fail",
         json={
