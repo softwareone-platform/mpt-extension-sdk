@@ -31,5 +31,5 @@ def test_set_secret(mocker, mock_key_vault_name, mock_secret_name, mock_key_vaul
     )
     mocker.patch.object(mock_client, "set_secret", return_value=mock_secret_value.value)
     mocker.patch.object(mock_client, "get_secret", return_value=mock_secret_value)
-    secret = key_vault.get_secret(mock_secret_name)
+    secret = key_vault.set_secret(mock_secret_name, mock_secret_value.value)
     assert secret == mock_secret_value.value
