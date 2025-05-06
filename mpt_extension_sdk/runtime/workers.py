@@ -2,6 +2,10 @@ from django.core.management import call_command
 from django.core.wsgi import get_wsgi_application
 from gunicorn.app.base import BaseApplication
 
+from mpt_extension_sdk.constants import (
+    DEFAULT_APP_CONFIG_GROUP,
+    DEFAULT_APP_CONFIG_NAME,
+)
 from mpt_extension_sdk.runtime.initializer import initialize
 
 
@@ -29,8 +33,10 @@ def start_event_consumer(options):
     call_command("consume_events")
 
 
-def start_gunicorn(options):
-    initialize(options)
+def start_gunicorn(
+    options, group=DEFAULT_APP_CONFIG_GROUP, name=DEFAULT_APP_CONFIG_NAME
+):
+    initialize(options, group=group, name=name)
 
     logging_config = {
         "version": 1,

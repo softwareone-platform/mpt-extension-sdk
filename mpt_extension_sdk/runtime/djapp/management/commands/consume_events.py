@@ -3,7 +3,6 @@ from threading import Event
 
 from django.core.management.base import BaseCommand
 
-from mpt_extension_sdk.constants import CONSUME_EVENTS_HELP_TEXT
 from mpt_extension_sdk.runtime.events.dispatcher import Dispatcher
 from mpt_extension_sdk.runtime.events.producers import OrderEventProducer
 
@@ -26,7 +25,7 @@ class Command(BaseCommand):  # pragma: no cover
         signal.signal(signal.SIGTERM, shutdown)
         signal.signal(signal.SIGINT, shutdown)
         for producer_cls in self.producer_classes:
-            producer = producer_cls(self.dispatcher)
+            producer = producer_cls(self)
             self.producers.append(producer)
             producer.start()
 

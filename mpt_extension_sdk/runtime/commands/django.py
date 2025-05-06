@@ -3,6 +3,12 @@ from contextlib import nullcontext
 import click
 from opentelemetry import trace
 
+from mpt_extension_sdk.constants import (
+    DEFAULT_APP_CONFIG_GROUP,
+    DEFAULT_APP_CONFIG_NAME,
+    DJANGO_SETTINGS_MODULE,
+)
+
 
 @click.command(
     add_help_option=False, context_settings=dict(ignore_unknown_options=True)
@@ -11,10 +17,17 @@ from opentelemetry import trace
 @click.pass_context
 def django(ctx, management_args):
     "Execute Django subcommands."
+    from django.conf import settings
+
     from mpt_extension_sdk.runtime.initializer import initialize
 
-    initialize({})
-    from django.conf import settings
+    initialize(
+        {
+            "group": DEFAULT_APP_CONFIG_GROUP,
+            "name": DEFAULT_APP_CONFIG_NAME,
+            "django_settings_module": DJANGO_SETTINGS_MODULE,
+        }
+    )
     from django.core.management import execute_from_command_line
 
     if settings.USE_APPLICATIONINSIGHTS:
