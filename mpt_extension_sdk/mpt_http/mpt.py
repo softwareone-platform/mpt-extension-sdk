@@ -1,6 +1,5 @@
 import logging
 from datetime import date
-from enum import Enum
 from functools import cache
 from itertools import batched
 
@@ -10,8 +9,6 @@ from mpt_extension_sdk.mpt_http.base import MPTClient
 from mpt_extension_sdk.mpt_http.wrap_http_error import wrap_mpt_http_error
 
 logger = logging.getLogger(__name__)
-
-NotifyCategories = Enum("NotifyCategories", settings.MPT_NOTIFY_CATEGORIES)
 
 
 def _has_more_pages(page):
