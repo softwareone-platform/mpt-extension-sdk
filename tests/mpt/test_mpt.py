@@ -15,6 +15,8 @@ from mpt_extension_sdk.mpt_http.mpt import (
     get_agreement,
     get_agreement_subscription,
     get_agreement_subscription_by_external_id,
+    get_agreements_by_customer_deployments,
+    get_agreements_by_external_id_values,
     get_agreements_by_ids,
     get_agreements_by_next_sync,
     get_agreements_by_query,
@@ -33,6 +35,7 @@ from mpt_extension_sdk.mpt_http.mpt import (
     get_webhook,
     notify,
     query_order,
+    set_processing_template,
     update_agreement,
     update_agreement_subscription,
     update_order,
@@ -1113,3 +1116,82 @@ def test_notify_error(mpt_operations_client, requests_mocker, mocker):
             "subject",
             "message_body",
         )
+
+
+def test_set_processing_template(mpt_client, requests_mocker):
+    order_id = "ORD-1234"
+    template = {
+        "id": "template_id",
+        "name": "template_name",
+        "description": "template_description",
+        "type": "OrderProcessing",
+    }
+    requests_mocker.put(
+        urljoin(mpt_client.base_url, f"commerce/orders/{order_id}"),
+        json=template,
+        status=201,
+        match=[
+            matchers.json_params_matcher({"template": template}),
+        ],
+    )
+
+    created_template = set_processing_template(mpt_client, order_id, template)
+    assert created_template == template
+
+
+def test_get_agreements_by_external_id_values(mpt_client, requests_mocker, agreement):
+    external_id = "external_id"
+    display_value = ["Product Name 1"]
+    requests_mocker.get(
+        urljoin(
+            mpt_client.base_url,
+            f"commerce/agreements?"
+            f"any(parameters.fulfillment,and("
+            f"eq(externalId,{external_id}),"
+            f"in(displayValue,({display_value}))))"
+            "&limit=10&offset=0",
+        ),
+        json={
+            "$meta": {
+                "pagination": {
+                    "offset": 0,
+                    "limit": 10,
+                    "total": 2,
+                },
+            },
+            "data": [agreement],
+        },
+    )
+    retrieved_agreement = get_agreements_by_external_id_values(
+        mpt_client, external_id, display_value
+    )
+    assert retrieved_agreement == [agreement]
+
+
+def test_get_agreements_by_customer_deployments(mpt_client, requests_mocker, agreement):
+    deployment_id_parameter = "external_id"
+    deployments_list = ["Product Name 1"]
+    requests_mocker.get(
+        urljoin(
+            mpt_client.base_url,
+            f"commerce/agreements?"
+            f"any(parameters.fulfillment,and("
+            f"eq(externalId,{deployment_id_parameter}),"
+            f"in(displayValue,({deployments_list}))))"
+            "&limit=10&offset=0",
+        ),
+        json={
+            "$meta": {
+                "pagination": {
+                    "offset": 0,
+                    "limit": 10,
+                    "total": 2,
+                },
+            },
+            "data": [agreement],
+        },
+    )
+    retrieved_agreement = get_agreements_by_customer_deployments(
+        mpt_client, deployment_id_parameter, deployments_list
+    )
+    assert retrieved_agreement == [agreement]

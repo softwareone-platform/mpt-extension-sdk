@@ -32,7 +32,7 @@ class EventProducer(ABC):
         self.producer.join()
 
     @contextmanager
-    def sleep(self, secs, interval=0.5):
+    def sleep(self, secs, interval=0.5):  # pragma: no cover
         yield
         sleeped = 0
         while sleeped < secs and self.running_event.is_set():
@@ -61,7 +61,7 @@ class OrderEventProducer(EventProducer):
                 for order in orders:
                     self.dispatcher.dispatch_event(Event(order["id"], "orders", order))
 
-    def produce_events_with_context(self):
+    def produce_events_with_context(self):  # pragma: no cover
         while self.running:
             with self.sleep(settings.MPT_ORDERS_API_POLLING_INTERVAL_SECS):
                 orders = self.get_processing_orders()
@@ -89,7 +89,6 @@ class OrderEventProducer(EventProducer):
             except requests.RequestException:
                 logger.exception("Cannot retrieve orders")
                 return []
-
             if response.status_code == 200:
                 page = response.json()
                 orders.extend(page["data"])

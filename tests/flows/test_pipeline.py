@@ -1,4 +1,5 @@
 import pytest
+
 from mpt_extension_sdk.flows.pipeline import Cursor, Pipeline, Step
 
 

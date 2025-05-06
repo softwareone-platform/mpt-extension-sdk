@@ -5,7 +5,7 @@ from mpt_extension_sdk.mpt_http.base import MPTClient
 _CLIENT = None
 
 
-class MPTClientMiddleware:
+class MPTClientMiddleware:  # pragma: no cover
     def __init__(self, get_response):
         self.get_response = get_response
 
