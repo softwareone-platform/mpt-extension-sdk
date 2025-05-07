@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
+import json
 import os
 from pathlib import Path
 
@@ -211,6 +212,11 @@ MPT_PORTAL_BASE_URL = os.getenv("MPT_PORTAL_BASE_URL", "https://portal.s1.show")
 
 MPT_ORDERS_API_POLLING_INTERVAL_SECS = int(
     os.getenv("MPT_ORDERS_API_POLLING_INTERVAL_SECS", "120")
+)
+
+# TODO: Should be synced with the initializer.py::initialize function
+MPT_NOTIFY_CATEGORIES = json.loads(
+    os.getenv("MPT_NOTIFY_CATEGORIES", '{"ORDERS": "NTC-0000-0006"}')
 )
 
 EXTENSION_CONFIG = {

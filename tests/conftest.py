@@ -301,6 +301,17 @@ def mpt_client(settings):
 
 
 @pytest.fixture()
+def mpt_operations_client(settings):
+    """
+    Create an instance of the MPT client used by the extension.
+    """
+    settings.MPT_API_BASE_URL = "https://localhost"
+    from mpt_extension_sdk.core.utils import setup_operations_client
+
+    return setup_operations_client()
+
+
+@pytest.fixture()
 def mpt_error_factory():
     """
     Generate an error message returned by the Marketplace platform.

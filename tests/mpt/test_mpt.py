@@ -4,6 +4,7 @@ import pytest
 from freezegun import freeze_time
 from responses import matchers
 
+from mpt_extension_sdk.constants import NotifyCategories
 from mpt_extension_sdk.mpt_http.mpt import (
     complete_order,
     create_agreement,
@@ -30,6 +31,7 @@ from mpt_extension_sdk.mpt_http.mpt import (
     get_product_template_or_default,
     get_rendered_template,
     get_webhook,
+    notify,
     query_order,
     update_agreement,
     update_agreement_subscription,
@@ -1000,3 +1002,114 @@ def test_get_buyer(mpt_client, requests_mocker):
     )
 
     assert get_buyer(mpt_client, buyer_id) == {"data": []}
+
+
+def test_notify(mpt_operations_client, requests_mocker, mocker, notify_post_resp):
+    """Tests the basic notification functionality by:
+    1. Verifying GET request is made to fetch contacts with proper query parameters
+    2. Verifying POST request is made to create a notification batch with the correct payload
+    3. Ensuring notification is sent successfully for valid contacts
+    """
+    recipients = [{"id": "CTT-0158-9018"}]
+
+    mocker.patch(
+        "mpt_extension_sdk.mpt_http.mpt._paginated",
+        return_value=recipients,
+        spec=True,
+    )
+
+    requests_mocker.post(
+        urljoin(mpt_operations_client.base_url, "notifications/batches"),
+        json=notify_post_resp,
+        status=201,
+        match=[
+            matchers.json_params_matcher(
+                {
+                    "category": {"id": NotifyCategories.ORDERS.value},
+                    "subject": "subject",
+                    "body": "message_body",
+                    "contacts": recipients,
+                    "buyer": {"id": "buyer_id"},
+                }
+            )
+        ],
+    )
+
+    notify(
+        mpt_operations_client,
+        NotifyCategories.ORDERS.value,
+        "account_id",
+        "buyer_id",
+        "subject",
+        "message_body",
+    )
+
+
+def test_notify_gt_1k(mpt_operations_client, requests_mocker, mocker, notify_post_resp):
+    """Test that notify function properly handles pagination when there are more than
+    1000 contacts.
+
+    The test verifies that:
+    1. Multiple GET requests are made to fetch all contacts with proper offset
+    2. Multiple POST requests are made to create notification batches for each group
+    of contacts
+    3. The notification is sent successfully to all contacts
+    """
+    recipients = [{"id": "CTT-0158-9018"}]
+    recipients1k = 1000 * recipients
+
+    mocker.patch(
+        "mpt_extension_sdk.mpt_http.mpt._paginated",
+        return_value=2001 * recipients,
+        spec=True,
+    )
+
+    for contacts in (
+        recipients1k,
+        recipients1k,
+        recipients,
+    ):
+        requests_mocker.post(
+            urljoin(mpt_operations_client.base_url, "notifications/batches"),
+            json=notify_post_resp,
+            status=201,
+            match=[
+                matchers.json_params_matcher(
+                    {
+                        "category": {"id": NotifyCategories.ORDERS.value},
+                        "subject": "subject",
+                        "body": "message_body",
+                        "contacts": contacts,
+                        "buyer": {"id": "buyer_id"},
+                    }
+                )
+            ],
+        )
+
+    notify(
+        mpt_operations_client,
+        NotifyCategories.ORDERS.value,
+        "account_id",
+        "buyer_id",
+        "subject",
+        "message_body",
+    )
+
+
+def test_notify_error(mpt_operations_client, requests_mocker, mocker):
+    """Test that notify function connection error is propagated up to the caller."""
+    mocker.patch(
+        "mpt_extension_sdk.mpt_http.mpt._paginated",
+        side_effect=ConnectionError(),
+        spec=True,
+    )
+
+    with pytest.raises(ConnectionError):
+        notify(
+            mpt_operations_client,
+            NotifyCategories.ORDERS.value,
+            "account_id",
+            "buyer_id",
+            "subject",
+            "message_body",
+        )

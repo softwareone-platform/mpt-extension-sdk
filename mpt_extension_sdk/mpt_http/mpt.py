@@ -1,9 +1,12 @@
 import logging
 from datetime import date
 from functools import cache
+from itertools import batched
 
 from django.conf import settings
 
+from mpt_extension_sdk.constants import NotifyCategories
+from mpt_extension_sdk.mpt_http.base import MPTClient
 from mpt_extension_sdk.mpt_http.wrap_http_error import wrap_mpt_http_error
 
 logger = logging.getLogger(__name__)
@@ -16,10 +19,9 @@ def _has_more_pages(page):
     return pagination["total"] > pagination["limit"] + pagination["offset"]
 
 
-def _paginated(mpt_client, url):
+def _paginated(mpt_client, url, limit=10):
     items = []
     page = None
-    limit = 10
     offset = 0
     while _has_more_pages(page):
         response = mpt_client.get(f"{url}&limit={limit}&offset={offset}")
@@ -374,3 +376,56 @@ def get_buyer(mpt_client, buyer_id):
     response = mpt_client.get(f"/accounts/buyers/{buyer_id}")
     response.raise_for_status()
     return response.json()
+
+
+@wrap_mpt_http_error
+def notify(
+    mpt_client: MPTClient,
+    category_id: NotifyCategories,
+    account_id: str,
+    buyer_id: str,
+    subject: str,
+    message_body: str,
+    limit: int = 1000,
+):
+    """
+    Sends notifications to multiple recipients in batches for a specific buyer and
+    category through the MPTClient service. The function retrieves recipients,
+    groups them into manageable batches, and sends notifications using the provided
+    message details.
+
+    Args:
+        mpt_client (MPTClient): Client object for interacting with MPT service.
+        category_id (NotifyCategories): Identifier for the category of recipients or messages.
+        account_id (str): Identifier for the associated account.
+        buyer_id (str): Identifier for the buyer related to the notification.
+        subject (str): Subject/title of the notification to be sent.
+        message_body (str): Content/body of the notification message.
+        limit (int): Maximum number of recipients to process per batch. Defaults
+            to 1000.
+
+    Returns:
+        None
+    """
+    recipients = _paginated(
+        mpt_client,
+        url=(
+            f"notifications/accounts/{account_id}/categories/{category_id}/contacts?"
+            f"select=id,-email,-name,-status,-user&"
+            f"filter(group.buyers.id,{buyer_id})"
+        ),
+        limit=limit,
+    )
+
+    for contacts in batched(recipients, limit):
+        response = mpt_client.post(
+            "notifications/batches",
+            json={
+                "category": {"id": category_id},
+                "subject": subject,
+                "body": message_body,
+                "contacts": contacts,
+                "buyer": {"id": buyer_id},
+            },
+        )
+        response.raise_for_status()
