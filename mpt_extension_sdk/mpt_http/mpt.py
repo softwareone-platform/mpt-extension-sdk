@@ -1,15 +1,17 @@
 import logging
 from datetime import date
+from enum import Enum
 from functools import cache
 from itertools import batched
 
 from django.conf import settings
 
-from mpt_extension_sdk.constants import NotifyCategories
 from mpt_extension_sdk.mpt_http.base import MPTClient
 from mpt_extension_sdk.mpt_http.wrap_http_error import wrap_mpt_http_error
 
 logger = logging.getLogger(__name__)
+
+NotifyCategories = Enum("NotifyCategories", settings.MPT_NOTIFY_CATEGORIES)
 
 
 def _has_more_pages(page):
@@ -381,7 +383,7 @@ def get_buyer(mpt_client, buyer_id):
 @wrap_mpt_http_error
 def notify(
     mpt_client: MPTClient,
-    category_id: NotifyCategories,
+    category_id: str,
     account_id: str,
     buyer_id: str,
     subject: str,
@@ -396,7 +398,7 @@ def notify(
 
     Args:
         mpt_client (MPTClient): Client object for interacting with MPT service.
-        category_id (NotifyCategories): Identifier for the category of recipients or messages.
+        category_id (str): Identifier for the category of recipients or messages.
         account_id (str): Identifier for the associated account.
         buyer_id (str): Identifier for the buyer related to the notification.
         subject (str): Subject/title of the notification to be sent.

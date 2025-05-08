@@ -4,8 +4,8 @@ import pytest
 from freezegun import freeze_time
 from responses import matchers
 
-from mpt_extension_sdk.constants import NotifyCategories
 from mpt_extension_sdk.mpt_http.mpt import (
+    NotifyCategories,
     complete_order,
     create_agreement,
     create_agreement_subscription,
