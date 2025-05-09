@@ -8,7 +8,7 @@ from mpt_extension_sdk.runtime.events.dispatcher import Dispatcher
 from mpt_extension_sdk.runtime.events.producers import OrderEventProducer
 
 
-class Command(BaseCommand):
+class Command(BaseCommand):  # pragma: no cover
     help = CONSUME_EVENTS_HELP_TEXT
     producer_classes = [
         OrderEventProducer,

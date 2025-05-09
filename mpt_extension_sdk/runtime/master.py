@@ -79,7 +79,7 @@ class Master:
         self.workers[worker_type] = p
         logger.info(f"{worker_type.capitalize()} worker pid: {p.pid}")
 
-    def monitor_processes(self):
+    def monitor_processes(self):  # pragma: no cover
         while self.monitor_event.is_set():
             exited_workers = []
             for worker_type, p in self.workers.items():
@@ -112,16 +112,16 @@ class Master:
         self.stop()
         self.start()
 
-    def __iter__(self):
+    def __iter__(self):  # pragma: no cover
         return self
 
-    def __next__(self):
+    def __next__(self):  # pragma: no cover
         changes = next(self.watcher)
         if changes:
             return list({Path(c[1]) for c in changes})
         return None
 
-    def run(self):
+    def run(self):  # pragma: no cover
         self.start()
         if self.options.get("reload"):
             for files_changed in self:

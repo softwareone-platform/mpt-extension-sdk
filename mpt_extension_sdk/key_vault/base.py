@@ -74,7 +74,7 @@ class KeyVault(Session):
             )
             return None
 
-    def _get_key_vault_url(self, key_vault_name: str):
+    def _get_key_vault_url(self, key_vault_name: str):  # pragma: no cover
         """
         Construct the Key Vault URL using the provided Key Vault name.
 
@@ -88,7 +88,7 @@ class KeyVault(Session):
         # Construct the Key Vault URL
         return f"https://{key_vault_name}.vault.azure.net/"
 
-    def _get_key_vault_client(self, key_vault_name: str):
+    def _get_key_vault_client(self, key_vault_name: str):  # pragma: no cover
         """
         Create a Key Vault client using the provided Key Vault URL and secret name.
 

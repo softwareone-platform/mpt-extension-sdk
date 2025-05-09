@@ -4,9 +4,15 @@ from importlib.metadata import EntryPoint, EntryPoints
 
 import pytest
 import responses
+from azure.core.exceptions import HttpResponseError, ResourceNotFoundError
 from django.conf import settings
 from rich.highlighter import ReprHighlighter as _ReprHighlighter
 
+from mpt_extension_sdk.constants import (
+    DEFAULT_APP_CONFIG_GROUP,
+    DEFAULT_APP_CONFIG_NAME,
+    DJANGO_SETTINGS_MODULE,
+)
 from mpt_extension_sdk.core.events.dataclasses import Event
 
 
@@ -116,13 +122,20 @@ def mock_gunicorn_logging_config():
 
 
 @pytest.fixture()
-def mock_runtime_master_options():
-    return {
-        "color": True,
-        "debug": False,
-        "reload": True,
-        "component": "all",
-    }
+def runtime_master_options_factory(
+    component="all",
+):
+    def _runtime_master_options(
+        component=component,
+    ):
+        return {
+            "color": True,
+            "debug": False,
+            "reload": True,
+            "component": component,
+        }
+
+    return _runtime_master_options
 
 
 @pytest.fixture()
@@ -339,6 +352,41 @@ def mpt_error_factory():
 
 
 @pytest.fixture()
+def mock_generic_response_error():
+    """
+    Generate an HTTP error response.
+    """
+    return {
+        "status_code": 400,
+        "content": "bad request",
+    }
+
+
+@pytest.fixture()
+def mock_http_response_error():
+    """
+    Generate an HTTP error response.
+    """
+    return HttpResponseError(
+        message="Request failed",
+        request=None,
+        response=None,
+    )
+
+
+@pytest.fixture()
+def mock_resource_not_found_error():
+    """
+    Generate a resource not found error.
+    """
+    return ResourceNotFoundError(
+        message="Resource not found",
+        request=None,
+        response=None,
+    )
+
+
+@pytest.fixture()
 def buyer():
     return {
         "id": "BUY-3731-7971",
@@ -467,6 +515,8 @@ def agreement(buyer, licensee, listing):
         "product": {
             "id": "PRD-1111-1111",
         },
+        "externalId": "external_id",
+        "displayValue": "Product Name 1",
     }
 
 
@@ -774,3 +824,25 @@ def mock_secret_name():
 @pytest.fixture()
 def mock_key_vault_url():
     return "https://test-key-vault-name"
+
+
+@pytest.fixture()
+def mock_initializer_options():
+    return {
+        "app_config_group": DEFAULT_APP_CONFIG_GROUP,
+        "app_config_name": DEFAULT_APP_CONFIG_NAME,
+        "django_settings_module": DJANGO_SETTINGS_MODULE,
+    }
+
+
+@pytest.fixture()
+def mock_mpt_api_error_payload():
+    return {
+        "status": "error",
+        "title": "Error Title",
+        "detail": "Error Detail",
+        "traceId": "12345",
+        "errors": {
+            "error1": "error1",
+        },
+    }
