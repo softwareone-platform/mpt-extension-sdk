@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "mpt-extension-sdk"
-version = "0.1.0"
+version = "4.1.1"
 description = "Extensions SDK for SoftwareONE Marketplace Platform"
 authors = ["SoftwareOne AG"]
 readme = "README.md"
