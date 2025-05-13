@@ -2,8 +2,8 @@ from mpt_extension_sdk.core.events.registry import EventsRegistry
 from mpt_extension_sdk.runtime.utils import get_events_registry
 
 
-def test_get_events_registry():
-    registry = get_events_registry()
+def test_get_events_registry(mock_app_group_name):
+    registry = get_events_registry(group=mock_app_group_name)
     assert isinstance(registry, EventsRegistry)
 
 

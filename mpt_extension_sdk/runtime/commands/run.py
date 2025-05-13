@@ -1,4 +1,5 @@
 import click
+from django.conf import settings
 
 from mpt_extension_sdk.runtime.master import Master
 
@@ -37,5 +38,6 @@ def run(component, color, debug, reload, debug_py):
             "reload": reload,
             "component": component,
         },
+        settings=settings,
     )
     master.run()
