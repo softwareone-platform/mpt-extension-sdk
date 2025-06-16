@@ -184,6 +184,16 @@ def get_agreements_by_query(mpt_client, query):
     return _paginated(mpt_client, url)
 
 
+@wrap_mpt_http_error
+def get_subscriptions_by_query(
+    mpt_client: MPTClient,
+    query: str,
+    limit: int = 10,
+) -> list[dict]:
+    url = f"/commerce/subscriptions?{query}"
+    return _paginated(mpt_client, url, limit=limit)
+
+
 def get_agreements_by_next_sync(mpt_client, next_sync_parameter):
     today = date.today().isoformat()
     param_condition = (

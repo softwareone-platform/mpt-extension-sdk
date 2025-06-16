@@ -32,6 +32,7 @@ from mpt_extension_sdk.mpt_http.mpt import (
     get_product_onetime_items_by_ids,
     get_product_template_or_default,
     get_rendered_template,
+    get_subscriptions_by_query,
     get_webhook,
     notify,
     query_order,
@@ -636,6 +637,62 @@ def test_get_agreements_by_query_error(mpt_client, requests_mocker, mpt_error_fa
 
     with pytest.raises(MPTAPIError) as cv:
         get_agreements_by_query(mpt_client, rql_query)
+
+    assert cv.value.payload["status"] == 500
+
+
+def test_get_subscriptions_by_query(mpt_client, requests_mocker):
+    rql_query = "any-rql-query&select=any-obj"
+    url = f"commerce/subscriptions?{rql_query}"
+
+    page1_url = f"{url}&limit=10&offset=0"
+    page2_url = f"{url}&limit=10&offset=10"
+    data = [{"id": f"AGR-{idx}"} for idx in range(13)]
+    requests_mocker.get(
+        urljoin(mpt_client.base_url, page1_url),
+        json={
+            "$meta": {
+                "pagination": {
+                    "offset": 0,
+                    "limit": 10,
+                    "total": 12,
+                },
+            },
+            "data": data[:10],
+        },
+    )
+    requests_mocker.get(
+        urljoin(mpt_client.base_url, page2_url),
+        json={
+            "$meta": {
+                "pagination": {
+                    "offset": 10,
+                    "limit": 10,
+                    "total": 12,
+                },
+            },
+            "data": data[10:],
+        },
+    )
+
+    assert get_subscriptions_by_query(mpt_client, rql_query) == data
+
+
+def test_get_subscriptions_by_query_error(
+    mpt_client, requests_mocker, mpt_error_factory
+):
+    rql_query = "any-rql-query&select=any-obj"
+    url = f"commerce/subscriptions?{rql_query}"
+
+    url = f"{url}&limit=10&offset=0"
+    requests_mocker.get(
+        urljoin(mpt_client.base_url, url),
+        status=500,
+        json=mpt_error_factory(500, "Internal server error", "Whatever"),
+    )
+
+    with pytest.raises(MPTAPIError) as cv:
+        get_subscriptions_by_query(mpt_client, rql_query)
 
     assert cv.value.payload["status"] == 500
 
