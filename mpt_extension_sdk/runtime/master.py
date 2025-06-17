@@ -25,9 +25,10 @@ def _display_path(path):
 
 
 class Master:
-    def __init__(self, options):
+    def __init__(self, options, settings):
         self.workers = {}
         self.options = options
+        self.settings = settings
         self.stop_event = threading.Event()
         self.monitor_event = threading.Event()
         self.watch_filter = PythonFilter(ignore_paths=None)
