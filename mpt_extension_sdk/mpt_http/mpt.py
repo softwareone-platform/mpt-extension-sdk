@@ -179,9 +179,19 @@ def update_agreement(mpt_client, agreement_id, **kwargs):
 
 
 @wrap_mpt_http_error
-def get_agreements_by_query(mpt_client, query):
+def get_agreements_by_query(mpt_client: MPTClient, query: str, limit: int = 10):
     url = f"/commerce/agreements?{query}"
-    return _paginated(mpt_client, url)
+    return _paginated(mpt_client, url, limit=limit)
+
+
+@wrap_mpt_http_error
+def get_subscriptions_by_query(
+    mpt_client: MPTClient,
+    query: str,
+    limit: int = 10,
+) -> list[dict]:
+    url = f"/commerce/subscriptions?{query}"
+    return _paginated(mpt_client, url, limit=limit)
 
 
 def get_agreements_by_next_sync(mpt_client, next_sync_parameter):
