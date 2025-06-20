@@ -1206,6 +1206,7 @@ def test_get_agreements_by_external_id_values(mpt_client, requests_mocker, agree
             f"any(parameters.fulfillment,and("
             f"eq(externalId,{external_id}),"
             f"in(displayValue,({display_value}))))"
+            f"&select=lines,parameters,subscriptions,product,listing"
             "&limit=10&offset=0",
         ),
         json={
@@ -1235,6 +1236,7 @@ def test_get_agreements_by_customer_deployments(mpt_client, requests_mocker, agr
             f"any(parameters.fulfillment,and("
             f"eq(externalId,{deployment_id_parameter}),"
             f"in(displayValue,({deployments_list}))))"
+            f"&select=lines,parameters,subscriptions,product,listing"
             "&limit=10&offset=0",
         ),
         json={

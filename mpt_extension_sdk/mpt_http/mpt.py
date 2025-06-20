@@ -360,6 +360,7 @@ def get_agreements_by_external_id_values(mpt_client, external_id, display_values
         f"any(parameters.fulfillment,and("
         f"eq(externalId,{external_id}),"
         f"in(displayValue,({display_values_list}))))"
+        f"&select=lines,parameters,subscriptions,product,listing"
     )
 
     url = f"/commerce/agreements?{rql_query}"
@@ -376,6 +377,7 @@ def get_agreements_by_customer_deployments(
         f"any(parameters.fulfillment,and("
         f"eq(externalId,{deployment_id_parameter}),"
         f"in(displayValue,({deployments_list}))))"
+        f"&select=lines,parameters,subscriptions,product,listing"
     )
 
     url = f"/commerce/agreements?{rql_query}"
