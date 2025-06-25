@@ -67,7 +67,7 @@ class OrderEventProducer(EventProducer):
                 orders = self.get_processing_orders()
                 orders, contexts = self.filter_and_enrich(self.client, orders)
                 logger.info(f"{len(orders)} orders found for processing...")
-                for order, context in zip(orders, contexts):
+                for order, context in zip(orders, contexts, strict=False):
                     self.dispatcher.dispatch_event(
                         Event(order["id"], "orders", order, context)
                     )
