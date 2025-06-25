@@ -1,5 +1,5 @@
-from collections.abc import MutableMapping, Sequence
-from typing import Any, Callable
+from collections.abc import Callable, MutableMapping, Sequence
+from typing import Any
 
 from .dataclasses import Event, EventType
 
