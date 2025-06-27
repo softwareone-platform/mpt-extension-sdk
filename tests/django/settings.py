@@ -169,7 +169,7 @@ MPT_API_TOKEN = os.getenv("MPT_API_TOKEN", "change-me!")
 MPT_API_TOKEN_OPERATIONS = os.getenv("MPT_API_TOKEN_OPERATIONS", "change-me!")
 # TODO: Should be synced with the initializer.py::initialize function
 MPT_PRODUCTS_IDS = ["PRD-1111-1111"]
-MPT_ORDERS_API_POLLING_INTERVAL_SECS = 30
+MPT_ORDERS_API_POLLING_INTERVAL_SECS = 0
 MPT_PORTAL_BASE_URL = "https://portal.s1.local"
 MPT_NOTIFY_CATEGORIES = json.loads(
     os.getenv("MPT_NOTIFY_CATEGORIES", '{"ORDERS": "NTC-0000-0006"}')
