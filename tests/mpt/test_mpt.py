@@ -15,6 +15,7 @@ from mpt_extension_sdk.mpt_http.mpt import (
     get_agreement,
     get_agreement_subscription,
     get_agreement_subscription_by_external_id,
+    get_agreements_by_3yc_enroll_status,
     get_agreements_by_customer_deployments,
     get_agreements_by_external_id_values,
     get_agreements_by_ids,
@@ -995,6 +996,23 @@ def test_get_agreements_by_next_sync(mocker):
         {"id": "AGR-0001"}
     ]
     mocked_get_by_query.assert_called_once_with(mocked_client, rql_query)
+
+
+@pytest.mark.parametrize("status", ["Active", "processing"])
+def test_get_agreements_by_3yc_enroll_status(
+    mock_mpt_client, mock_get_agreements_by_query, status
+):
+    rql_query = (
+        f"and(eq(status,{status}),any(parameters.fulfillment,and(eq(externalId,3YCEnrollStatus),"
+        "in(displayValue,(REQUESTED,ACCEPTED)))))"
+        "&select=lines,parameters,subscriptions,product,listing"
+    )
+
+    get_agreements_by_3yc_enroll_status(
+        mock_mpt_client, ("REQUESTED", "ACCEPTED"), status=status
+    )
+
+    mock_get_agreements_by_query.assert_called_once_with(mock_mpt_client, rql_query)
 
 
 def test_get_buyer(mpt_client, requests_mocker):

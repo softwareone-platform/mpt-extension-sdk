@@ -20,6 +20,8 @@ services:
     command: bash -c "ruff check . && pytest"
     volumes:
       - .:/extension_sdk
+    environment:
+      - PROCESS_CHECK_INTERVAL_SECS=0
 
   format:
     container_name: mpt_extension_sdk_format
