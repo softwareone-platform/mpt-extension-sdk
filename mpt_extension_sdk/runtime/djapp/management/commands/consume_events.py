@@ -1,11 +1,13 @@
-import signal
-from threading import Event
+import signal  # pragma: no cover
+from threading import Event  # pragma: no cover
 
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand  # pragma: no cover
 
-from mpt_extension_sdk.constants import CONSUME_EVENTS_HELP_TEXT
-from mpt_extension_sdk.runtime.events.dispatcher import Dispatcher
-from mpt_extension_sdk.runtime.events.producers import OrderEventProducer
+from mpt_extension_sdk.constants import CONSUME_EVENTS_HELP_TEXT  # pragma: no cover
+from mpt_extension_sdk.runtime.events.dispatcher import Dispatcher  # pragma: no cover
+from mpt_extension_sdk.runtime.events.producers import (
+    OrderEventProducer,  # pragma: no cover
+)
 
 
 class Command(BaseCommand):  # pragma: no cover

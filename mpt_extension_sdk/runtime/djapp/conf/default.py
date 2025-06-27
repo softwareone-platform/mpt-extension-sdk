@@ -10,7 +10,6 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
-import json
 import os
 from pathlib import Path
 
@@ -25,6 +24,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
+
+# SECURITY WARNING: keep the secret key used in production secret!
+SECRET_KEY = os.getenv(
+    "MPT_DJANGO_SECRET_KEY",
+    "",
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -128,7 +133,7 @@ APPLICATIONINSIGHTS_CONNECTION_STRING = os.getenv(
 USE_APPLICATIONINSIGHTS = APPLICATIONINSIGHTS_CONNECTION_STRING != ""
 
 
-if USE_APPLICATIONINSIGHTS:
+if USE_APPLICATIONINSIGHTS:  # pragma: no cover
     logger_provider = LoggerProvider()
     set_logger_provider(logger_provider)
     exporter = AzureMonitorLogExporter(
@@ -208,11 +213,7 @@ MPT_ORDERS_API_POLLING_INTERVAL_SECS = int(
     os.getenv("MPT_ORDERS_API_POLLING_INTERVAL_SECS", "120")
 )
 
-# TODO: Should be synced with the initializer.py::initialize function
-MPT_NOTIFY_CATEGORIES = json.loads(
-    os.getenv("MPT_NOTIFY_CATEGORIES", '{"ORDERS": "NTC-0000-0006"}')
-)
-
 EXTENSION_CONFIG = {
     "DUE_DATE_DAYS": "30",
+    "ORDER_CREATION_WINDOW_HOURS": os.getenv("EXT_ORDER_CREATION_WINDOW_HOURS", "24"),
 }

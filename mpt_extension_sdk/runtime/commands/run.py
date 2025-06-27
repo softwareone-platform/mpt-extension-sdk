@@ -1,4 +1,6 @@
 import click
+import debugpy
+from django.conf import settings
 
 from mpt_extension_sdk.runtime.master import Master
 
@@ -25,10 +27,8 @@ def run(component, color, debug, reload, debug_py):
     """
 
     if debug_py:
-        import debugpy
-
         host, port = debug_py.split(":")
-        debugpy.listen((host, int(port)))
+        debugpy.listen((host, int(port)))  # pragma: no cover
 
     master = Master(
         {
@@ -37,5 +37,6 @@ def run(component, color, debug, reload, debug_py):
             "reload": reload,
             "component": component,
         },
+        settings=settings,
     )
-    master.run()
+    master.run()  # pragma: no cover

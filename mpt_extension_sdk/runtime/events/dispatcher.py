@@ -5,6 +5,10 @@ import time
 from collections import deque
 from concurrent.futures import ThreadPoolExecutor
 
+from mpt_extension_sdk.constants import (
+    DEFAULT_APP_CONFIG_GROUP,
+    DEFAULT_APP_CONFIG_NAME,
+)
 from mpt_extension_sdk.core.events.dataclasses import Event
 from mpt_extension_sdk.core.events.registry import EventsRegistry
 from mpt_extension_sdk.core.utils import setup_client
@@ -24,8 +28,8 @@ def done_callback(futures, key, future):  # pragma: no cover
 
 
 class Dispatcher:
-    def __init__(self):
-        self.registry: EventsRegistry = get_events_registry()
+    def __init__(self, group=DEFAULT_APP_CONFIG_GROUP, name=DEFAULT_APP_CONFIG_NAME):
+        self.registry: EventsRegistry = get_events_registry(group=group, name=name)
         self.queue = deque()
         self.futures = {}
         self.executor = ThreadPoolExecutor()
@@ -45,7 +49,7 @@ class Dispatcher:
     def running(self):
         return self.running_event.is_set()
 
-    def dispatch_event(self, event: Event):
+    def dispatch_event(self, event: Event):  # pragma: no cover
         if self.registry.is_event_supported(event.type):
             logger.info(f"event of type {event.type} with id {event.id} accepted")
             self.queue.appendleft((event.type, event))

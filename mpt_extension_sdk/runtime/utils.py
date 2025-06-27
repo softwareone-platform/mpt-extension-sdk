@@ -4,6 +4,8 @@ import sys
 from importlib.metadata import entry_points
 
 from django.apps import apps
+from django.contrib import admin
+from django.urls import path
 from pyfiglet import Figlet
 from rich.console import Console
 from rich.text import Text
@@ -105,3 +107,23 @@ def get_extension_variables(json_ext_variables):
 
         variables[var[0][4:]] = value
     return variables
+
+
+def get_api_url(extension):
+    if extension:
+        api_url = extension.api.urls
+        return api_url
+    return None
+
+
+def get_urlpatterns(extension):
+    urlpatterns = [
+        path("admin/", admin.site.urls),
+    ]
+
+    api_url = get_api_url(extension)
+
+    if api_url:
+        urlpatterns.append(api_url)
+
+    return urlpatterns

@@ -7,8 +7,8 @@ from mpt_extension_sdk.mpt_http.base import MPTClient
 from mpt_extension_sdk.runtime.events.dispatcher import Dispatcher
 
 
-def test_dispatcher():
-    dispatcher = Dispatcher()
+def test_dispatcher(mock_app_group_name):
+    dispatcher = Dispatcher(group=mock_app_group_name)
     assert dispatcher is not None
     assert isinstance(dispatcher.client, MPTClient)
     assert isinstance(dispatcher.executor, ThreadPoolExecutor)
@@ -18,8 +18,8 @@ def test_dispatcher():
     assert isinstance(dispatcher.processor, threading.Thread)
 
 
-def test_dispatcher_running():
-    dispatcher = Dispatcher()
+def test_dispatcher_running(mock_app_group_name):
+    dispatcher = Dispatcher(group=mock_app_group_name)
     dispatcher.start()
     is_running = dispatcher.running
     dispatcher.stop()
@@ -27,8 +27,8 @@ def test_dispatcher_running():
     assert is_running
 
 
-def test_dispatcher_stop():
-    dispatcher = Dispatcher()
+def test_dispatcher_stop(mock_app_group_name):
+    dispatcher = Dispatcher(group=mock_app_group_name)
     dispatcher.start()
     dispatcher.stop()
     is_running = dispatcher.running
@@ -36,9 +36,9 @@ def test_dispatcher_stop():
     assert not is_running
 
 
-def test_dispatcher_dispatch_event():
+def test_dispatcher_dispatch_event(mock_app_group_name):
     test_event = Event("evt-id", "orders", {"id": "ORD-1111-1111-1111"})
-    dispatcher = Dispatcher()
+    dispatcher = Dispatcher(group=mock_app_group_name)
     dispatcher.start()
     dispatcher.dispatch_event(test_event)
     dispatcher.stop()
