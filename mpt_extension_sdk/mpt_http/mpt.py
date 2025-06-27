@@ -209,6 +209,22 @@ def get_agreements_by_next_sync(mpt_client, next_sync_parameter):
     return get_agreements_by_query(mpt_client, rql_query)
 
 
+def get_agreements_by_3yc_enroll_status(
+    mpt_client: MPTClient, enroll_statuses: tuple[str], status: str = "Active"
+):
+    param_condition = (
+        f"any(parameters.fulfillment,"
+        f"and(eq(externalId,3YCEnrollStatus),in(displayValue,({",".join(enroll_statuses)}))))"
+    )
+    status_condition = f"eq(status,{status})"
+
+    rql_query = (
+        f"and({status_condition},{param_condition})"
+        "&select=lines,parameters,subscriptions,product,listing"
+    )
+    return get_agreements_by_query(mpt_client, rql_query)
+
+
 @wrap_mpt_http_error
 def update_agreement_subscription(mpt_client, subscription_id, **kwargs):
     response = mpt_client.put(
