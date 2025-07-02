@@ -24,10 +24,8 @@ JSON_EXT_VARIABLES = {
 }
 
 
-def initialize(options):
+def initialize(options, group=DEFAULT_APP_CONFIG_GROUP, name=DEFAULT_APP_CONFIG_NAME):
     rich.reconfigure(theme=Theme({"repr.mpt_id": "bold light_salmon3"}))
-    group = options.get("app_config_group", DEFAULT_APP_CONFIG_GROUP)
-    name = options.get("app_config_name", DEFAULT_APP_CONFIG_NAME)
     django_settings_module = options.get(
         "django_settings_module", DJANGO_SETTINGS_MODULE
     )
