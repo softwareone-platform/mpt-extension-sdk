@@ -16,7 +16,7 @@ from mpt_extension_sdk.runtime.initializer import initialize
         },
     },
 )
-def test_initialize(mocker, mock_initializer_options):
+def test_initialize(mocker, mock_initializer_options, mock_app_group_name):
     mocked_setup = mocker.patch("django.setup")
-    initialize(mock_initializer_options)
+    initialize(mock_initializer_options, group=mock_app_group_name)
     mocked_setup.assert_called_once()

@@ -4,34 +4,36 @@ from ninja import NinjaAPI
 from mpt_extension_sdk.core.events.registry import EventsRegistry
 from mpt_extension_sdk.runtime.events.utils import setup_contexts
 from mpt_extension_sdk.runtime.utils import (
+    get_api_url,
     get_events_registry,
     get_extension,
     get_extension_app_config,
     get_extension_app_config_name,
     get_extension_variables,
+    get_urlpatterns,
 )
 
 
-def test_get_extension_app_config_name():
-    app_config_name = get_extension_app_config_name()
+def test_get_extension_app_config_name(mock_app_group_name):
+    app_config_name = get_extension_app_config_name(group=mock_app_group_name)
     assert app_config_name == "mpt_extension_sdk.runtime.djapp.apps.ExtensionConfig"
 
 
-def test_get_extension_appconfig():
-    appconfig = get_extension_app_config()
+def test_get_extension_appconfig(mock_app_group_name):
+    appconfig = get_extension_app_config(group=mock_app_group_name)
     assert appconfig.name == "mpt_extension_sdk"
     assert appconfig.label == "mpt_extension_sdk"
 
 
-def test_get_extension():
-    extension = get_extension()
+def test_get_extension(mock_app_group_name):
+    extension = get_extension(group=mock_app_group_name)
     assert extension is not None
     assert isinstance(extension.api, NinjaAPI)
     assert isinstance(extension.events, EventsRegistry)
 
 
-def test_get_events_registry():
-    events_registry = get_events_registry()
+def test_get_events_registry(mock_app_group_name):
+    events_registry = get_events_registry(group=mock_app_group_name)
     assert events_registry.listeners is not None
     assert isinstance(events_registry.listeners, dict)
 
@@ -67,3 +69,28 @@ def test_setup_contexts(mpt_client, order_factory):
     contexts = setup_contexts(mpt_client, orders)
     assert len(contexts) == 1
     assert contexts[0].order == orders[0]
+
+
+def test_get_api_urls_no_extension():
+    extension = None
+    urlpatterns = get_urlpatterns(extension)
+    assert len(urlpatterns) == 1
+
+
+def test_get_api_url_with_no_api_url(
+    mocker,
+    mock_app_group_name,
+):
+    extension = get_extension(group=mock_app_group_name)
+    mocker.patch(
+        "mpt_extension_sdk.runtime.utils.get_api_url",
+        return_value=None,
+    )
+    urlpatterns = get_urlpatterns(extension)
+    assert len(urlpatterns) == 1
+
+
+def test_get_api_url_no_extension():
+    extension = None
+    api_url = get_api_url(extension)
+    assert api_url is None

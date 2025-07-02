@@ -85,8 +85,6 @@ relative_files = true
 omit = [
   "security.py",
   "django.py",
-  "run.py",
-  "default.py",
   "swoext.py",
   "__init__.py",
 ]

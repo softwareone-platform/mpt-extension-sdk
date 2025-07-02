@@ -45,7 +45,7 @@ def test_extension_web_application_load_config(mock_gunicorn_logging_config):
         },
     },
 )
-def test_start_gunicorn(mocker):
+def test_start_gunicorn(mocker, mock_app_group_name):
     mocker.patch.object(
         DictConfigurator,
         "configure",
@@ -56,5 +56,5 @@ def test_start_gunicorn(mocker):
         "run",
         return_value=None,
     )
-    start_gunicorn({})
+    start_gunicorn({}, group=mock_app_group_name)
     mock_run.assert_called_once()
