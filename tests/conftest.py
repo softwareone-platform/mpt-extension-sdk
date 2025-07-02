@@ -846,3 +846,13 @@ def mock_mpt_api_error_payload():
             "error1": "error1",
         },
     }
+
+
+@pytest.fixture()
+def mock_app_group_name():
+    return "swo.mpt.sdk"
+
+
+@pytest.fixture()
+def mock_notify_category_id():
+    return "NTC-0000-0006"

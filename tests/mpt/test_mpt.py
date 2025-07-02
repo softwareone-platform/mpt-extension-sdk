@@ -5,7 +5,6 @@ from freezegun import freeze_time
 from responses import matchers
 
 from mpt_extension_sdk.mpt_http.mpt import (
-    NotifyCategories,
     complete_order,
     create_agreement,
     create_agreement_subscription,
@@ -1025,7 +1024,9 @@ def test_get_buyer(mpt_client, requests_mocker):
     assert get_buyer(mpt_client, buyer_id) == {"data": []}
 
 
-def test_notify(mpt_operations_client, requests_mocker, mocker, notify_post_resp):
+def test_notify(
+    mpt_operations_client, requests_mocker, mocker, notify_post_resp, mock_notify_category_id
+):
     """Tests the basic notification functionality by:
     1. Verifying GET request is made to fetch contacts with proper query parameters
     2. Verifying POST request is made to create a notification batch with the correct payload
@@ -1046,7 +1047,7 @@ def test_notify(mpt_operations_client, requests_mocker, mocker, notify_post_resp
         match=[
             matchers.json_params_matcher(
                 {
-                    "category": {"id": NotifyCategories.ORDERS.value},
+                    "category": {"id": mock_notify_category_id},
                     "subject": "subject",
                     "body": "message_body",
                     "contacts": recipients,
@@ -1058,7 +1059,7 @@ def test_notify(mpt_operations_client, requests_mocker, mocker, notify_post_resp
 
     notify(
         mpt_operations_client,
-        NotifyCategories.ORDERS.value,
+        mock_notify_category_id,
         "account_id",
         "buyer_id",
         "subject",
@@ -1066,7 +1067,9 @@ def test_notify(mpt_operations_client, requests_mocker, mocker, notify_post_resp
     )
 
 
-def test_notify_gt_1k(mpt_operations_client, requests_mocker, mocker, notify_post_resp):
+def test_notify_gt_1k(
+    mpt_operations_client, requests_mocker, mocker, notify_post_resp, mock_notify_category_id
+):
     """Test that notify function properly handles pagination when there are more than
     1000 contacts.
 
@@ -1097,7 +1100,7 @@ def test_notify_gt_1k(mpt_operations_client, requests_mocker, mocker, notify_pos
             match=[
                 matchers.json_params_matcher(
                     {
-                        "category": {"id": NotifyCategories.ORDERS.value},
+                        "category": {"id": mock_notify_category_id},
                         "subject": "subject",
                         "body": "message_body",
                         "contacts": contacts,
@@ -1109,7 +1112,7 @@ def test_notify_gt_1k(mpt_operations_client, requests_mocker, mocker, notify_pos
 
     notify(
         mpt_operations_client,
-        NotifyCategories.ORDERS.value,
+        mock_notify_category_id,
         "account_id",
         "buyer_id",
         "subject",
@@ -1117,7 +1120,9 @@ def test_notify_gt_1k(mpt_operations_client, requests_mocker, mocker, notify_pos
     )
 
 
-def test_notify_error(mpt_operations_client, requests_mocker, mocker):
+def test_notify_error(
+    mpt_operations_client, requests_mocker, mocker, mock_notify_category_id
+):
     """Test that notify function connection error is propagated up to the caller."""
     mocker.patch(
         "mpt_extension_sdk.mpt_http.mpt._paginated",
@@ -1128,7 +1133,7 @@ def test_notify_error(mpt_operations_client, requests_mocker, mocker):
     with pytest.raises(ConnectionError):
         notify(
             mpt_operations_client,
-            NotifyCategories.ORDERS.value,
+            mock_notify_category_id,
             "account_id",
             "buyer_id",
             "subject",
