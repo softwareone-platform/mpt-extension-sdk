@@ -68,6 +68,11 @@ dev = [
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.hatch.build]
+include = [
+  "mpt_extension_sdk/**"
+]
+
 [tool.pytest.ini_options]
 testpaths = "tests"
 pythonpath = "."
