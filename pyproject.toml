@@ -67,6 +67,11 @@ swosdk = 'mpt_extension_sdk.runtime.swoext:main'
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
+[tool.hatch.build]
+include = [
+  "mpt_extension_sdk/**"
+]
+
 [tool.pytest.ini_options]
 testpaths = "tests"
 pythonpath = "."
