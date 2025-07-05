@@ -124,6 +124,6 @@ def get_urlpatterns(extension):
     api_url = get_api_url(extension)
 
     if api_url:
-        urlpatterns.append(api_url)
+        urlpatterns.append(path("api/", api_url))
 
     return urlpatterns
