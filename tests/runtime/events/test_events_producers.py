@@ -19,7 +19,7 @@ def test_event_producer_get_processing_orders(
     rql_query = f"and(in(agreement.product.id,({mock_settings_product_ids})),eq(status,processing))"
     url = (
         f"/v1/commerce/orders?{rql_query}"
-        "&select=audit,parameters,lines,subscriptions,subscriptions.lines,agreement,buyer&order=audit.created.at"
+        "&select=audit,parameters,lines,subscriptions,subscriptions.lines,agreement,buyer,seller&order=audit.created.at"
         f"&limit={limit}&offset={offset}"
     )
     requests_mocker.get(
@@ -53,7 +53,7 @@ def test_event_producer_get_processing_orders_invalid_response(
     rql_query = f"and(in(agreement.product.id,({mock_settings_product_ids})),eq(status,processing))"
     url = (
         f"/v1/commerce/orders?{rql_query}"
-        "&select=audit,parameters,lines,subscriptions,subscriptions.lines,agreement,buyer&order=audit.created.at"
+        "&select=audit,parameters,lines,subscriptions,subscriptions.lines,agreement,buyer,seller&order=audit.created.at"
         f"&limit={limit}&offset={offset}"
     )
     requests_mocker.get(

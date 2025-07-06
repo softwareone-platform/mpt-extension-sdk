@@ -208,6 +208,7 @@ MPT_API_TOKEN = os.getenv("MPT_API_TOKEN", "change-me!")
 MPT_API_TOKEN_OPERATIONS = os.getenv("MPT_API_TOKEN_OPERATIONS", "change-me!")
 MPT_PRODUCTS_IDS = os.getenv("MPT_PRODUCTS_IDS", "PRD-1111-1111")
 MPT_PORTAL_BASE_URL = os.getenv("MPT_PORTAL_BASE_URL", "https://portal.s1.show")
+MPT_KEY_VAULT_NAME = os.getenv("MPT_KEY_VAULT_NAME", "mpt-key-vault")
 
 MPT_ORDERS_API_POLLING_INTERVAL_SECS = int(
     os.getenv("MPT_ORDERS_API_POLLING_INTERVAL_SECS", "120")
@@ -217,3 +218,8 @@ EXTENSION_CONFIG = {
     "DUE_DATE_DAYS": "30",
     "ORDER_CREATION_WINDOW_HOURS": os.getenv("EXT_ORDER_CREATION_WINDOW_HOURS", "24"),
 }
+
+MPT_SETUP_CONTEXTS_FUNC = os.getenv(
+    "MPT_SETUP_CONTEXTS_FUNC",
+    "mpt_extension_sdk.runtime.events.utils.setup_contexts",
+)
