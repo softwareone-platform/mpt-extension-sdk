@@ -1,5 +1,4 @@
 import logging
-from datetime import date
 from functools import cache
 from itertools import batched
 
@@ -189,21 +188,6 @@ def get_subscriptions_by_query(
 ) -> list[dict]:
     url = f"/commerce/subscriptions?{query}"
     return _paginated(mpt_client, url, limit=limit)
-
-
-def get_agreements_by_next_sync(mpt_client, next_sync_parameter):
-    today = date.today().isoformat()
-    param_condition = (
-        f"any(parameters.fulfillment,and(eq(externalId,{next_sync_parameter})"
-        f",lt(displayValue,{today})))"
-    )
-    status_condition = "eq(status,Active)"
-
-    rql_query = (
-        f"and({status_condition},{param_condition})"
-        "&select=lines,parameters,subscriptions,product,listing"
-    )
-    return get_agreements_by_query(mpt_client, rql_query)
 
 
 @wrap_mpt_http_error
