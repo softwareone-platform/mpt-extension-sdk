@@ -146,7 +146,7 @@ LOGGING = {
     "disable_existing_loggers": False,
     "formatters": {
         "verbose": {
-            "format": "{asctime} {name} {levelname} (pid: {process}) {message}",
+            "format": "{asctime} {name} {levelname} (pid: {process}, thread: {thread}) {message}",
             "style": "{",
         },
         "rich": {
@@ -154,7 +154,7 @@ LOGGING = {
             "style": "{",
         },
         "opentelemetry": {
-            "format": "(pid: {process}) {message}",
+            "format": "(pid: {process}, thread: {thread}) {message}",
             "style": "{",
         },
     },
