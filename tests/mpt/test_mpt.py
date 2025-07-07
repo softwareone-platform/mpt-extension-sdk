@@ -1,7 +1,6 @@
 from urllib.parse import urljoin
 
 import pytest
-from freezegun import freeze_time
 from responses import matchers
 
 from mpt_extension_sdk.mpt_http.mpt import (
@@ -17,7 +16,6 @@ from mpt_extension_sdk.mpt_http.mpt import (
     get_agreements_by_customer_deployments,
     get_agreements_by_external_id_values,
     get_agreements_by_ids,
-    get_agreements_by_next_sync,
     get_agreements_by_query,
     get_all_agreements,
     get_authorizations_by_currency_and_seller_id,
@@ -970,32 +968,6 @@ def test_create_agreement_subscription(
     assert created_subscription == subscription
 
 
-@freeze_time("2024-01-04 03:00:00")
-def test_get_agreements_by_next_sync(mocker):
-    param_condition = (
-        f"any(parameters.fulfillment,and(eq(externalId,{'nextSync'})"
-        f",lt(displayValue,2024-01-04)))"
-    )
-    status_condition = "eq(status,Active)"
-
-    rql_query = (
-        f"and({status_condition},{param_condition})"
-        "&select=lines,parameters,subscriptions,product,listing"
-    )
-
-    mocked_get_by_query = mocker.patch(
-        "mpt_extension_sdk.mpt_http.mpt.get_agreements_by_query",
-        return_value=[{"id": "AGR-0001"}],
-    )
-
-    mocked_client = mocker.MagicMock()
-
-    assert get_agreements_by_next_sync(mocked_client, "nextSync") == [
-        {"id": "AGR-0001"}
-    ]
-    mocked_get_by_query.assert_called_once_with(mocked_client, rql_query)
-
-
 def test_get_buyer(mpt_client, requests_mocker):
     buyer_id = "buyer_id"
     requests_mocker.get(
@@ -1007,7 +979,11 @@ def test_get_buyer(mpt_client, requests_mocker):
 
 
 def test_notify(
-    mpt_operations_client, requests_mocker, mocker, notify_post_resp, mock_notify_category_id
+    mpt_operations_client,
+    requests_mocker,
+    mocker,
+    notify_post_resp,
+    mock_notify_category_id,
 ):
     """Tests the basic notification functionality by:
     1. Verifying GET request is made to fetch contacts with proper query parameters
@@ -1050,7 +1026,11 @@ def test_notify(
 
 
 def test_notify_gt_1k(
-    mpt_operations_client, requests_mocker, mocker, notify_post_resp, mock_notify_category_id
+    mpt_operations_client,
+    requests_mocker,
+    mocker,
+    notify_post_resp,
+    mock_notify_category_id,
 ):
     """Test that notify function properly handles pagination when there are more than
     1000 contacts.
