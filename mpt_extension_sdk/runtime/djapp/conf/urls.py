@@ -1,4 +1,3 @@
-
 from mpt_extension_sdk.constants import (
     DEFAULT_APP_CONFIG_GROUP,
     DEFAULT_APP_CONFIG_NAME,

@@ -78,7 +78,7 @@ class OrderEventProducer(EventProducer):
         rql_query = f"and(in(agreement.product.id,({products})),eq(status,processing))"
         url = (
             f"/commerce/orders?{rql_query}&select=audit,parameters,lines,subscriptions,"
-            f"subscriptions.lines,agreement,buyer&order=audit.created.at"
+            f"subscriptions.lines,agreement,buyer,seller&order=audit.created.at"
         )
         page = None
         limit = 10
