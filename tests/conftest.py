@@ -857,3 +857,13 @@ def mock_app_group_name():
 @pytest.fixture()
 def mock_notify_category_id():
     return "NTC-0000-0006"
+
+
+@pytest.fixture()
+def mock_product_ids_for_expression():
+    return ["PRD-1", "PRD-2"]
+
+
+@pytest.fixture()
+def mock_product_id_for_expression():
+    return "PRD-1"
