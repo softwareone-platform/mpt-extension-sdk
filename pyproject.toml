@@ -4,7 +4,36 @@ version = "4.1.1"
 description = "Extensions SDK for SoftwareONE Marketplace Platform"
 authors = ["SoftwareOne AG"]
 readme = "README.md"
-license = "Apache-2.0"
+license = {text = "Apache-2.0 license"}
+dependencies = [
+    "azure-identity>=1.21.0,<2",
+    "azure-keyvault-secrets>=4.9.0,<5",
+    "azure-monitor-opentelemetry-exporter==1.0.0b25",
+    "click==8.1.*",
+    "debugpy==1.8.*",
+    "django==4.2.*",
+    "django-ninja==1.1.*",
+    "gunicorn==23.0.*",
+    "jinja2==3.1.*",
+    "markdown-it-py==3.0.*",
+    "openpyxl==3.1.*",
+    "opentelemetry-api==1.30.*",
+    "opentelemetry-instrumentation-django==0.51b0",
+    "opentelemetry-instrumentation-logging==0.51b0",
+    "opentelemetry-instrumentation-requests==0.51b0",
+    "opentelemetry-sdk==1.30.*",
+    "phonenumbers==8.13.*",
+    "pyairtable==2.3.*",
+    "pyfiglet==1.0.*",
+    "pyjwt==2.8.*",
+    "pymsteams==0.2.*",
+    "regex>=2024.7.24,<2025",
+    "requests==2.32.*",
+    "rich==13.7.*",
+    "types-openpyxl==3.1.*",
+    "typing-extensions==4.9.*",
+    "watchfiles==0.21.*",
+]
 
 [project.scripts]
 swosdk = "mpt_extension_sdk.runtime.swoext:main"
