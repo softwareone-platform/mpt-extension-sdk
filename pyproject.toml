@@ -57,7 +57,7 @@ types-openpyxl = "3.1.*"
 types-requests = "2.31.*"
 
 [tool.poetry.scripts]
-swoext = 'mpt_extension_sdk.runtime.swoext:main'
+swosdk = 'mpt_extension_sdk.runtime.swoext:main'
 
 
 [tool.poetry.plugins."swo.mpt.sdk"]
