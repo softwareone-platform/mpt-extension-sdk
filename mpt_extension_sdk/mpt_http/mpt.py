@@ -382,25 +382,12 @@ def notify(
     subject: str,
     message_body: str,
     limit: int = 1000,
-):
+) -> None:
     """
     Sends notifications to multiple recipients in batches for a specific buyer and
     category through the MPTClient service. The function retrieves recipients,
     groups them into manageable batches, and sends notifications using the provided
     message details.
-
-    Args:
-        mpt_client (MPTClient): Client object for interacting with MPT service.
-        category_id (str): Identifier for the category of recipients or messages.
-        account_id (str): Identifier for the associated account.
-        buyer_id (str): Identifier for the buyer related to the notification.
-        subject (str): Subject/title of the notification to be sent.
-        message_body (str): Content/body of the notification message.
-        limit (int): Maximum number of recipients to process per batch. Defaults
-            to 1000.
-
-    Returns:
-        None
     """
     recipients = _paginated(
         mpt_client,
@@ -424,3 +411,23 @@ def notify(
             },
         )
         response.raise_for_status()
+
+
+@wrap_mpt_http_error
+def terminate_subscription(
+    mpt_client: MPTClient, subscription_id: str, reason: str
+) -> dict:
+    """
+    Terminates a subscription by calling the MPT API.
+
+    Raises:
+        HTTPError: If the HTTP request fails, an HTTPError is raised with
+            information about the issue.
+    """
+    response = mpt_client.post(
+        f"/commerce/subscriptions/{subscription_id}/terminate",
+        json={"description": reason},
+    )
+    response.raise_for_status()
+
+    return response.json()
