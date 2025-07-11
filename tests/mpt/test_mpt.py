@@ -34,6 +34,7 @@ from mpt_extension_sdk.mpt_http.mpt import (
     notify,
     query_order,
     set_processing_template,
+    terminate_subscription,
     update_agreement,
     update_agreement_subscription,
     update_order,
@@ -1239,3 +1240,36 @@ def test_get_agreements_by_customer_deployments(mpt_client, requests_mocker, agr
         mpt_client, deployment_id_parameter, deployments_list
     )
     assert retrieved_agreement == [agreement]
+
+
+def test_terminate_subscription(mpt_client, requests_mocker, subscriptions_factory):
+    subscription = subscriptions_factory()
+    reason = "test reason"
+    requests_mocker.post(
+        urljoin(
+            mpt_client.base_url,
+            f"commerce/subscriptions/{subscription[0]["id"]}/terminate",
+        ),
+        status=200,
+        match=[matchers.json_params_matcher({"description": reason})],
+        json=subscription,
+    )
+
+    terminate_subscription(mpt_client, subscription[0]["id"], reason)
+
+
+def test_terminate_subscription_error(
+    mpt_client, requests_mocker, subscriptions_factory
+):
+    subscription = subscriptions_factory()
+    reason = "test reason"
+    requests_mocker.post(
+        urljoin(
+            mpt_client.base_url,
+            f"commerce/subscriptions/{subscription[0]["id"]}/terminate",
+        ),
+        body=ConnectionError(),
+    )
+
+    with pytest.raises(ConnectionError):
+        terminate_subscription(mpt_client, subscription[0]["id"], reason)
