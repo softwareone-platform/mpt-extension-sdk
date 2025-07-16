@@ -45,7 +45,7 @@ def make_django_command(name, django_command=None, help=None):
         name=name,
         help=help,
         add_help_option=False,
-        context_settings=dict(ignore_unknown_options=True),
+        context_settings={"ignore_unknown_options": True},
     )
     @click.argument("management_args", nargs=-1, type=click.UNPROCESSED)
     @click.pass_context

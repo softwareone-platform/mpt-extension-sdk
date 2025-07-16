@@ -16,7 +16,7 @@ from mpt_extension_sdk.constants import (
 from mpt_extension_sdk.core.events.dataclasses import Event
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_valid_env_values(
     mock_env_webhook_secret,
     mock_env_airtable_base,
@@ -33,32 +33,32 @@ def mock_valid_env_values(
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_env_webhook_secret():
     return '{ "webhook_secret": "WEBHOOK_SECRET" }'
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_env_airtable_base():
     return '{ "airtable_base": "AIRTABLE_BASE" }'
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_env_airtable_pricing_base():
     return '{ "airtable_pricing_base": "AIRTABLE_PRICING_BASE" }'
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_env_product_segment():
     return '{ "product_segment": "PRODUCT_SEGMENT" }'
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_email_notification_sender():
     return "email_sender"
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_invalid_env_values(
     mock_env_webhook_secret,
     mock_env_airtable_base,
@@ -75,7 +75,7 @@ def mock_invalid_env_values(
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_gunicorn_logging_config():
     return {
         "version": 1,
@@ -122,7 +122,7 @@ def mock_gunicorn_logging_config():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def runtime_master_options_factory(
     component="all",
 ):
@@ -139,19 +139,19 @@ def runtime_master_options_factory(
     return _runtime_master_options
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_highlights(mock_logging_all_prefixes):
     return _ReprHighlighter.highlights + [
         rf"(?P<mpt_id>(?:{'|'.join(mock_logging_all_prefixes)})(?:-\d{{4}})*)"
     ]
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_logging_account_prefixes():
     return ("ACC", "BUY", "LCE", "MOD", "SEL", "USR", "AUSR", "UGR")
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_logging_catalog_prefixes():
     return (
         "PRD",
@@ -170,17 +170,17 @@ def mock_logging_catalog_prefixes():
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_logging_commerce_prefixes():
     return ("AGR", "ORD", "SUB", "REQ")
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_logging_aux_prefixes():
     return ("FIL", "MSG")
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_logging_all_prefixes(
     mock_logging_account_prefixes,
     mock_logging_catalog_prefixes,
@@ -195,12 +195,12 @@ def mock_logging_all_prefixes(
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_env_invalid_product_segment():
     return '{ "field_1": , , "field2": "very bad json"}'
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_ext_expected_environment_values(
     mock_env_webhook_secret,
     mock_env_airtable_base,
@@ -217,17 +217,17 @@ def mock_ext_expected_environment_values(
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_worker_initialize(mocker):
     return mocker.patch("mpt_extension_sdk.runtime.workers.initialize")
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_worker_call_command(mocker):
     return mocker.patch("mpt_extension_sdk.runtime.workers.call_command")
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_worker_get_entry_points(
     mocker,
     mock_entry_points,
@@ -238,7 +238,7 @@ def mock_worker_get_entry_points(
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_worker_select_entry_point(
     mocker,
     mock_select_entry_point,
@@ -249,7 +249,7 @@ def mock_worker_select_entry_point(
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_select_entry_point():
     return EntryPoint(
         name="ep-test-1",
@@ -258,7 +258,7 @@ def mock_select_entry_point():
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_entry_points():
     return EntryPoints(
         EntryPoint(
@@ -274,7 +274,7 @@ def mock_entry_points():
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_app_config():
     return list(
         {
@@ -284,7 +284,7 @@ def mock_app_config():
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_json_ext_variables():
     return {
         "EXT_WEBHOOKS_SECRETS",
@@ -294,7 +294,7 @@ def mock_json_ext_variables():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def requests_mocker():
     """
     Allow mocking of http calls made with requests.
@@ -303,7 +303,7 @@ def requests_mocker():
         yield rsps
 
 
-@pytest.fixture()
+@pytest.fixture
 def mpt_client(settings):
     """
     Create an instance of the MPT client used by the extension.
@@ -314,7 +314,7 @@ def mpt_client(settings):
     return setup_client()
 
 
-@pytest.fixture()
+@pytest.fixture
 def mpt_operations_client(settings):
     """
     Create an instance of the MPT client used by the extension.
@@ -325,7 +325,7 @@ def mpt_operations_client(settings):
     return setup_operations_client()
 
 
-@pytest.fixture()
+@pytest.fixture
 def mpt_error_factory():
     """
     Generate an error message returned by the Marketplace platform.
@@ -352,7 +352,7 @@ def mpt_error_factory():
     return _mpt_error
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_generic_response_error():
     """
     Generate an HTTP error response.
@@ -363,7 +363,7 @@ def mock_generic_response_error():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_http_response_error():
     """
     Generate an HTTP error response.
@@ -375,7 +375,7 @@ def mock_http_response_error():
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_resource_not_found_error():
     """
     Generate a resource not found error.
@@ -387,7 +387,7 @@ def mock_resource_not_found_error():
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def buyer():
     return {
         "id": "BUY-3731-7971",
@@ -414,7 +414,7 @@ def buyer():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def licensee(buyer):
     return {
         "id": "LCE-1111-2222-3333",
@@ -430,7 +430,7 @@ def licensee(buyer):
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def listing(buyer):
     return {
         "id": "LST-9401-9279",
@@ -451,7 +451,7 @@ def listing(buyer):
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def agreement(buyer, licensee, listing):
     return {
         "id": "AGR-2119-4550-8674-5962",
@@ -521,7 +521,7 @@ def agreement(buyer, licensee, listing):
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def order_parameters_factory():
     def _order_parameters(
         company_name="FF Buyer good enough",
@@ -586,7 +586,7 @@ def order_parameters_factory():
     return _order_parameters
 
 
-@pytest.fixture()
+@pytest.fixture
 def fulfillment_parameters_factory():
     def _fulfillment_parameters(
         customer_id="",
@@ -604,7 +604,7 @@ def fulfillment_parameters_factory():
     return _fulfillment_parameters
 
 
-@pytest.fixture()
+@pytest.fixture
 def lines_factory(agreement):
     agreement_id = agreement["id"].split("-", 1)[1]
 
@@ -638,7 +638,7 @@ def lines_factory(agreement):
     return _items
 
 
-@pytest.fixture()
+@pytest.fixture
 def order_factory(
     agreement,
     order_parameters_factory,
@@ -708,12 +708,12 @@ def order_factory(
     return _order
 
 
-@pytest.fixture()
+@pytest.fixture
 def order(order_factory):
     return order_factory()
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_status_notes():
     return {
         "id": "VIPM001",
@@ -721,7 +721,7 @@ def mock_status_notes():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def webhook(settings):
     return {
         "id": "WH-123-123",
@@ -729,7 +729,7 @@ def webhook(settings):
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def subscriptions_factory(lines_factory):
     def _subscriptions(
         subscription_id="SUB-1000-2000-3000",
@@ -760,17 +760,17 @@ def subscriptions_factory(lines_factory):
     return _subscriptions
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_wrap_event():
     return Event("evt-id", "orders", {"id": "ORD-1111-1111-1111"})
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_settings_product_ids():
     return ",".join(settings.MPT_PRODUCTS_IDS)
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_get_order_for_producer(order, order_factory):
     order = order_factory()
 
@@ -786,7 +786,7 @@ def mock_get_order_for_producer(order, order_factory):
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_meta_with_pagination_has_more_pages():
     return {
         "$meta": {
@@ -799,7 +799,7 @@ def mock_meta_with_pagination_has_more_pages():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_meta_with_pagination_has_no_more_pages():
     return {
         "$meta": {
@@ -812,22 +812,22 @@ def mock_meta_with_pagination_has_no_more_pages():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_key_vault_name():
     return "test-key-vault-name"
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_secret_name():
     return "test-secret-name"
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_key_vault_url():
     return "https://test-key-vault-name"
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_initializer_options():
     return {
         "app_config_group": DEFAULT_APP_CONFIG_GROUP,
@@ -836,7 +836,7 @@ def mock_initializer_options():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_mpt_api_error_payload():
     return {
         "status": "error",
@@ -849,21 +849,21 @@ def mock_mpt_api_error_payload():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_app_group_name():
     return "swo.mpt.sdk"
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_notify_category_id():
     return "NTC-0000-0006"
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_product_ids_for_expression():
     return ["PRD-1", "PRD-2"]
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_product_id_for_expression():
     return "PRD-1"
