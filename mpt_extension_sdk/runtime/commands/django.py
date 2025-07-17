@@ -13,7 +13,8 @@ from mpt_extension_sdk.runtime.initializer import initialize
 
 
 @click.command(
-    add_help_option=False, context_settings={"ignore_unknown_options": True},
+    add_help_option=False,
+    context_settings={"ignore_unknown_options": True},
 )
 @click.argument("management_args", nargs=-1, type=click.UNPROCESSED)
 @click.pass_context

@@ -352,8 +352,8 @@ class RQLQuery:
             return ""
 
         if query.negated:
-            return f'not({query.op}({",".join(tokens)}))'
-        return f'{query.op}({",".join(tokens)})'
+            return f"not({query.op}({','.join(tokens)}))"
+        return f"{query.op}({','.join(tokens)})"
 
     def _copy(self, other):
         return RQLQuery(
