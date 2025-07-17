@@ -1248,7 +1248,7 @@ def test_terminate_subscription(mpt_client, requests_mocker, subscriptions_facto
     requests_mocker.post(
         urljoin(
             mpt_client.base_url,
-            f"commerce/subscriptions/{subscription[0]["id"]}/terminate",
+            f"commerce/subscriptions/{subscription[0]['id']}/terminate",
         ),
         status=200,
         match=[matchers.json_params_matcher({"description": reason})],
@@ -1266,7 +1266,7 @@ def test_terminate_subscription_error(
     requests_mocker.post(
         urljoin(
             mpt_client.base_url,
-            f"commerce/subscriptions/{subscription[0]["id"]}/terminate",
+            f"commerce/subscriptions/{subscription[0]['id']}/terminate",
         ),
         body=ConnectionError(),
     )
