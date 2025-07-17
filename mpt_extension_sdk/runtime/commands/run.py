@@ -1,5 +1,5 @@
 import click
-import debugpy
+import debugpy  # noqa
 from django.conf import settings
 
 from mpt_extension_sdk.runtime.master import Master
@@ -28,7 +28,7 @@ def run(component, color, debug, reload, debug_py):
 
     if debug_py:
         host, port = debug_py.split(":")
-        debugpy.listen((host, int(port)))  # pragma: no cover
+        debugpy.listen((host, int(port)))  # noqa
 
     master = Master(
         {
