@@ -36,7 +36,7 @@ dependencies = [
 ]
 
 [project.scripts]
-swosdk = "mpt_extension_sdk.runtime.swoext:main"
+swoext = "mpt_extension_sdk.runtime.swoext:main"
 
 [tool.poetry.group.dev.dependencies]
 freezegun = "1.4.*"
