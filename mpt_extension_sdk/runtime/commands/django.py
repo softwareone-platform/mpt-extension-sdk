@@ -1,8 +1,4 @@
-from contextlib import nullcontext
-
 import click
-from django.core.management import execute_from_command_line
-from opentelemetry import trace
 
 from mpt_extension_sdk.constants import (
     DEFAULT_APP_CONFIG_GROUP,
@@ -10,6 +6,14 @@ from mpt_extension_sdk.constants import (
     DJANGO_SETTINGS_MODULE,
 )
 from mpt_extension_sdk.runtime.initializer import initialize
+from mpt_extension_sdk.runtime.tracer import dynamic_trace_span
+
+
+@dynamic_trace_span(lambda *args: f"Running Django command {args[1]}")
+def execute(ctx, management_args):
+    from django.core.management import execute_from_command_line
+
+    execute_from_command_line(argv=[ctx.command_path] + list(management_args))
 
 
 @click.command(
@@ -19,9 +23,7 @@ from mpt_extension_sdk.runtime.initializer import initialize
 @click.argument("management_args", nargs=-1, type=click.UNPROCESSED)
 @click.pass_context
 def django(ctx, management_args):  # pragma: no cover
-    "Execute Django subcommands."
-    from django.conf import settings
-
+    """Execute Django subcommands."""
     initialize(
         {
             "group": DEFAULT_APP_CONFIG_GROUP,
@@ -30,13 +32,4 @@ def django(ctx, management_args):  # pragma: no cover
         }
     )
 
-    if settings.USE_APPLICATIONINSIGHTS:
-        tracer = trace.get_tracer(__name__)
-        tracer_context = tracer.start_as_current_span(
-            f"Running Django command {management_args[0]}",
-        )
-    else:
-        tracer_context = nullcontext()
-
-    with tracer_context:
-        execute_from_command_line(argv=[ctx.command_path] + list(management_args))
+    execute(ctx, management_args)

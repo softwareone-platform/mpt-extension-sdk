@@ -77,7 +77,7 @@ class OrderEventProducer(EventProducer):
         orders = []
         rql_query = RQLQuery().agreement.product.id.in_(
             settings.MPT_PRODUCTS_IDS
-        ) and RQLQuery(status="processing")
+        ) & RQLQuery(status="processing")
         url = (
             f"/commerce/orders?{rql_query}&select=audit,parameters,lines,subscriptions,"
             f"subscriptions.lines,agreement,buyer,seller&order=audit.created.at"

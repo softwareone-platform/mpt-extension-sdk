@@ -109,6 +109,34 @@ wheels = [
 ]
 
 [[package]]
+name = "boto3"
+version = "1.39.7"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "botocore" },
+    { name = "jmespath" },
+    { name = "s3transfer" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/9c/43/81ae62386917fa163f1d3bc59e77da56924f9824b5100fd2807e74a675fc/boto3-1.39.7.tar.gz", hash = "sha256:28daeb005e3381808e0e12995056ee8951056ddd43506c07482a15b40ae785b0", size = 111820, upload-time = "2025-07-16T16:29:52.858Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/cc/60/1d2d708f5bc125fe6fe262ea767c82020ea6deeda113e989cff5ab89a9f9/boto3-1.39.7-py3-none-any.whl", hash = "sha256:c8c0e11fff7bb85f903b860b6bfd4f509a4d749decf38bb6a409ffe5d6eb0c91", size = 139882, upload-time = "2025-07-16T16:29:51.176Z" },
+]
+
+[[package]]
+name = "botocore"
+version = "1.39.7"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "jmespath" },
+    { name = "python-dateutil" },
+    { name = "urllib3" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/e7/9d/73f300c841a3c47d2baf4bf6ecb9d6de476edf91de8c3c26ceed5044e666/botocore-1.39.7.tar.gz", hash = "sha256:431e342ef97ecb387cea9df1ae8c4e0edc1b0c9c50d2e121cca77699f24f8dc1", size = 14201331, upload-time = "2025-07-16T16:29:43.011Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/30/20/ab70de7441cbc4b8ffc5d6d9a8e02e4c703cc07accb7441ce54020e20950/botocore-1.39.7-py3-none-any.whl", hash = "sha256:1d11ba9f3cb46856bb541ed010db160093201a224d21ef854249513ae3af7e77", size = 13864168, upload-time = "2025-07-16T16:29:37.114Z" },
+]
+
+[[package]]
 name = "certifi"
 version = "2025.6.15"
 source = { registry = "https://pypi.org/simple" }
@@ -551,6 +579,15 @@ wheels = [
 ]
 
 [[package]]
+name = "jmespath"
+version = "1.0.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/00/2a/e867e8531cf3e36b41201936b7fa7ba7b5702dbef42922193f05c8976cd6/jmespath-1.0.1.tar.gz", hash = "sha256:90261b206d6defd58fdd5e85f478bf633a2901798906be2ad389150c5c60edbe", size = 25843, upload-time = "2022-06-17T18:00:12.224Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/31/b4/b9b800c45527aadd64d5b442f9b932b00648617eb5d63d2c7a6587b7cafc/jmespath-1.0.1-py3-none-any.whl", hash = "sha256:02e2e4cc71b5bcab88332eebf907519190dd9e6e82107fa7f83b1003a6252980", size = 20256, upload-time = "2022-06-17T18:00:10.251Z" },
+]
+
+[[package]]
 name = "markdown-it-py"
 version = "3.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -629,6 +666,7 @@ dependencies = [
     { name = "azure-identity" },
     { name = "azure-keyvault-secrets" },
     { name = "azure-monitor-opentelemetry-exporter" },
+    { name = "boto3" },
     { name = "click" },
     { name = "debugpy" },
     { name = "django" },
@@ -638,6 +676,7 @@ dependencies = [
     { name = "markdown-it-py" },
     { name = "openpyxl" },
     { name = "opentelemetry-api" },
+    { name = "opentelemetry-instrumentation-botocore" },
     { name = "opentelemetry-instrumentation-django" },
     { name = "opentelemetry-instrumentation-logging" },
     { name = "opentelemetry-instrumentation-requests" },
@@ -680,6 +719,7 @@ requires-dist = [
     { name = "azure-identity", specifier = ">=1.21.0,<2" },
     { name = "azure-keyvault-secrets", specifier = ">=4.9.0,<5" },
     { name = "azure-monitor-opentelemetry-exporter", specifier = "==1.0.0b25" },
+    { name = "boto3", specifier = "==1.39.*" },
     { name = "click", specifier = "==8.1.*" },
     { name = "debugpy", specifier = "==1.8.*" },
     { name = "django", specifier = "==4.2.*" },
@@ -689,6 +729,7 @@ requires-dist = [
     { name = "markdown-it-py", specifier = "==3.0.*" },
     { name = "openpyxl", specifier = "==3.1.*" },
     { name = "opentelemetry-api", specifier = "==1.30.*" },
+    { name = "opentelemetry-instrumentation-botocore", specifier = "==0.51b0" },
     { name = "opentelemetry-instrumentation-django", specifier = "==0.51b0" },
     { name = "opentelemetry-instrumentation-logging", specifier = "==0.51b0" },
     { name = "opentelemetry-instrumentation-requests", specifier = "==0.51b0" },
@@ -854,6 +895,21 @@ wheels = [
 ]
 
 [[package]]
+name = "opentelemetry-instrumentation-botocore"
+version = "0.51b0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "opentelemetry-api" },
+    { name = "opentelemetry-instrumentation" },
+    { name = "opentelemetry-propagator-aws-xray" },
+    { name = "opentelemetry-semantic-conventions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/35/2c/6dbd0c81cbf7cb24217bde630bac0e9a458f2f5721251cb9340835b95c57/opentelemetry_instrumentation_botocore-0.51b0.tar.gz", hash = "sha256:63cc232bcf48a9f569d9a6d2243e355934be1a950dac945f3d0b34ceb08552d7", size = 40299, upload-time = "2025-02-04T18:21:19.335Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/9d/19/3f9c1d7ba7c5dc3610968abc1504be75044dcb5d1d7f6320df577f164b52/opentelemetry_instrumentation_botocore-0.51b0-py3-none-any.whl", hash = "sha256:43c48ac60ed28120a96946878614cba62c7bf7bea9c34733ef9121e19de0d62c", size = 28261, upload-time = "2025-02-04T18:20:01.48Z" },
+]
+
+[[package]]
 name = "opentelemetry-instrumentation-django"
 version = "0.51b0"
 source = { registry = "https://pypi.org/simple" }
@@ -910,6 +966,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/ab/7a/c68d3051ba791645cb78107310321d04dc249c72e59397aae933fb13548c/opentelemetry_instrumentation_wsgi-0.51b0.tar.gz", hash = "sha256:a759b020a41c5ddddbb3c71149aa60f2dd06c423ec507c8dfecec89e0570d5bc", size = 18240, upload-time = "2025-02-04T18:21:56.677Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/5c/12/95690e603e8cb52f8d247e01653a9cec898394686abde707a45285a20aaa/opentelemetry_instrumentation_wsgi-0.51b0-py3-none-any.whl", hash = "sha256:bd0403cf00b39b0e4b2acf9aa08ccd6799e2d3b45b950bfaabfb10aed301727f", size = 14377, upload-time = "2025-02-04T18:21:01.687Z" },
+]
+
+[[package]]
+name = "opentelemetry-propagator-aws-xray"
+version = "1.0.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "opentelemetry-api" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/f4/31/40004e9e55b1e5694ef3a7526f0b7637df44196fc68a8b7d248a3684680f/opentelemetry_propagator_aws_xray-1.0.2.tar.gz", hash = "sha256:6b2cee5479d2ef0172307b66ed2ed151f598a0fd29b3c01133ac87ca06326260", size = 10994, upload-time = "2024-08-05T17:45:57.601Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ea/89/849a0847871fd9745315896ad9e23d6479db84d90b8b36c4c26dc46e92b8/opentelemetry_propagator_aws_xray-1.0.2-py3-none-any.whl", hash = "sha256:1c99181ee228e99bddb638a0c911a297fa21f1c3a0af951f841e79919b5f1934", size = 10856, upload-time = "2024-08-05T17:45:56.492Z" },
 ]
 
 [[package]]
@@ -1478,6 +1546,18 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/fe/84/7cc7bd73924ee6be4724be0db5414a4a2ed82d06b30827342315a1be9e9c/ruff-0.12.3-py3-none-win32.whl", hash = "sha256:dfd45e6e926deb6409d0616078a666ebce93e55e07f0fb0228d4b2608b2c248d", size = 10589263, upload-time = "2025-07-11T13:21:07.148Z" },
     { url = "https://files.pythonhosted.org/packages/07/87/c070f5f027bd81f3efee7d14cb4d84067ecf67a3a8efb43aadfc72aa79a6/ruff-0.12.3-py3-none-win_amd64.whl", hash = "sha256:a946cf1e7ba3209bdef039eb97647f1c77f6f540e5845ec9c114d3af8df873e7", size = 11695072, upload-time = "2025-07-11T13:21:11.004Z" },
     { url = "https://files.pythonhosted.org/packages/e0/30/f3eaf6563c637b6e66238ed6535f6775480db973c836336e4122161986fc/ruff-0.12.3-py3-none-win_arm64.whl", hash = "sha256:5f9c7c9c8f84c2d7f27e93674d27136fbf489720251544c4da7fb3d742e011b1", size = 10805855, upload-time = "2025-07-11T13:21:13.547Z" },
+]
+
+[[package]]
+name = "s3transfer"
+version = "0.13.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "botocore" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ed/5d/9dcc100abc6711e8247af5aa561fc07c4a046f72f659c3adea9a449e191a/s3transfer-0.13.0.tar.gz", hash = "sha256:f5e6db74eb7776a37208001113ea7aa97695368242b364d73e91c981ac522177", size = 150232, upload-time = "2025-05-22T19:24:50.245Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/18/17/22bf8155aa0ea2305eefa3a6402e040df7ebe512d1310165eda1e233c3f8/s3transfer-0.13.0-py3-none-any.whl", hash = "sha256:0148ef34d6dd964d0d8cf4311b2b21c474693e57c2e069ec708ce043d2b527be", size = 85152, upload-time = "2025-05-22T19:24:48.703Z" },
 ]
 
 [[package]]

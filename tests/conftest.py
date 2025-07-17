@@ -867,3 +867,11 @@ def mock_product_ids_for_expression():
 @pytest.fixture
 def mock_product_id_for_expression():
     return "PRD-1"
+
+
+@pytest.fixture
+def mock_app_insights_connection_string():
+    return (
+        "InstrumentationKey=11111111-1111-1111-1111-111111111111;"
+        "IngestionEndpoint=https://test.monitor.azure.com/"
+    )

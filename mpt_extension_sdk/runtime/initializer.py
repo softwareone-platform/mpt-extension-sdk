@@ -1,6 +1,7 @@
 import os
 
 import rich
+from opentelemetry.instrumentation.botocore import BotocoreInstrumentor
 from rich.theme import Theme
 
 from mpt_extension_sdk.constants import (
@@ -58,5 +59,6 @@ def initialize(options, group=DEFAULT_APP_CONFIG_GROUP, name=DEFAULT_APP_CONFIG_
 
     if settings.USE_APPLICATIONINSIGHTS:
         instrument_logging()
+        BotocoreInstrumentor().instrument()
 
     django.setup()
