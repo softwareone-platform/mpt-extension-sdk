@@ -30,13 +30,15 @@ def run(component, color, debug, reload, debug_py):
         host, port = debug_py.split(":")
         debugpy.listen((host, int(port)))  # noqa
 
+    options = {
+        "color": color,
+        "debug": debug,
+        "reload": reload,
+        "component": component,
+    }
+
     master = Master(
-        {
-            "color": color,
-            "debug": debug,
-            "reload": reload,
-            "component": component,
-        },
+        options,
         settings=settings,
     )
     master.run()  # pragma: no cover
