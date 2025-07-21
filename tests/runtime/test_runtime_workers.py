@@ -3,8 +3,10 @@ from logging.config import DictConfigurator
 from django.core.wsgi import get_wsgi_application
 from django.test import override_settings
 
+from mpt_extension_sdk.runtime.initializer import initialize
 from mpt_extension_sdk.runtime.workers import (
     ExtensionWebApplication,
+    start_event_consumer,
     start_gunicorn,
 )
 
@@ -56,5 +58,22 @@ def test_start_gunicorn(mocker, mock_app_group_name):
         "run",
         return_value=None,
     )
-    start_gunicorn({}, group=mock_app_group_name)
+    start_gunicorn(initialize, {}, group=mock_app_group_name)
     mock_run.assert_called_once()
+
+
+def test_start_event_consumer(mocker):
+    """
+    Test that start_event_consumer calls initialize_func and then call_command.
+    """
+    mock_call_command = mocker.patch("mpt_extension_sdk.runtime.workers.call_command")
+
+    mock_initialize_func = mocker.Mock()
+
+    test_options = {"some_option": "test_value"}
+
+    start_event_consumer(mock_initialize_func, test_options)
+
+    mock_initialize_func.assert_called_once_with(test_options)
+
+    mock_call_command.assert_called_once_with("consume_events")

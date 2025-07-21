@@ -1,3 +1,4 @@
+import importlib
 import json
 import os
 import sys
@@ -127,3 +128,17 @@ def get_urlpatterns(extension):
         urlpatterns.append(path("api/", api_url))
 
     return urlpatterns
+
+
+def get_initializer_function():
+    """
+    Dynamically import and return the initializer function from settings.INITIALIZER.
+    """
+    # Read from environment variable instead of Django settings to avoid circular dependency
+    # (Django settings need to be configured before we can read settings.INITIALIZER)
+    initializer_path = os.getenv(
+        "MPT_INITIALIZER", "mpt_extension_sdk.runtime.initializer.initialize"
+    )
+    module_path, function_name = initializer_path.rsplit(".", 1)
+    module = importlib.import_module(module_path)
+    return getattr(module, function_name)
