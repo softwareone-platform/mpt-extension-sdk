@@ -23,7 +23,7 @@ jobs:
     - name: Set up Python 3.12
       uses: actions/setup-python@v4
       with:
-        python-version: '3.12'
+        python-version-file: ".python-version"
 
     - name: Install dependencies
       run: |
@@ -43,3 +43,10 @@ jobs:
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         repository-url: https://upload.pypi.org/legacy/
+
+  dtrack:
+    uses: softwareone-platform/ops-template/.github/workflows/dependency-track-python-uv.yml@v1
+    with:
+      projectName: 'mpt-extension-sdk'
+    secrets:
+      DEPENDENCYTRACK_APIKEY: ${{ secrets.DEPENDENCYTRACK_APIKEY }}
