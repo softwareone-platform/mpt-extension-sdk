@@ -6,7 +6,6 @@ from mpt_extension_sdk.constants import (
     DEFAULT_APP_CONFIG_GROUP,
     DEFAULT_APP_CONFIG_NAME,
 )
-from mpt_extension_sdk.runtime.initializer import initialize
 
 
 class ExtensionWebApplication(BaseApplication):
@@ -28,15 +27,18 @@ class ExtensionWebApplication(BaseApplication):
         return self.application
 
 
-def start_event_consumer(options):
-    initialize(options)
+def start_event_consumer(initialize_func, options):
+    initialize_func(options)
     call_command("consume_events")
 
 
 def start_gunicorn(
-    options, group=DEFAULT_APP_CONFIG_GROUP, name=DEFAULT_APP_CONFIG_NAME
+    initialize_func,
+    options,
+    group=DEFAULT_APP_CONFIG_GROUP,
+    name=DEFAULT_APP_CONFIG_NAME,
 ):
-    initialize(options, group=group, name=name)
+    initialize_func(options, group=group, name=name)
 
     logging_config = {
         "version": 1,

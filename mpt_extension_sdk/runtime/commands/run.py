@@ -3,6 +3,7 @@ import debugpy  # noqa
 from django.conf import settings
 
 from mpt_extension_sdk.runtime.master import Master
+from mpt_extension_sdk.runtime.utils import get_initializer_function
 
 
 @click.command()
@@ -30,13 +31,16 @@ def run(component, color, debug, reload, debug_py):
         host, port = debug_py.split(":")
         debugpy.listen((host, int(port)))  # noqa
 
+    options = {
+        "color": color,
+        "debug": debug,
+        "reload": reload,
+        "component": component,
+    }
+
     master = Master(
-        {
-            "color": color,
-            "debug": debug,
-            "reload": reload,
-            "component": component,
-        },
+        options,
         settings=settings,
+        initialize_func=get_initializer_function(),
     )
     master.run()  # pragma: no cover

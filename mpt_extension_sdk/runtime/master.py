@@ -3,6 +3,7 @@ import os
 import signal
 import threading
 import time
+from functools import partial
 from pathlib import Path
 
 from watchfiles import watch
@@ -26,7 +27,8 @@ def _display_path(path):  # pragma: no cover
 
 
 class Master:
-    def __init__(self, options, settings):
+    def __init__(self, options, settings, initialize_func):
+        self.initialize = initialize_func
         self.workers = {}
         self.options = options
         self.settings = settings
@@ -45,21 +47,33 @@ class Master:
         match self.options["component"]:
             case "all":
                 self.proc_targets = {
-                    "event-consumer": start_event_consumer,
-                    "gunicorn": start_gunicorn,
+                    "event-consumer": partial(
+                        start_event_consumer_worker, initialize_func=self.initialize
+                    ),
+                    "gunicorn": partial(
+                        start_gunicorn_worker, initialize_func=self.initialize
+                    ),
                 }
             case "api":
                 self.proc_targets = {
-                    "gunicorn": start_gunicorn,
+                    "gunicorn": partial(
+                        start_gunicorn_worker, initialize_func=self.initialize
+                    ),
                 }
             case "consumer":
                 self.proc_targets = {
-                    "event-consumer": start_event_consumer,
+                    "event-consumer": partial(
+                        start_event_consumer_worker, initialize_func=self.initialize
+                    ),
                 }
             case _:
                 self.proc_targets = {
-                    "event-consumer": start_event_consumer,
-                    "gunicorn": start_gunicorn,
+                    "event-consumer": partial(
+                        start_event_consumer_worker, initialize_func=self.initialize
+                    ),
+                    "gunicorn": partial(
+                        start_gunicorn_worker, initialize_func=self.initialize
+                    ),
                 }
 
     def setup_signals_handler(self):
@@ -136,3 +150,17 @@ class Master:
         else:
             self.stop_event.wait()
         self.stop()
+
+
+def start_event_consumer_worker(options, initialize_func):
+    """
+    Worker function for start event consumer
+    """
+    start_event_consumer(initialize_func, options)
+
+
+def start_gunicorn_worker(options, initialize_func):
+    """
+    Worker function for start gunicorn
+    """
+    start_gunicorn(initialize_func, options)

@@ -851,7 +851,7 @@ def mock_mpt_api_error_payload():
 
 @pytest.fixture
 def mock_app_group_name():
-    return "swo.mpt.sdk"
+    return "swo.mpt.ext"
 
 
 @pytest.fixture
@@ -867,3 +867,13 @@ def mock_product_ids_for_expression():
 @pytest.fixture
 def mock_product_id_for_expression():
     return "PRD-1"
+
+
+@pytest.fixture
+def mock_process_id():
+    return "12345"
+
+
+@pytest.fixture
+def mock_gunicorn_options():
+    return {"component": "api", "debug": False}
