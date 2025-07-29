@@ -1,4 +1,3 @@
-
 import importlib
 from unittest.mock import MagicMock
 
@@ -13,10 +12,11 @@ def test_dynamic_trace_span(mocker):
     mocker.patch(
         "mpt_extension_sdk.runtime.tracer.trace.get_tracer",
         autospec=True,
-        return_value=mocker_tracer_instance
+        return_value=mocker_tracer_instance,
     )
 
     import mpt_extension_sdk.runtime.tracer as tracer
+
     importlib.reload(tracer)
 
     def name_fn(x):
