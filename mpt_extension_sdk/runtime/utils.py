@@ -6,6 +6,7 @@ from importlib.metadata import entry_points
 from django.apps import apps
 from django.contrib import admin
 from django.urls import path
+from django.utils.module_loading import import_string
 from pyfiglet import Figlet
 from rich.console import Console
 from rich.text import Text
@@ -127,3 +128,22 @@ def get_urlpatterns(extension):
         urlpatterns.append(path("api/", api_url))
 
     return urlpatterns
+
+
+def get_initializer_function():
+    """
+    Dynamically import and return the initializer function from settings.INITIALIZER.
+    """
+    # Read from environment variable instead of Django settings to avoid circular dependency
+    # (Django settings need to be configured before we can read settings.INITIALIZER)
+    return os.getenv(
+        "MPT_INITIALIZER", "mpt_extension_sdk.runtime.initializer.initialize"
+    )
+
+
+def initialize_extension(
+    options, group=DEFAULT_APP_CONFIG_GROUP, name=DEFAULT_APP_CONFIG_NAME
+):
+    initialize_path = get_initializer_function()
+    initialize_func = import_string(initialize_path)
+    initialize_func(options, group=group, name=name)
