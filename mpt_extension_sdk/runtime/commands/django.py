@@ -9,7 +9,7 @@ from mpt_extension_sdk.constants import (
     DEFAULT_APP_CONFIG_NAME,
     DJANGO_SETTINGS_MODULE,
 )
-from mpt_extension_sdk.runtime.initializer import initialize
+from mpt_extension_sdk.runtime.utils import initialize_extension
 
 
 @click.command(
@@ -19,20 +19,21 @@ from mpt_extension_sdk.runtime.initializer import initialize
 @click.pass_context
 def django(ctx, management_args):  # pragma: no cover
     "Execute Django subcommands."
+
     from django.conf import settings
 
-    initialize(
-        {
-            "group": DEFAULT_APP_CONFIG_GROUP,
-            "name": DEFAULT_APP_CONFIG_NAME,
-            "django_settings_module": DJANGO_SETTINGS_MODULE,
-        }
-    )
+    options = {
+        "group": DEFAULT_APP_CONFIG_GROUP,
+        "name": DEFAULT_APP_CONFIG_NAME,
+        "django_settings_module": DJANGO_SETTINGS_MODULE,
+    }
+
+    initialize_extension(options=options)
 
     if settings.USE_APPLICATIONINSIGHTS:
         tracer = trace.get_tracer(__name__)
         tracer_context = tracer.start_as_current_span(
-            f"Running Django command {management_args}",
+            f"Running Django command {management_args[0]}",
         )
     else:
         tracer_context = nullcontext()

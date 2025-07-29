@@ -8,7 +8,15 @@ from mpt_extension_sdk.runtime.master import Master
 def test_run(mocker):
     component = "all"
 
+    def mock_initializer(*args, **kwargs):
+        pass
+
     mock_master_run = mocker.patch.object(Master, "run", return_value=None)
+
+    mocker.patch(
+        "mpt_extension_sdk.runtime.utils.get_initializer_function",
+        return_value=mock_initializer,
+    )
 
     runner = CliRunner()
     result = runner.invoke(run, [component, "--color"])
@@ -21,7 +29,15 @@ def test_run_with_debug_py(mocker):
 
     debug_py = "localhost:5678"
 
+    def mock_initializer(*args, **kwargs):
+        pass
+
     mock_master_run = mocker.patch.object(Master, "run", return_value=None)
+
+    mocker.patch(
+        "mpt_extension_sdk.runtime.utils.get_initializer_function",
+        return_value=mock_initializer,
+    )
 
     mock_debugpy = mocker.patch(
         "mpt_extension_sdk.runtime.commands.run.debugpy.listen", return_value=None

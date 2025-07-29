@@ -53,9 +53,7 @@ class Master:
                     "gunicorn": start_gunicorn,
                 }
             case "consumer":
-                self.proc_targets = {
-                    "event-consumer": start_event_consumer,
-                }
+                self.proc_targets = {"event-consumer": start_event_consumer}
             case _:
                 self.proc_targets = {
                     "event-consumer": start_event_consumer,

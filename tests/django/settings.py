@@ -180,3 +180,7 @@ EXTENSION_CONFIG = {
     "MAX_RETRY_ATTEMPS": "10",
     "DUE_DATE_DAYS": "30",
 }
+
+INITIALIZER = os.getenv(
+    "MPT_INITIALIZER", "mpt_extension_sdk.runtime.initializer.initialize"
+)
