@@ -24,8 +24,17 @@ JSON_EXT_VARIABLES = {
 }
 
 
-def initialize(options, group=DEFAULT_APP_CONFIG_GROUP, name=DEFAULT_APP_CONFIG_NAME):
+def initialize(
+    options,
+    group=DEFAULT_APP_CONFIG_GROUP,
+    name=DEFAULT_APP_CONFIG_NAME,
+    json_variables=None,
+):
     rich.reconfigure(theme=Theme({"repr.mpt_id": "bold light_salmon3"}))
+
+    if json_variables is None:
+        json_variables = JSON_EXT_VARIABLES
+
     django_settings_module = options.get(
         "django_settings_module", DJANGO_SETTINGS_MODULE
     )
@@ -53,7 +62,7 @@ def initialize(options, group=DEFAULT_APP_CONFIG_GROUP, name=DEFAULT_APP_CONFIG_
         "level": logging_level,
         "propagate": False,
     }
-    settings.EXTENSION_CONFIG.update(get_extension_variables(JSON_EXT_VARIABLES))
+    settings.EXTENSION_CONFIG.update(get_extension_variables(json_variables))
     settings.MPT_PRODUCTS_IDS = extract_product_ids(settings.MPT_PRODUCTS_IDS)
 
     if settings.USE_APPLICATIONINSIGHTS:
