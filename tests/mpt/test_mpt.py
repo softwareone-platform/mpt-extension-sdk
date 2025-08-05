@@ -1222,7 +1222,7 @@ def test_get_agreements_by_customer_deployments(mpt_client, requests_mocker, agr
             f"any(parameters.fulfillment,and("
             f"eq(externalId,{deployment_id_parameter}),"
             f"in(displayValue,({deployments_list}))))"
-            f"&select=lines,parameters,subscriptions,product,listing"
+            f"&select=lines,parameters,subscriptions,subscriptions.parameters,product,listing"
             "&limit=10&offset=0",
         ),
         json={
