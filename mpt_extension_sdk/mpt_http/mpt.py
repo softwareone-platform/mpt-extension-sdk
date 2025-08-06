@@ -358,7 +358,7 @@ def get_agreements_by_customer_deployments(
         f"any(parameters.fulfillment,and("
         f"eq(externalId,{deployment_id_parameter}),"
         f"in(displayValue,({deployments_list}))))"
-        f"&select=lines,parameters,subscriptions,product,listing"
+        f"&select=lines,parameters,subscriptions,subscriptions.parameters,product,listing"
     )
 
     url = f"/commerce/agreements?{rql_query}"
