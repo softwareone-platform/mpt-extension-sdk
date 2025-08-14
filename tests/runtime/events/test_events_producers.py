@@ -1,9 +1,8 @@
 from urllib.parse import urljoin
 
 from mpt_extension_sdk.runtime.events.dispatcher import Dispatcher
-from mpt_extension_sdk.runtime.events.producers import (
-    OrderEventProducer,
-)
+from mpt_extension_sdk.runtime.events.producers import OrderEventProducer
+
 
 
 def test_event_producer_get_processing_orders(
@@ -17,15 +16,12 @@ def test_event_producer_get_processing_orders(
     limit = 10
     offset = 0
     rql_query = f"and(in(agreement.product.id,({mock_settings_product_ids})),eq(status,processing))"
+    select = "assets,audit,parameters,lines,subscriptions,subscriptions.lines,agreement,buyer,seller"
     url = (
-        f"/v1/commerce/orders?{rql_query}"
-        "&select=audit,parameters,lines,subscriptions,subscriptions.lines,agreement,buyer,seller&order=audit.created.at"
+        f"/v1/commerce/orders?{rql_query}&select={select}&order=audit.created.at"
         f"&limit={limit}&offset={offset}"
     )
-    requests_mocker.get(
-        urljoin(mpt_client.base_url, url),
-        json=mock_get_order_for_producer,
-    )
+    requests_mocker.get(urljoin(mpt_client.base_url, url), json=mock_get_order_for_producer)
 
     dispatcher = Dispatcher(group=mock_app_group_name)
     dispatcher.start()

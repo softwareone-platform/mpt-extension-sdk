@@ -101,6 +101,26 @@ def set_processing_template(mpt_client, order_id, template):
 
 
 @wrap_mpt_http_error
+def create_asset(mpt_client, order_id, asset):
+    response = mpt_client.post(
+        f"/commerce/orders/{order_id}/assets",
+        json=asset,
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+@wrap_mpt_http_error
+def update_asset(mpt_client, order_id, asset_id, **kwargs):
+    response = mpt_client.put(
+        f"/commerce/orders/{order_id}/assets/{asset_id}",
+        json=kwargs,
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+@wrap_mpt_http_error
 def create_subscription(mpt_client, order_id, subscription):
     response = mpt_client.post(
         f"/commerce/orders/{order_id}/subscriptions",

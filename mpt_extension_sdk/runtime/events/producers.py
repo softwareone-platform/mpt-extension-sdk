@@ -79,7 +79,7 @@ class OrderEventProducer(EventProducer):
             settings.MPT_PRODUCTS_IDS
         ) & RQLQuery(status="processing")
         url = (
-            f"/commerce/orders?{rql_query}&select=audit,parameters,lines,subscriptions,"
+            f"/commerce/orders?{rql_query}&select=assets,audit,parameters,lines,subscriptions,"
             f"subscriptions.lines,agreement,buyer,seller&order=audit.created.at"
         )
         page = None
