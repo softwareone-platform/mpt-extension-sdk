@@ -30,6 +30,7 @@ from mpt_extension_sdk.mpt_http.mpt import (
     get_product_template_or_default,
     get_rendered_template,
     get_subscriptions_by_query,
+    get_template_by_name,
     get_webhook,
     notify,
     query_order,
@@ -456,6 +457,27 @@ def test_get_product_template_or_default(mpt_client, requests_mocker, name):
         mpt_client,
         "PRD-1111",
         "Processing",
+        name,
+    ) == {"id": "TPL-0000"}
+
+@pytest.mark.parametrize("name", ["template_name", None])
+def test_get_product_template_by_name(mpt_client, requests_mocker, name):
+    url = f"catalog/products/PRD-1111/templates?eq(name,{name})"
+    requests_mocker.get(
+        urljoin(
+            mpt_client.base_url,
+            url,
+        ),
+        json={
+            "data": [
+                {"id": "TPL-0000"},
+            ]
+        },
+    )
+
+    assert get_template_by_name(
+        mpt_client,
+        "PRD-1111",
         name,
     ) == {"id": "TPL-0000"}
 

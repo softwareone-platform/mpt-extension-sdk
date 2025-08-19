@@ -164,6 +164,14 @@ def get_product_template_or_default(mpt_client, product_id, status, name=None):
     return templates["data"][0]
 
 
+def get_template_by_name(mpt_client, product_id, template_name):
+    url = f"/catalog/products/{product_id}/templates?eq(name,{template_name})"
+    response = mpt_client.get(url)
+    response.raise_for_status()
+    templates = response.json()
+    return templates["data"][0]
+
+
 @wrap_mpt_http_error
 def update_agreement(mpt_client, agreement_id, **kwargs):
     response = mpt_client.put(
