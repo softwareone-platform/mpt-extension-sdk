@@ -32,6 +32,7 @@ def _response_hook(span, request, response):  # pragma: no cover
 
 
 def instrument_logging():  # pragma: no cover
+    """Instrument logging for OpenTelemetry."""
     exporter = AzureMonitorTraceExporter(
         connection_string=settings.APPLICATIONINSIGHTS_CONNECTION_STRING
     )
@@ -46,6 +47,7 @@ def instrument_logging():  # pragma: no cover
 
 
 def wrap_for_trace(func, event_type):  # pragma: no cover
+    """Wrap a function to add OpenTelemetry tracing."""
     @wraps(func)
     def opentelemetry_wrapper(client, event):
         tracer = trace.get_tracer(event_type)
@@ -74,12 +76,12 @@ def wrap_for_trace(func, event_type):  # pragma: no cover
 
 def setup_contexts(mpt_client, orders):
     """
-    List of contexts from orders
+    List of contexts from orders.
+
     Args:
         mpt_client (MPTClient): MPT client
         orders (list): List of orders
 
     Returns: List of contexts
-
     """
     return [Context(order=order) for order in orders]

@@ -19,13 +19,11 @@ from mpt_extension_sdk.runtime.master import Master
 def run(component, color, debug, reload, debug_py):
     """Run the extension.
 
-    \b
     COMPONENT is the the name of the component to run. Possible values:
         * all - run both API and Event Consumer threads (default)
         * api - run only API thread
         * consumer - run only Event Consumer thread
     """
-
     if debug_py:
         host, port = debug_py.split(":")
         debugpy.listen((host, int(port)))  # noqa

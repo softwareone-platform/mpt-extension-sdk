@@ -8,6 +8,7 @@ NextStep = Callable[[MPTClient, Context], None]
 
 
 class Step(ABC):
+    """Abstract base class for pipeline steps."""
     @abstractmethod
     def __call__(
         self,
@@ -15,7 +16,8 @@ class Step(ABC):
         context: Context,
         next_step: NextStep,
     ) -> None:
-        raise NotImplementedError()  # pragma: no cover
+        """Execute the step."""
+        raise NotImplementedError  # pragma: no cover
 
 
 def _default_error_handler(error: Exception, context: Context, next_step: NextStep):
@@ -23,11 +25,13 @@ def _default_error_handler(error: Exception, context: Context, next_step: NextSt
 
 
 class Cursor:
+    """A cursor for navigating through pipeline steps."""
     def __init__(self, steps, error_handler):
         self.queue = steps
         self.error_handler = error_handler
 
     def __call__(self, client: MPTClient, context: Context):
+        """Execute the next step in the pipeline."""
         if not self.queue:
             return
         current_step = self.queue[0]
@@ -40,10 +44,12 @@ class Cursor:
 
 
 class Pipeline:
+    """A pipeline for processing steps."""
     def __init__(self, *steps):
         self.queue = steps
 
     def run(self, client: MPTClient, context: Context, error_handler=None):
+        """Run the pipeline."""
         execute = Cursor(self.queue, error_handler or _default_error_handler)
         return execute(client, context)
 
