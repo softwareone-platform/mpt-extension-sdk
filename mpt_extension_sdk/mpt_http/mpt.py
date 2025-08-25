@@ -108,6 +108,22 @@ def set_processing_template(mpt_client, order_id, template):
 
 
 @wrap_mpt_http_error
+def create_asset(mpt_client, order_id, asset):
+    """Create a new asset for an order."""
+    response = mpt_client.post(f"/commerce/orders/{order_id}/assets", json=asset)
+    response.raise_for_status()
+    return response.json()
+
+
+@wrap_mpt_http_error
+def update_asset(mpt_client, order_id, asset_id, **kwargs):
+    """Update an order asset."""
+    response = mpt_client.put(f"/commerce/orders/{order_id}/assets/{asset_id}", json=kwargs)
+    response.raise_for_status()
+    return response.json()
+
+
+@wrap_mpt_http_error
 def create_subscription(mpt_client, order_id, subscription):
     """Create a new subscription for an order."""
     response = mpt_client.post(
@@ -130,9 +146,7 @@ def update_subscription(mpt_client, order_id, subscription_id, **kwargs):
 
 
 @wrap_mpt_http_error
-def get_order_subscription_by_external_id(
-    mpt_client, order_id, subscription_external_id
-):
+def get_order_subscription_by_external_id(mpt_client, order_id, subscription_external_id):
     """Retrieve an order subscription by its external ID."""
     response = mpt_client.get(
         f"/commerce/orders/{order_id}/subscriptions?eq(externalIds.vendor,{subscription_external_id})&limit=1",
@@ -148,9 +162,7 @@ def get_order_subscription_by_external_id(
 def get_product_items_by_skus(mpt_client, product_id, skus):
     """Retrieve product items by their SKUs."""
     skus_str = ",".join(skus)
-    rql_query = (
-        f"and(eq(product.id,{product_id}),in(externalIds.vendor,({skus_str})))"
-    )
+    rql_query = f"and(eq(product.id,{product_id}),in(externalIds.vendor,({skus_str})))"
     url = f"/catalog/items?{rql_query}"
     return _paginated(mpt_client, url)
 
@@ -284,9 +296,7 @@ def get_all_agreements(
 
 
 @wrap_mpt_http_error
-def get_authorizations_by_currency_and_seller_id(
-    mpt_client, product_id, currency, owner_id
-):
+def get_authorizations_by_currency_and_seller_id(mpt_client, product_id, currency, owner_id):
     """Retrieve authorizations by product ID, currency, and owner ID."""
     authorization_filter = (
         f"eq(product.id,{product_id})&eq(currency,{currency})&eq(owner.id,{owner_id})"
@@ -362,9 +372,7 @@ def get_listing_by_id(mpt_client, listing_id):
 
 
 @wrap_mpt_http_error
-def get_agreement_subscription_by_external_id(
-    mpt_client, agreement_id, subscription_external_id
-):
+def get_agreement_subscription_by_external_id(mpt_client, agreement_id, subscription_external_id):
     """Retrieve an agreement subscription by external ID."""
     response = mpt_client.get(
         f"/commerce/subscriptions?eq(externalIds.vendor,{subscription_external_id})"
@@ -395,9 +403,7 @@ def get_agreements_by_external_id_values(mpt_client, external_id, display_values
 
 
 @wrap_mpt_http_error
-def get_agreements_by_customer_deployments(
-    mpt_client, deployment_id_parameter, deployment_ids
-):
+def get_agreements_by_customer_deployments(mpt_client, deployment_id_parameter, deployment_ids):
     """Retrieve agreements by customer deployments."""
     deployments_list = ",".join(deployment_ids)
     rql_query = (
@@ -463,9 +469,7 @@ def notify(
 
 
 @wrap_mpt_http_error
-def terminate_subscription(
-    mpt_client: MPTClient, subscription_id: str, reason: str
-) -> dict:
+def terminate_subscription(mpt_client: MPTClient, subscription_id: str, reason: str) -> dict:
     """
     Terminates a subscription by calling the MPT API.
 
