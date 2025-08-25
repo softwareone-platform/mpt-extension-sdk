@@ -730,6 +730,33 @@ def webhook(settings):
 
 
 @pytest.fixture
+def assets_factory(lines_factory):
+    def _assets(
+        asset_id="AST-1000-2000-3000",
+        product_name="Awesome product",
+        vendor_subscription_id="a-sub-id",
+        start_date=None,
+        lines=None,
+    ):
+        start_date = (
+            start_date.isoformat() if start_date else datetime.now(UTC).isoformat()
+        )
+        lines = lines_factory() if lines is None else lines
+        return [
+            {
+                "id": asset_id,
+                "name": f"Subscription for {product_name}",
+                "lines": lines,
+                "externalIds": {"vendor": vendor_subscription_id},
+                "status": "Active",
+                "price": {"PPx1": 3148.80000, "currency": "USD"},
+            }
+        ]
+
+    return _assets
+
+
+@pytest.fixture
 def subscriptions_factory(lines_factory):
     def _subscriptions(
         subscription_id="SUB-1000-2000-3000",
