@@ -1,12 +1,13 @@
 from collections.abc import Callable, MutableMapping, Sequence
 from typing import Any
 
-from .dataclasses import Event, EventType
+from mpt_extension_sdk.core.events.dataclasses import Event, EventType
 
 EventListener = Callable[[Any, Event], None]
 
 
 class EventsRegistry:
+    """Registry for event listeners."""
     def __init__(
         self,
     ) -> None:
@@ -44,13 +45,16 @@ class EventsRegistry:
         self,
         event_type: EventType,
     ) -> EventListener | None:
+        """Get the listener for a specific event type."""
         return self.listeners.get(event_type)
 
     def get_registered_types(self) -> Sequence[str]:
+        """Get a list of all registered event types."""
         return list(self.listeners.keys())
 
     def is_event_supported(
         self,
         event_type: EventType,
     ) -> bool:
+        """Check if an event type is supported."""
         return event_type in self.listeners

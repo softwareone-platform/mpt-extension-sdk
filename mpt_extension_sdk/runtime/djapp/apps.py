@@ -8,9 +8,11 @@ ext = Extension()
 
 
 class DjAppConfig(AppConfig):
+    """Django AppConfig for the extension."""
     name = "mpt_extension_sdk.runtime.djapp"
 
     def ready(self):
+        """Check if the extension is properly configured."""
         if not hasattr(settings, "MPT_PRODUCTS_IDS") or not settings.MPT_PRODUCTS_IDS:
             raise ImproperlyConfigured(
                 f"Extension {self.verbose_name} is not properly configured."
@@ -20,15 +22,17 @@ class DjAppConfig(AppConfig):
         self.extension_ready()
 
     def extension_ready(self):
-        pass
+        """Perform actions when the extension is ready."""
 
 
 class ExtensionConfig(DjAppConfig):
+    """Configuration for the extension."""
     name = "mpt_extension_sdk"
     verbose_name = "SWO Extension SDK"
     extension = ext
 
     def extension_ready(self):
+        """Perform actions when the extension is ready."""
         error_msgs = []
 
         for product_id in settings.MPT_PRODUCTS_IDS:

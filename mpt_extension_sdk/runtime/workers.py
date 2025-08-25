@@ -10,25 +10,29 @@ from mpt_extension_sdk.runtime.utils import initialize_extension
 
 
 class ExtensionWebApplication(BaseApplication):
+    """Gunicorn application for the extension."""
     def __init__(self, app, options=None):
         self.options = options or {}
         self.application = app
         super().__init__()
 
     def load_config(self):
+        """Load configuration settings."""
         config = {
-            key: value
-            for key, value in self.options.items()
-            if key in self.cfg.settings and value is not None
+            opt_key: opt_value
+            for opt_key, opt_value in self.options.items()
+            if opt_key in self.cfg.settings and opt_value is not None
         }
-        for key, value in config.items():
-            self.cfg.set(key.lower(), value)
+        for opt_key, opt_value in config.items():
+            self.cfg.set(opt_key.lower(), opt_value)
 
     def load(self):
+        """Load the application."""
         return self.application
 
 
 def start_event_consumer(options):
+    """Start the event consumer."""
     initialize_extension(options)
     call_command("consume_events")
 
@@ -38,6 +42,7 @@ def start_gunicorn(
     group=DEFAULT_APP_CONFIG_GROUP,
     name=DEFAULT_APP_CONFIG_NAME,
 ):
+    """Start the Gunicorn server."""
     initialize_extension(options, group=group, name=name)
 
     logging_config = {
@@ -61,7 +66,7 @@ def start_gunicorn(
             "rich": {
                 "class": "rich.logging.RichHandler",
                 "formatter": "rich",
-                "log_time_format": lambda x: x.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3],
+                "log_time_format": lambda log_time: log_time.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3],
                 "rich_tracebacks": True,
             },
         },

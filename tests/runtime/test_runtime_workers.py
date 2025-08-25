@@ -65,9 +65,7 @@ def test_start_gunicorn(mocker, monkeypatch, mock_app_group_name):
 
 
 def test_start_event_consumer(mocker, monkeypatch, settings):
-    """
-    Test that start_event_consumer calls initialize_func and then call_command.
-    """
+    """Test that start_event_consumer calls initialize_func and then call_command."""
     settings.MPT_PRODUCTS_IDS = "PRD-1111-1111"
 
     monkeypatch.setenv("MPT_INITIALIZE", "mpt_extension_sdk.runtime.workers.initialize")

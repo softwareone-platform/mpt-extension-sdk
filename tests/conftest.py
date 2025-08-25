@@ -1,5 +1,5 @@
+import datetime as dt
 import json
-from datetime import UTC, datetime
 from importlib.metadata import EntryPoint, EntryPoints
 
 import pytest
@@ -141,7 +141,8 @@ def runtime_master_options_factory(
 
 @pytest.fixture
 def mock_highlights(mock_logging_all_prefixes):
-    return _ReprHighlighter.highlights + [
+    return [
+        *_ReprHighlighter.highlights,
         rf"(?P<mpt_id>(?:{'|'.join(mock_logging_all_prefixes)})(?:-\d{{4}})*)"
     ]
 
@@ -296,40 +297,32 @@ def mock_json_ext_variables():
 
 @pytest.fixture
 def requests_mocker():
-    """
-    Allow mocking of http calls made with requests.
-    """
+    """Allow mocking of http calls made with requests."""
     with responses.RequestsMock() as rsps:
         yield rsps
 
 
 @pytest.fixture
 def mpt_client(settings):
-    """
-    Create an instance of the MPT client used by the extension.
-    """
+    """Create an instance of the MPT client used by the extension."""
     settings.MPT_API_BASE_URL = "https://localhost"
-    from mpt_extension_sdk.core.utils import setup_client
+    from mpt_extension_sdk.core.utils import setup_client  # noqa: PLC0415
 
     return setup_client()
 
 
 @pytest.fixture
 def mpt_operations_client(settings):
-    """
-    Create an instance of the MPT client used by the extension.
-    """
+    """Create an instance of the MPT client used by the extension."""
     settings.MPT_API_BASE_URL = "https://localhost"
-    from mpt_extension_sdk.core.utils import setup_operations_client
+    from mpt_extension_sdk.core.utils import setup_operations_client  # noqa: PLC0415
 
     return setup_operations_client()
 
 
 @pytest.fixture
 def mpt_error_factory():
-    """
-    Generate an error message returned by the Marketplace platform.
-    """
+    """Generate an error message returned by the Marketplace platform."""
 
     def _mpt_error(
         status,
@@ -354,9 +347,7 @@ def mpt_error_factory():
 
 @pytest.fixture
 def mock_generic_response_error():
-    """
-    Generate an HTTP error response.
-    """
+    """Generate an HTTP error response."""
     return {
         "status_code": 400,
         "content": "bad request",
@@ -365,9 +356,7 @@ def mock_generic_response_error():
 
 @pytest.fixture
 def mock_http_response_error():
-    """
-    Generate an HTTP error response.
-    """
+    """Generate an HTTP error response."""
     return HttpResponseError(
         message="Request failed",
         request=None,
@@ -377,9 +366,7 @@ def mock_http_response_error():
 
 @pytest.fixture
 def mock_resource_not_found_error():
-    """
-    Generate a resource not found error.
-    """
+    """Generate a resource not found error."""
     return ResourceNotFoundError(
         message="Resource not found",
         request=None,
@@ -646,9 +633,7 @@ def order_factory(
     lines_factory,
     status="Processing",
 ):
-    """
-    Marketplace platform order for tests.
-    """
+    """Marketplace platform order for tests."""
 
     def _order(
         order_id="ORD-0792-5000-2253-4210",
@@ -740,7 +725,7 @@ def subscriptions_factory(lines_factory):
         lines=None,
     ):
         start_date = (
-            start_date.isoformat() if start_date else datetime.now(UTC).isoformat()
+            start_date.isoformat() if start_date else dt.datetime.now(dt.UTC).isoformat()
         )
         lines = lines_factory() if lines is None else lines
         return [
@@ -877,3 +862,8 @@ def mock_process_id():
 @pytest.fixture
 def mock_gunicorn_options():
     return {"component": "api", "debug": False}
+
+
+@pytest.fixture
+def mock_auth_payload():
+    return {"user_id": "USR-0000-0001", "role": "vendor"}

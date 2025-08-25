@@ -9,3 +9,5 @@ ERR_DJANGO_SETTINGS_MODULE_TEXT = (
     "DJANGO_SETTINGS_MODULE environment variable is not set. "
     "Please set it to your Django settings module before running this command."
 )
+POOL_MAX_SIZE = 36
+GRADIENT_HEX_BASE = 16

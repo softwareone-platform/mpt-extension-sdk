@@ -5,10 +5,11 @@ from requests import HTTPError, JSONDecodeError
 
 
 class MPTError(Exception):
-    pass
+    """Represents a generic MPT error."""
 
 
 class MPTHttpError(MPTError):
+    """Represents an HTTP error."""
     def __init__(self, status_code: int, content: str):
         self.status_code = status_code
         self.content = content
@@ -16,6 +17,7 @@ class MPTHttpError(MPTError):
 
 
 class MPTAPIError(MPTHttpError):
+    """Represents an API error."""
     def __init__(self, status_code, payload):
         super().__init__(status_code, json.dumps(payload))
         self.payload = payload
@@ -37,25 +39,30 @@ class MPTAPIError(MPTHttpError):
 
 
 def wrap_mpt_http_error(func):
+    """Wrap a function to catch MPT HTTP errors."""
     @wraps(func)
     def _wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
-        except HTTPError as e:
+        except HTTPError as err:
+            response = err.response
             try:
-                raise MPTAPIError(e.response.status_code, e.response.json())
+                payload = response.json()
             except JSONDecodeError:
-                raise MPTHttpError(e.response.status_code, e.response.content.decode())
+                raise MPTHttpError(response.status_code, response.content.decode()) from err
+            raise MPTAPIError(response.status_code, payload) from err
 
     return _wrapper
 
 
 class ValidationError:
-    def __init__(self, id, message):
-        self.id = id
+    """Represents a validation error."""
+    def __init__(self, err_id, message):
+        self.id = err_id
         self.message = message
 
     def to_dict(self, **kwargs):
+        """Convert the validation error to a dictionary."""
         return {
             "id": self.id,
             "message": self.message.format(**kwargs),

@@ -2,18 +2,17 @@ from mpt_extension_sdk.swo_rql import constants
 
 
 def parse_kwargs(query_dict):
+    """Parse keyword arguments into RQL query components."""
     query = []
     for lookup, value in query_dict.items():
         tokens = lookup.split("__")
         if len(tokens) == 1:
-            #  field=value
             field = tokens[0]
             value = rql_encode("eq", value)
             query.append(f"eq({field},{value})")
             continue
         op = tokens[-1]
         if op not in constants.KEYWORDS:
-            # field__nested=value
             field = ".".join(tokens)
             value = rql_encode("eq", value)
             query.append(f"eq({field},{value})")
@@ -35,9 +34,9 @@ def parse_kwargs(query_dict):
     return query
 
 
-def rql_encode(op, value):
-    from datetime import date, datetime
-    from decimal import Decimal
+def rql_encode(op, value):  # noqa: C901, D103
+    from datetime import date, datetime  # noqa: ICN003, PLC0415
+    from decimal import Decimal  # noqa: PLC0415
 
     if op not in constants.LIST:
         if isinstance(value, str):
@@ -258,6 +257,12 @@ class RQLQuery:
         return self._list("out", value)
 
     def in_(self, value):
+        """
+        Apply the `in` operator to the field this `R` object refers to.
+
+        Args:
+            value (list[str]): The list of values to which compare the field.
+        """
         return self._list("in", value)
 
     def oneof(self, value: list[str]):
@@ -278,7 +283,7 @@ class RQLQuery:
         """
         return self._bool("null", value)
 
-    def empty(self, value: bool = True):
+    def empty(self, value: bool = True):  # noqa: FBT001, FBT002
         """
         Apply the `empty` operator to the field this `R` object refers to.
 
@@ -289,11 +294,8 @@ class RQLQuery:
         return self._bool("empty", value)
 
     def not_empty(self):
-        """
-        Apply the `not_empty` operator to the field this `R` object refers to.
-        """
-        query = self._bool("empty", False)
-        return query
+        """Apply the `not_empty` operator to the field this `R` object refers to."""
+        return self._bool("empty", False)  # noqa: FBT003
 
     def like(self, value: list[str]):
         """
@@ -333,7 +335,8 @@ class RQLQuery:
         self.expr = f"eq({self._field},{expr}())"
         return self
 
-    def _to_string(self, query):
+    def _to_string(self, query):  # noqa: C901
+        """Convert the query to a string representation."""
         tokens = []
         if query.expr:
             if query.negated:
