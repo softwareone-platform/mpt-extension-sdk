@@ -3,6 +3,7 @@ import threading
 import time
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
+from http import HTTPStatus
 
 import requests
 from django.conf import settings
@@ -15,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class EventProducer(ABC):
+    """Abstract base class for event producers."""
     def __init__(self, dispatcher):
         self.dispatcher = dispatcher
         self.running_event = threading.Event()
@@ -22,18 +24,22 @@ class EventProducer(ABC):
 
     @property
     def running(self):
+        """Return True if the producer is running."""
         return self.running_event.is_set()
 
     def start(self):
+        """Start the event producer."""
         self.running_event.set()
         self.producer.start()
 
     def stop(self):
+        """Stop the event producer."""
         self.running_event.clear()
         self.producer.join()
 
     @contextmanager
     def sleep(self, secs, interval=0.5):  # pragma: no cover
+        """Sleep for a given number of seconds."""
         yield
         sleeped = 0
         while sleeped < secs and self.running_event.is_set():
@@ -42,38 +48,42 @@ class EventProducer(ABC):
 
     @abstractmethod
     def produce_events(self):
-        pass
+        """Produce events."""
 
     @abstractmethod
     def produce_events_with_context(self):
-        pass
+        """Produce events with context."""
 
 
 class OrderEventProducer(EventProducer):
+    """Order event producer."""
     def __init__(self, dispatcher):
         super().__init__(dispatcher)
         self.client = setup_client()
 
     def produce_events(self):
+        """Produce order events."""
         while self.running:
             with self.sleep(settings.MPT_ORDERS_API_POLLING_INTERVAL_SECS):
                 orders = self.get_processing_orders()
-                logger.info(f"{len(orders)} orders found for processing...")
+                logger.info("%d orders found for processing...", len(orders))
                 for order in orders:
                     self.dispatcher.dispatch_event(Event(order["id"], "orders", order))
 
     def produce_events_with_context(self):  # pragma: no cover
+        """Produce order events with context."""
         while self.running:
             with self.sleep(settings.MPT_ORDERS_API_POLLING_INTERVAL_SECS):
                 orders = self.get_processing_orders()
                 orders, contexts = self.filter_and_enrich(self.client, orders)
-                logger.info(f"{len(orders)} orders found for processing...")
+                logger.info("%d orders found for processing...", len(orders))
                 for order, context in zip(orders, contexts, strict=False):
                     self.dispatcher.dispatch_event(
                         Event(order["id"], "orders", order, context)
                     )
 
     def get_processing_orders(self):
+        """Get processing orders."""
         orders = []
         rql_query = RQLQuery().agreement.product.id.in_(
             settings.MPT_PRODUCTS_IDS
@@ -91,12 +101,12 @@ class OrderEventProducer(EventProducer):
             except requests.RequestException:
                 logger.exception("Cannot retrieve orders")
                 return []
-            if response.status_code == 200:
+            if response.status_code == HTTPStatus.OK.value:
                 page = response.json()
                 orders.extend(page["data"])
             else:
                 logger.warning(
-                    f"Order API error: {response.status_code} {response.content}"
+                    "Order API error: %s %s", response.status_code, response.content
                 )
                 return []
             offset += limit
@@ -104,6 +114,7 @@ class OrderEventProducer(EventProducer):
         return orders
 
     def has_more_pages(self, orders):
+        """Check if there are more pages of orders."""
         if not orders:
             return True
         pagination = orders["$meta"]["pagination"]

@@ -14,9 +14,9 @@ import os
 from pathlib import Path
 
 from azure.monitor.opentelemetry.exporter import AzureMonitorLogExporter
-from opentelemetry._logs import set_logger_provider
-from opentelemetry.sdk._logs import LoggerProvider
-from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
+from opentelemetry._logs import set_logger_provider  # noqa: PLC2701
+from opentelemetry.sdk._logs import LoggerProvider  # noqa: PLC2701
+from opentelemetry.sdk._logs.export import BatchLogRecordProcessor  # noqa: PLC2701
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -34,12 +34,12 @@ SECRET_KEY = os.getenv(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = ("*")
 
 
 # Application definition
 
-INSTALLED_APPS = [
+INSTALLED_APPS = (
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -47,9 +47,9 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "mpt_extension_sdk.runtime.djapp.apps.DjAppConfig",
-]
+)
 
-MIDDLEWARE = [
+MIDDLEWARE = (
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -58,7 +58,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "mpt_extension_sdk.runtime.djapp.middleware.MPTClientMiddleware",
-]
+)
 
 ROOT_URLCONF = "mpt_extension_sdk.runtime.djapp.conf.urls"
 
@@ -130,7 +130,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 APPLICATIONINSIGHTS_CONNECTION_STRING = os.getenv(
     "APPLICATIONINSIGHTS_CONNECTION_STRING", ""
 )
-USE_APPLICATIONINSIGHTS = APPLICATIONINSIGHTS_CONNECTION_STRING != ""
+USE_APPLICATIONINSIGHTS = bool(APPLICATIONINSIGHTS_CONNECTION_STRING)
 
 
 if USE_APPLICATIONINSIGHTS:  # pragma: no cover
@@ -166,7 +166,7 @@ LOGGING = {
         "rich": {
             "class": "mpt_extension_sdk.runtime.logging.RichHandler",
             "formatter": "rich",
-            "log_time_format": lambda x: x.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3],
+            "log_time_format": lambda log_time: log_time.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3],
             "rich_tracebacks": True,
         },
         "opentelemetry": {

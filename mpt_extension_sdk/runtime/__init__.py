@@ -7,4 +7,5 @@ except Exception:  # pragma: no cover
 
 
 def get_version():
+    """Get the current version of the package."""
     return __version__

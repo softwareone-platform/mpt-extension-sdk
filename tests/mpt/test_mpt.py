@@ -29,6 +29,8 @@ from mpt_extension_sdk.mpt_http.mpt import (
     get_product_onetime_items_by_ids,
     get_product_template_or_default,
     get_rendered_template,
+    get_subscriptions_by_query,
+    get_template_by_name,
     get_webhook,
     notify,
     query_order,
@@ -93,9 +95,7 @@ def test_complete_order(mpt_client, requests_mocker, order_factory):
 
 
 def test_complete_order_error(mpt_client, requests_mocker, mpt_error_factory):
-    """
-    Test the call to switch an order to Completed when it fails.
-    """
+    """Test the call to switch an order to Completed when it fails."""
     requests_mocker.post(
         urljoin(mpt_client.base_url, "commerce/orders/ORD-0000/complete"),
         status=404,
@@ -150,9 +150,7 @@ def test_query_order(mpt_client, requests_mocker, order_factory):
 
 
 def test_query_order_error(mpt_client, requests_mocker, mpt_error_factory):
-    """
-    Test the call to switch an order to Query when it fails.
-    """
+    """Test the call to switch an order to Query when it fails."""
     requests_mocker.post(
         urljoin(mpt_client.base_url, "commerce/orders/ORD-0000/query"),
         status=404,
@@ -207,9 +205,7 @@ def test_update_order(mpt_client, requests_mocker, order_factory):
 
 
 def test_update_order_error(mpt_client, requests_mocker, mpt_error_factory):
-    """
-    Test the call to update an order when it fails.
-    """
+    """Test the call to update an order when it fails."""
     requests_mocker.put(
         urljoin(mpt_client.base_url, "commerce/orders/ORD-0000"),
         status=404,
@@ -243,9 +239,7 @@ def test_create_subscription(mpt_client, requests_mocker, subscriptions_factory)
 
 
 def test_create_subscription_error(mpt_client, requests_mocker, mpt_error_factory):
-    """
-    Test the call to create a subscription when it fails.
-    """
+    """Test the call to create a subscription when it fails."""
     requests_mocker.post(
         urljoin(mpt_client.base_url, "commerce/orders/ORD-0000/subscriptions"),
         status=404,
@@ -304,9 +298,7 @@ def test_update_subscription(mpt_client, requests_mocker, subscriptions_factory)
 
 
 def test_update_subscription_error(mpt_client, requests_mocker, mpt_error_factory):
-    """
-    Test the call to update a subscription when it fails.
-    """
+    """Test the call to update a subscription when it fails."""
     requests_mocker.put(
         urljoin(mpt_client.base_url, "commerce/orders/ORD-0000/subscriptions/SUB-1234"),
         status=404,
@@ -320,10 +312,7 @@ def test_update_subscription_error(mpt_client, requests_mocker, mpt_error_factor
 
 
 def test_get_product_items_by_skus(mpt_client, requests_mocker):
-    """
-    Tests the call to retrieve all the item of a given product
-    that matches a list of vendor SKUs.
-    """
+    """Tests the call to retrieve all the item of a product that matches a list of vendor SKUs."""
     product_id = "PRD-1234-5678"
     skus = ["sku1", "sku2"]
     rql_query = (
@@ -366,10 +355,7 @@ def test_get_product_items_by_skus(mpt_client, requests_mocker):
 def test_get_product_items_by_skus_error(
     mpt_client, requests_mocker, mpt_error_factory
 ):
-    """
-    Tests the call to retrieve all the item of a given product
-    that matches a list of vendor SKUs.
-    """
+    """Tests the call to retrieve all the item of a product that matches a list of vendor SKUs."""
     product_id = "PRD-1234-5678"
     skus = ["sku1", "sku2"]
     rql_query = (
@@ -459,6 +445,28 @@ def test_get_product_template_or_default(mpt_client, requests_mocker, name):
     ) == {"id": "TPL-0000"}
 
 
+@pytest.mark.parametrize("name", ["template_name", None])
+def test_get_product_template_by_name(mpt_client, requests_mocker, name):
+    url = f"catalog/products/PRD-1111/templates?eq(name,{name})"
+    requests_mocker.get(
+        urljoin(
+            mpt_client.base_url,
+            url,
+        ),
+        json={
+            "data": [
+                {"id": "TPL-0000"},
+            ]
+        },
+    )
+
+    assert get_template_by_name(
+        mpt_client,
+        "PRD-1111",
+        name,
+    ) == {"id": "TPL-0000"}
+
+
 def test_update_agreement(mpt_client, requests_mocker):
     """Test the call to update an agreement."""
     requests_mocker.put(
@@ -484,9 +492,7 @@ def test_update_agreement(mpt_client, requests_mocker):
 
 
 def test_update_agreement_error(mpt_client, requests_mocker, mpt_error_factory):
-    """
-    Test the call to update an order when it fails.
-    """
+    """Test the call to update an order when it fails."""
     requests_mocker.put(
         urljoin(mpt_client.base_url, "commerce/agreements/AGR-1111"),
         status=404,
@@ -634,6 +640,62 @@ def test_get_agreements_by_query_error(mpt_client, requests_mocker, mpt_error_fa
 
     with pytest.raises(MPTAPIError) as cv:
         get_agreements_by_query(mpt_client, rql_query)
+
+    assert cv.value.payload["status"] == 500
+
+
+def test_get_subscriptions_by_query(mpt_client, requests_mocker):
+    rql_query = "any-rql-query&select=any-obj"
+    url = f"commerce/subscriptions?{rql_query}"
+
+    page1_url = f"{url}&limit=10&offset=0"
+    page2_url = f"{url}&limit=10&offset=10"
+    data = [{"id": f"AGR-{idx}"} for idx in range(13)]
+    requests_mocker.get(
+        urljoin(mpt_client.base_url, page1_url),
+        json={
+            "$meta": {
+                "pagination": {
+                    "offset": 0,
+                    "limit": 10,
+                    "total": 12,
+                },
+            },
+            "data": data[:10],
+        },
+    )
+    requests_mocker.get(
+        urljoin(mpt_client.base_url, page2_url),
+        json={
+            "$meta": {
+                "pagination": {
+                    "offset": 10,
+                    "limit": 10,
+                    "total": 12,
+                },
+            },
+            "data": data[10:],
+        },
+    )
+
+    assert get_subscriptions_by_query(mpt_client, rql_query) == data
+
+
+def test_get_subscriptions_by_query_error(
+    mpt_client, requests_mocker, mpt_error_factory
+):
+    rql_query = "any-rql-query&select=any-obj"
+    url = f"commerce/subscriptions?{rql_query}"
+
+    url = f"{url}&limit=10&offset=0"
+    requests_mocker.get(
+        urljoin(mpt_client.base_url, url),
+        status=500,
+        json=mpt_error_factory(500, "Internal server error", "Whatever"),
+    )
+
+    with pytest.raises(MPTAPIError) as cv:
+        get_subscriptions_by_query(mpt_client, rql_query)
 
     assert cv.value.payload["status"] == 500
 
@@ -986,7 +1048,10 @@ def test_notify(
     notify_post_resp,
     mock_notify_category_id,
 ):
-    """Tests the basic notification functionality by:
+    """
+    Tests the basic notification functionality.
+
+    Tests the basic notification functionality by:
     1. Verifying GET request is made to fetch contacts with proper query parameters
     2. Verifying POST request is made to create a notification batch with the correct payload
     3. Ensuring notification is sent successfully for valid contacts
@@ -1033,8 +1098,7 @@ def test_notify_gt_1k(
     notify_post_resp,
     mock_notify_category_id,
 ):
-    """Test that notify function properly handles pagination when there are more than
-    1000 contacts.
+    """Test that notify function properly handles pagination when there are more than 1000 contacts.
 
     The test verifies that:
     1. Multiple GET requests are made to fetch all contacts with proper offset
