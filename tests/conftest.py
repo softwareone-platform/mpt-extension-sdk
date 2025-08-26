@@ -143,7 +143,7 @@ def runtime_master_options_factory(
 def mock_highlights(mock_logging_all_prefixes):
     return [
         *_ReprHighlighter.highlights,
-        rf"(?P<mpt_id>(?:{'|'.join(mock_logging_all_prefixes)})(?:-\d{{4}})*)"
+        rf"(?P<mpt_id>(?:{'|'.join(mock_logging_all_prefixes)})(?:-\d{{4}})*)",
     ]
 
 
@@ -715,6 +715,29 @@ def webhook(settings):
 
 
 @pytest.fixture
+def assets_factory(lines_factory):
+    def _assets(
+        asset_id="AST-1000-2000-3000",
+        product_name="Awesome product",
+        vendor_subscription_id="a-sub-id",
+        lines=None,
+    ):
+        lines = lines_factory() if lines is None else lines
+        return [
+            {
+                "id": asset_id,
+                "name": f"Subscription for {product_name}",
+                "lines": lines,
+                "externalIds": {"vendor": vendor_subscription_id},
+                "status": "Active",
+                "price": {"PPx1": 3148.80000, "currency": "USD"},
+            }
+        ]
+
+    return _assets
+
+
+@pytest.fixture
 def subscriptions_factory(lines_factory):
     def _subscriptions(
         subscription_id="SUB-1000-2000-3000",
@@ -724,9 +747,7 @@ def subscriptions_factory(lines_factory):
         commitment_date=None,
         lines=None,
     ):
-        start_date = (
-            start_date.isoformat() if start_date else dt.datetime.now(dt.UTC).isoformat()
-        )
+        start_date = start_date.isoformat() if start_date else dt.datetime.now(dt.UTC).isoformat()
         lines = lines_factory() if lines is None else lines
         return [
             {
