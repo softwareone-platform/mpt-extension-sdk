@@ -7,6 +7,7 @@ from mpt_extension_sdk.mpt_http.mpt import (
     complete_order,
     create_agreement,
     create_agreement_subscription,
+    create_asset,
     create_listing,
     create_subscription,
     fail_order,
@@ -38,6 +39,7 @@ from mpt_extension_sdk.mpt_http.mpt import (
     terminate_subscription,
     update_agreement,
     update_agreement_subscription,
+    update_asset,
     update_order,
     update_subscription,
 )
@@ -214,6 +216,91 @@ def test_update_order_error(mpt_client, requests_mocker, mpt_error_factory):
 
     with pytest.raises(MPTAPIError) as cv:
         update_order(mpt_client, "ORD-0000", parameters={})
+
+    assert cv.value.payload["status"] == 404
+
+
+def test_create_asset(mpt_client, requests_mocker, assets_factory):
+    asset = assets_factory()[0]
+    requests_mocker.post(
+        urljoin(mpt_client.base_url, "commerce/orders/ORD-0000/assets"),
+        json=asset,
+        status=201,
+        match=[
+            matchers.json_params_matcher(asset),
+        ],
+    )
+
+    created_asset = create_asset(mpt_client, "ORD-0000", asset)
+    assert created_asset == asset
+
+
+def test_create_asset_error(mpt_client, requests_mocker, mpt_error_factory):
+    requests_mocker.post(
+        urljoin(mpt_client.base_url, "commerce/orders/ORD-0000/assets"),
+        status=404,
+        json=mpt_error_factory(404, "Not Found", "Order not found"),
+    )
+
+    with pytest.raises(MPTAPIError) as cv:
+        create_asset(mpt_client, "ORD-0000", {})
+
+    assert cv.value.payload["status"] == 404
+
+
+def test_update_asset(mpt_client, requests_mocker, assets_factory):
+    asset = assets_factory()
+    requests_mocker.put(
+        urljoin(
+            mpt_client.base_url,
+            "commerce/orders/ORD-0000/assets/AST-1234",
+        ),
+        json=asset,
+        match=[
+            matchers.json_params_matcher(
+                {
+                    "parameters": {
+                        "fulfillment": [
+                            {
+                                "externalId": "a-param",
+                                "name": "a-param",
+                                "value": "a-value",
+                                "type": "SingleLineText",
+                            }
+                        ],
+                    },
+                },
+            ),
+        ],
+    )
+
+    updated_asset = update_asset(
+        mpt_client,
+        "ORD-0000",
+        "AST-1234",
+        parameters={
+            "fulfillment": [
+                {
+                    "externalId": "a-param",
+                    "name": "a-param",
+                    "value": "a-value",
+                    "type": "SingleLineText",
+                }
+            ]
+        },
+    )
+    assert updated_asset == asset
+
+
+def test_update_asset_error(mpt_client, requests_mocker, mpt_error_factory):
+    requests_mocker.put(
+        urljoin(mpt_client.base_url, "commerce/orders/ORD-0000/assets/AST-1234"),
+        status=404,
+        json=mpt_error_factory(404, "Not Found", "Order not found"),
+    )
+
+    with pytest.raises(MPTAPIError) as cv:
+        update_asset(mpt_client, "ORD-0000", "AST-1234", parameters={})
 
     assert cv.value.payload["status"] == 404
 
