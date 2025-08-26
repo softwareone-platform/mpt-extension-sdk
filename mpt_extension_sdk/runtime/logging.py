@@ -1,8 +1,11 @@
+from typing import ClassVar
+
 from rich.highlighter import ReprHighlighter as _ReprHighlighter
 from rich.logging import RichHandler as _RichHandler
 
 
 class ReprHighlighter(_ReprHighlighter):
+    """Highlighter for MPT IDs."""
     accounts_prefixes = ("ACC", "BUY", "LCE", "MOD", "SEL", "USR", "AUSR", "UGR")
     catalog_prefixes = (
         "PRD",
@@ -27,10 +30,14 @@ class ReprHighlighter(_ReprHighlighter):
         *commerce_prefixes,
         *aux_prefixes,
     )
-    highlights = _ReprHighlighter.highlights + [
-        rf"(?P<mpt_id>(?:{'|'.join(all_prefixes)})(?:-\d{{4}})*)"
+    prefixes_pattern = "|".join(all_prefixes)
+    pattern = rf"(?P<mpt_id>(?:{prefixes_pattern})(?:-\d{{4}})*)"
+    highlights: ClassVar[list[str]] = [
+        *_ReprHighlighter.highlights,
+        pattern,
     ]
 
 
 class RichHandler(_RichHandler):
+    """Rich handler for logging with color support."""
     HIGHLIGHTER_CLASS = ReprHighlighter

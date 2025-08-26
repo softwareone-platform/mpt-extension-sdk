@@ -19,9 +19,8 @@ from mpt_extension_sdk.runtime.utils import initialize_extension
 @click.argument("management_args", nargs=-1, type=click.UNPROCESSED)
 @click.pass_context
 def django(ctx, management_args):  # pragma: no cover
-    "Execute Django subcommands."
-
-    from django.conf import settings
+    """Execute Django subcommands."""
+    from django.conf import settings  # noqa: PLC0415
 
     options = {
         "group": DEFAULT_APP_CONFIG_GROUP,
@@ -40,4 +39,4 @@ def django(ctx, management_args):  # pragma: no cover
         tracer_context = nullcontext()
 
     with tracer_context:
-        execute_from_command_line(argv=[ctx.command_path] + list(management_args))
+        execute_from_command_line(argv=[ctx.command_path, *management_args])

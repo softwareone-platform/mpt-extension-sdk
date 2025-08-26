@@ -12,10 +12,7 @@ from mpt_extension_sdk.runtime.master import Master
 def test_master_start_signals_handler_all(
     mocker, runtime_master_options_factory, settings, mock_process_id
 ):
-    """
-    Test master start with signals handler for all components
-    """
-
+    """Test master start with signals handler for all components."""
     mock_start_process = mocker.patch("mpt_extension_sdk.runtime.master.start_process")
 
     mock_process = MagicMock(autospec=True)
@@ -38,10 +35,7 @@ def test_master_start_signals_handler_all(
 def test_master_start_signals_handler_api(
     mocker, runtime_master_options_factory, settings, mock_process_id
 ):
-    """
-    Test master start with signals handler for API component
-    """
-
+    """Test master start with signals handler for API component."""
     mock_start_process = mocker.patch("mpt_extension_sdk.runtime.master.start_process")
 
     mock_process = MagicMock(autospec=True)
@@ -64,9 +58,7 @@ def test_master_start_signals_handler_api(
 def test_master_start_signals_handler_consumer(
     mocker, runtime_master_options_factory, settings, mock_process_id
 ):
-    """
-    Test master start with signals handler for consumer component
-    """
+    """Test master start with signals handler for consumer component."""
     mock_start_process = mocker.patch("mpt_extension_sdk.runtime.master.start_process")
 
     mock_process = MagicMock(autospec=True)
@@ -89,9 +81,7 @@ def test_master_start_signals_handler_consumer(
 def test_master_start_signals_handler_other(
     mocker, runtime_master_options_factory, settings, mock_process_id
 ):
-    """
-    Test master start with signals handler for other components
-    """
+    """Test master start with signals handler for other components."""
     mock_start_process = mocker.patch("mpt_extension_sdk.runtime.master.start_process")
 
     mock_process = MagicMock(autospec=True)
@@ -114,9 +104,7 @@ def test_master_start_signals_handler_other(
 def test_master_restart_signals_handler(
     mocker, runtime_master_options_factory, settings, mock_process_id
 ):
-    """
-    Test master restart with signals handler
-    """
+    """Test master restart with signals handler."""
     mock_start_process = mocker.patch("mpt_extension_sdk.runtime.master.start_process")
 
     mock_process = MagicMock(autospec=True)
@@ -140,9 +128,7 @@ def test_master_restart_signals_handler(
 def test_master_stop_signals_handler(
     mocker, runtime_master_options_factory, settings, mock_process_id
 ):
-    """
-    Test master stop with signals handler
-    """
+    """Test master stop with signals handler."""
     mock_start_process = mocker.patch("mpt_extension_sdk.runtime.master.start_process")
 
     mock_process = MagicMock(autospec=True)

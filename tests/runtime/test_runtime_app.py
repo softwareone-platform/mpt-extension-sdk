@@ -83,10 +83,10 @@ def test_urls(
     monkeypatch,
     mock_app_group_name,
 ):
-    import mpt_extension_sdk.constants as constants
+    from mpt_extension_sdk import constants  # noqa: PLC0415
 
     monkeypatch.setattr(constants, "DEFAULT_APP_CONFIG_GROUP", mock_app_group_name)
-    import mpt_extension_sdk.runtime.djapp.conf.urls as urls
+    from mpt_extension_sdk.runtime.djapp.conf import urls  # noqa: PLC0415
 
     assert urls.urlpatterns is not None
     assert len(urls.urlpatterns) == 2

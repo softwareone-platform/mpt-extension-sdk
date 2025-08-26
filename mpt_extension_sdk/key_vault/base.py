@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class KeyVault(Session):
+    """A client for interacting with Azure Key Vault."""
     def __init__(self, key_vault_name: str):
         """
         Initialize the KeyVault client with the provided Key Vault name.
@@ -34,15 +35,10 @@ class KeyVault(Session):
             str: The value of the secret.
         """
         try:
-            client = self._get_key_vault_client(self.key_vault_name)
-
-            # Retrieve the secret from the Key Vault
-            secret = client.get_secret(secret_name)
-
-            return secret.value
-        except ResourceNotFoundError as e:
-            logger.error(
-                f"Secret '{secret_name}' not found in Key Vault '{self.key_vault_name}': {e}"
+            return self._get_secret_from_key_vault(secret_name)
+        except ResourceNotFoundError:
+            logger.exception(
+                "Secret '%s' not found in Key Vault '%s'", secret_name, self.key_vault_name
             )
             return None
 
@@ -58,21 +54,39 @@ class KeyVault(Session):
         Returns:
             None
         """
-
         # Set the secret in the Key Vault
         try:
-            client = self._get_key_vault_client(self.key_vault_name)
-
-            client.set_secret(secret_name, secret_value)
-
-            updated_secret = client.get_secret(secret_name)
-
-            return updated_secret.value
-        except HttpResponseError as e:
-            logger.error(
-                f"Failed to set secret '{secret_name}' in Key Vault '{self.key_vault_name}': {e}"
+            return self._set_secret_for_key_vault(secret_name, secret_value)
+        except HttpResponseError as err:
+            logger.exception(
+                "Failed to set secret '%s' in Key Vault '%s': %s",
+                secret_name,
+                self.key_vault_name,
+                err  # noqa: TRY401
             )
             return None
+
+    def _get_secret_from_key_vault(self, secret_name: str):
+        """
+        Retrieve a secret from the Azure Key Vault.
+
+        Args:
+            secret_name (str): The name of the secret to retrieve.
+
+        Returns:
+            str: The value of the secret.
+        """
+        client = self._get_key_vault_client(self.key_vault_name)
+
+        # Retrieve the secret from the Key Vault
+        return client.get_secret(secret_name).value
+
+    def _set_secret_for_key_vault(self, secret_name: str, secret_value: str):
+        client = self._get_key_vault_client(self.key_vault_name)
+
+        client.set_secret(secret_name, secret_value)
+
+        return client.get_secret(secret_name).value
 
     def _get_key_vault_url(self, key_vault_name: str):  # pragma: no cover
         """
@@ -84,7 +98,6 @@ class KeyVault(Session):
         Returns:
             str: The URL of the Azure Key Vault.
         """
-
         # Construct the Key Vault URL
         return f"https://{key_vault_name}.vault.azure.net/"
 
@@ -93,18 +106,15 @@ class KeyVault(Session):
         Create a Key Vault client using the provided Key Vault URL and secret name.
 
         Args:
-            key_vault_url (str): The URL of the Azure Key Vault.
+            key_vault_name (str): The name of the Azure Key Vault.
 
         Returns:
             SecretClient: An instance of the SecretClient for the specified Key Vault.
         """
-
         # Get the Key Vault URL
         key_vault_url = self._get_key_vault_url(key_vault_name)
         # Create a credential object using DefaultAzureCredential
         credential = DefaultAzureCredential()
 
         # Create a Key Vault client using the credential
-        client = SecretClient(vault_url=key_vault_url, credential=credential)
-
-        return client
+        return SecretClient(vault_url=key_vault_url, credential=credential)

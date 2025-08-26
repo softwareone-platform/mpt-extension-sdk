@@ -5,9 +5,7 @@ from mpt_extension_sdk.mpt_http.base import MPTClient
 
 @pytest.fixture
 def mock_mpt_client(mocker):
-    """
-    Create an instance of the MPT client used by the extension.
-    """
+    """Create an instance of the MPT client used by the extension."""
     return mocker.MagicMock(spec=MPTClient)
 
 

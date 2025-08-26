@@ -11,6 +11,7 @@ EventType = Annotated[Literal[EVENT_TYPES], Doc("Unique identifier of the event 
 
 @dataclass
 class Event:
+    """Represents an event."""
     id: Annotated[str, Doc("The unique identifier of the event.")]
     type: EventType
     data: Annotated[Mapping | Sequence, Doc("Event data.")]

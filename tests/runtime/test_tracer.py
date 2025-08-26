@@ -15,7 +15,7 @@ def test_dynamic_trace_span(mocker):
         return_value=mocker_tracer_instance,
     )
 
-    import mpt_extension_sdk.runtime.tracer as tracer
+    from mpt_extension_sdk.runtime import tracer  # noqa: PLC0415
 
     importlib.reload(tracer)
 
