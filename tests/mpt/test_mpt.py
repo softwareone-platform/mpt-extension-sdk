@@ -26,6 +26,7 @@ from mpt_extension_sdk.mpt_http.mpt import (
     get_listing_by_id,
     get_listings_by_price_list_and_seller_and_authorization,
     get_order_subscription_by_external_id,
+    get_product_items_by_period,
     get_product_items_by_skus,
     get_product_onetime_items_by_ids,
     get_product_template_or_default,
@@ -829,6 +830,64 @@ def test_get_product_onetime_items_by_ids_error(
 
     with pytest.raises(MPTAPIError) as cv:
         get_product_onetime_items_by_ids(mpt_client, product_id, ids)
+
+    assert cv.value.payload["status"] == 500
+
+
+def test_get_product_items_by_period(mpt_client, requests_mocker):
+    product_id = "PRD-1234-5678"
+    period = "one-time"
+    rql_query = f"and(eq(product.id,{product_id}),eq(terms.period,{period}))"
+    url = f"catalog/items?{rql_query}"
+    page1_url = f"{url}&limit=10&offset=0"
+    page2_url = f"{url}&limit=10&offset=10"
+    data = [{"id": f"ITM-{idx}"} for idx in range(13)]
+    requests_mocker.get(
+        urljoin(mpt_client.base_url, page1_url),
+        json={
+            "$meta": {
+                "pagination": {
+                    "offset": 0,
+                    "limit": 10,
+                    "total": 12,
+                },
+            },
+            "data": data[:10],
+        },
+    )
+    requests_mocker.get(
+        urljoin(mpt_client.base_url, page2_url),
+        json={
+            "$meta": {
+                "pagination": {
+                    "offset": 10,
+                    "limit": 10,
+                    "total": 12,
+                },
+            },
+            "data": data[10:],
+        },
+    )
+
+    assert get_product_items_by_period(mpt_client, product_id, period) == data
+
+
+def test_get_product_items_by_period_error(
+    mpt_client, requests_mocker, mpt_error_factory
+):
+    product_id = "PRD-1234-5678"
+    period = "one-time"
+    rql_query = f"and(eq(product.id,{product_id}),eq(terms.period,{period}))"
+    url = f"catalog/items?{rql_query}&limit=10&offset=0"
+
+    requests_mocker.get(
+        urljoin(mpt_client.base_url, url),
+        status=500,
+        json=mpt_error_factory(500, "Internal server error", "Whatever"),
+    )
+
+    with pytest.raises(MPTAPIError) as cv:
+        get_product_items_by_period(mpt_client, product_id, period)
 
     assert cv.value.payload["status"] == 500
 

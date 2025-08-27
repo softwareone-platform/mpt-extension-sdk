@@ -241,6 +241,16 @@ def get_product_onetime_items_by_ids(mpt_client, product_id, item_ids):
     return _paginated(mpt_client, url)
 
 
+@wrap_mpt_http_error
+def get_product_items_by_period(mpt_client, product_id, period):
+    """Fetches one-time items for a product."""
+    product_cond = f"eq(product.id,{product_id})"
+    rql_query = f"and({product_cond},eq(terms.period,{period}))"
+    url = f"/catalog/items?{rql_query}"
+
+    return _paginated(mpt_client, url)
+
+
 def get_agreements_by_ids(mpt_client, ids):
     rql_query = (
         f"and(in(id,({','.join(ids)})),eq(status,Active))"
