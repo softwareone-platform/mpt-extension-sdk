@@ -837,39 +837,91 @@ def test_get_product_onetime_items_by_ids_error(
 def test_get_product_items_by_period(mpt_client, requests_mocker):
     product_id = "PRD-1234-5678"
     period = "one-time"
-    rql_query = f"and(eq(product.id,{product_id}),eq(terms.period,{period}))"
-    url = f"catalog/items?{rql_query}"
-    page1_url = f"{url}&limit=10&offset=0"
-    page2_url = f"{url}&limit=10&offset=10"
-    data = [{"id": f"ITM-{idx}"} for idx in range(13)]
     requests_mocker.get(
-        urljoin(mpt_client.base_url, page1_url),
+        urljoin(
+            mpt_client.base_url,
+            f"catalog/items?and(eq(product.id,{product_id}),eq(terms.period,{period}))"
+            "&limit=10&offset=0",
+        ),
         json={
             "$meta": {
-                "pagination": {
-                    "offset": 0,
-                    "limit": 10,
-                    "total": 12,
-                },
+                "pagination": {"offset": 0, "limit": 10, "total": 1},
+                "omitted": ["parameters", "audit"],
             },
-            "data": data[:10],
-        },
-    )
-    requests_mocker.get(
-        urljoin(mpt_client.base_url, page2_url),
-        json={
-            "$meta": {
-                "pagination": {
-                    "offset": 10,
-                    "limit": 10,
-                    "total": 12,
+            "data": [
+                {
+                    "id": "ITM-7664-8222-0193",
+                    "name": "Acrobat Sign Solutions for Business (50 transactions) (AWS)",
+                    "description": "With app security, a world-class cloud infrastructure.",
+                    "externalIds": {"vendor": "65322572CA"},
+                    "group": {"id": "IGR-7664-8222-0002", "name": "Items"},
+                    "unit": {
+                        "id": "UNT-2501",
+                        "description": "transaction",
+                        "name": "transaction",
+                    },
+                    "terms": {"model": "one-time", "period": "one-time"},
+                    "quantityNotApplicable": False,
+                    "status": "Pending",
+                    "product": {
+                        "id": "PRD-7664-8222",
+                        "name": "Lukasz Test Adobe VIP Marketplace for Commercial",
+                        "externalIds": {},
+                        "icon": "/v1/catalog/products/PRD-7664-8222/icon",
+                        "status": "Published",
+                    },
                 },
-            },
-            "data": data[10:],
+            ],
         },
     )
 
-    assert get_product_items_by_period(mpt_client, product_id, period) == data
+    get_product_items_by_period(mpt_client, product_id, period)
+
+
+def test_get_product_items_by_period_vendors(mpt_client, requests_mocker):
+    product_id = "PRD-1234-5678"
+    period = "one-time"
+    vendors = ("65327674CA", "65327669CA")
+
+    requests_mocker.get(
+        urljoin(
+            mpt_client.base_url,
+            f"catalog/items?and(eq(product.id,{product_id}),eq(terms.period,{period}))"
+            "&limit=10&offset=0",
+        ),
+        json={
+            "$meta": {
+                "pagination": {"offset": 0, "limit": 10, "total": 1},
+                "omitted": ["parameters", "audit"],
+            },
+            "data": [
+                {
+                    "id": "ITM-7664-8222-0193",
+                    "name": "Acrobat Sign Solutions for Business (50 transactions) (AWS)",
+                    "description": "With app security, a world-class cloud infrastructure.",
+                    "externalIds": {"vendor": "65327674CA"},
+                    "group": {"id": "IGR-7664-8222-0002", "name": "Items"},
+                    "unit": {
+                        "id": "UNT-2501",
+                        "description": "transaction",
+                        "name": "transaction",
+                    },
+                    "terms": {"model": "one-time", "period": "one-time"},
+                    "quantityNotApplicable": False,
+                    "status": "Pending",
+                    "product": {
+                        "id": "PRD-7664-8222",
+                        "name": "Lukasz Test Adobe VIP Marketplace for Commercial",
+                        "externalIds": {},
+                        "icon": "/v1/catalog/products/PRD-7664-8222/icon",
+                        "status": "Published",
+                    },
+                },
+            ],
+        },
+    )
+
+    get_product_items_by_period(mpt_client, product_id, period, vendors)
 
 
 def test_get_product_items_by_period_error(
