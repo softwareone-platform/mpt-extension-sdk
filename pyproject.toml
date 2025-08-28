@@ -1,6 +1,6 @@
 [project]
 name = "mpt-extension-sdk"
-version = "4.1.1"
+version = "5.9.0"
 description = "Extensions SDK for SoftwareONE Marketplace Platform"
 authors = [{ name = "SoftwareOne AG" }]
 requires-python = ">=3.12,<4"
