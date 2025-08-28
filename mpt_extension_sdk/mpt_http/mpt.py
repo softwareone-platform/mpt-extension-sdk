@@ -1,4 +1,5 @@
 import logging
+from collections.abc import Iterable
 from functools import cache
 from itertools import batched
 
@@ -273,10 +274,34 @@ def get_product_onetime_items_by_ids(mpt_client, product_id, item_ids):
 
 
 @wrap_mpt_http_error
-def get_product_items_by_period(mpt_client, product_id, period):
-    """Fetches one-time items for a product."""
+def get_product_items_by_period(
+    mpt_client,
+    product_id: str,
+    period: str,
+    vendor_external_ids: Iterable[str] | None = None,
+):
+    """
+    Fetches product items based on a specified period and filters.
+
+    Args:
+        mpt_client: Client in tance to interact with the required API.
+        product_id (str): The unique identifier of the product to fetch items for.
+        period (str): The period for which to fetch the product items.
+        vendor_external_ids (Iterable[str] | None):
+            Optional. A list of vendor external IDs to filter out the product items by. Defaults
+            to None.
+
+    Returns:
+        list:
+            A paginated list of product items matching the specified criteria.
+
+    """
     product_cond = f"eq(product.id,{product_id})"
-    rql_query = f"and({product_cond},eq(terms.period,{period}))"
+    vendors_cond = ""
+    if vendor_external_ids:
+        vendor_ids = ",".join(vendor_external_ids)
+        vendors_cond = f",in(externalIds.vendor,({vendor_ids})))"
+    rql_query = f"and({product_cond},eq(terms.period,{period}){vendors_cond})"
     url = f"/catalog/items?{rql_query}"
 
     return _paginated(mpt_client, url)
