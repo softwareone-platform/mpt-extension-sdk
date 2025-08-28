@@ -127,18 +127,14 @@ STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # OpenTelemetry configuration
-APPLICATIONINSIGHTS_CONNECTION_STRING = os.getenv(
-    "APPLICATIONINSIGHTS_CONNECTION_STRING", ""
-)
+APPLICATIONINSIGHTS_CONNECTION_STRING = os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING", "")
 USE_APPLICATIONINSIGHTS = bool(APPLICATIONINSIGHTS_CONNECTION_STRING)
 
 
 if USE_APPLICATIONINSIGHTS:  # pragma: no cover
     logger_provider = LoggerProvider()
     set_logger_provider(logger_provider)
-    exporter = AzureMonitorLogExporter(
-        connection_string=APPLICATIONINSIGHTS_CONNECTION_STRING
-    )
+    exporter = AzureMonitorLogExporter(connection_string=APPLICATIONINSIGHTS_CONNECTION_STRING)
     logger_provider.add_log_record_processor(BatchLogRecordProcessor(exporter))
 
 LOGGING = {
@@ -210,9 +206,7 @@ MPT_PRODUCTS_IDS = os.getenv("MPT_PRODUCTS_IDS", "PRD-1111-1111")
 MPT_PORTAL_BASE_URL = os.getenv("MPT_PORTAL_BASE_URL", "https://portal.s1.show")
 MPT_KEY_VAULT_NAME = os.getenv("MPT_KEY_VAULT_NAME", "mpt-key-vault")
 
-MPT_ORDERS_API_POLLING_INTERVAL_SECS = int(
-    os.getenv("MPT_ORDERS_API_POLLING_INTERVAL_SECS", "120")
-)
+MPT_ORDERS_API_POLLING_INTERVAL_SECS = int(os.getenv("MPT_ORDERS_API_POLLING_INTERVAL_SECS", "120"))
 
 EXTENSION_CONFIG = {
     "DUE_DATE_DAYS": "30",
