@@ -7,6 +7,7 @@ from http import HTTPStatus
 
 import requests
 from django.conf import settings
+from django.utils.module_loading import import_string
 
 from mpt_extension_sdk.core.events.dataclasses import Event
 from mpt_extension_sdk.core.utils import setup_client
@@ -17,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 class EventProducer(ABC):
     """Abstract base class for event producers."""
+
     def __init__(self, dispatcher):
         self.dispatcher = dispatcher
         self.running_event = threading.Event()
@@ -50,16 +52,14 @@ class EventProducer(ABC):
     def produce_events(self):
         """Produce events."""
 
-    @abstractmethod
-    def produce_events_with_context(self):
-        """Produce events with context."""
-
 
 class OrderEventProducer(EventProducer):
     """Order event producer."""
+
     def __init__(self, dispatcher):
         super().__init__(dispatcher)
         self.client = setup_client()
+        self.setup_contexts = import_string(settings.MPT_SETUP_CONTEXTS_FUNC)
 
     def produce_events(self):
         """Produce order events."""
@@ -67,27 +67,20 @@ class OrderEventProducer(EventProducer):
             with self.sleep(settings.MPT_ORDERS_API_POLLING_INTERVAL_SECS):
                 orders = self.get_processing_orders()
                 logger.info("%d orders found for processing...", len(orders))
-                for order in orders:
-                    self.dispatcher.dispatch_event(Event(order["id"], "orders", order))
+                self.dispatch_events(orders)
 
-    def produce_events_with_context(self):  # pragma: no cover
-        """Produce order events with context."""
-        while self.running:
-            with self.sleep(settings.MPT_ORDERS_API_POLLING_INTERVAL_SECS):
-                orders = self.get_processing_orders()
-                orders, contexts = self.filter_and_enrich(self.client, orders)
-                logger.info("%d orders found for processing...", len(orders))
-                for order, context in zip(orders, contexts, strict=False):
-                    self.dispatcher.dispatch_event(
-                        Event(order["id"], "orders", order, context)
-                    )
+    def dispatch_events(self, orders):
+        """Dispatch events for the given orders."""
+        contexts = self.setup_contexts(self.client, orders)
+        for context in contexts:
+            self.dispatcher.dispatch_event(Event(context.order_id, "orders", context))
 
     def get_processing_orders(self):
         """Get processing orders."""
         orders = []
-        rql_query = RQLQuery().agreement.product.id.in_(
-            settings.MPT_PRODUCTS_IDS
-        ) & RQLQuery(status="processing")
+        rql_query = RQLQuery().agreement.product.id.in_(settings.MPT_PRODUCTS_IDS) & RQLQuery(
+            status="processing"
+        )
         url = (
             f"/commerce/orders?{rql_query}&select=audit,parameters,lines,subscriptions,"
             f"subscriptions.lines,agreement,buyer,seller&order=audit.created.at"
@@ -105,9 +98,7 @@ class OrderEventProducer(EventProducer):
                 page = response.json()
                 orders.extend(page["data"])
             else:
-                logger.warning(
-                    "Order API error: %s %s", response.status_code, response.content
-                )
+                logger.warning("Order API error: %s %s", response.status_code, response.content)
                 return []
             offset += limit
 
