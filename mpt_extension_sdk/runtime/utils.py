@@ -88,10 +88,9 @@ def show_banner():  # pragma: no cover
 
     for line in banner_lines:
         colored_line = Text()
-        for i in range(len(line)):
-            char = line[i : i + 1]
-            char.stylize(colors[i])
-            colored_line = Text.assemble(colored_line, char)
+        for idx, line_char in enumerate(line):
+            line_char.stylize(colors[idx])
+            colored_line = Text.assemble(colored_line, line_char)
         console.print(colored_line)
 
 
