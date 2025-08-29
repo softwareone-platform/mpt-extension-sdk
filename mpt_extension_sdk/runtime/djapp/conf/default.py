@@ -34,12 +34,12 @@ SECRET_KEY = os.getenv(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ("*")
+ALLOWED_HOSTS = ("*",)
 
 
 # Application definition
 
-INSTALLED_APPS = (
+INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -47,9 +47,9 @@ INSTALLED_APPS = (
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "mpt_extension_sdk.runtime.djapp.apps.DjAppConfig",
-)
+]
 
-MIDDLEWARE = (
+MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -58,7 +58,7 @@ MIDDLEWARE = (
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "mpt_extension_sdk.runtime.djapp.middleware.MPTClientMiddleware",
-)
+]
 
 ROOT_URLCONF = "mpt_extension_sdk.runtime.djapp.conf.urls"
 
