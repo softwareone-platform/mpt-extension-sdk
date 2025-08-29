@@ -30,7 +30,7 @@ dependencies = [
     "pymsteams==0.2.*",
     "regex>=2024.7.24,<2025",
     "requests==2.32.*",
-    "rich==13.7.*",
+    "rich==14.1.*",
     "types-openpyxl==3.1.*",
     "typing-extensions==4.14.*",
     "watchfiles==0.21.*",
