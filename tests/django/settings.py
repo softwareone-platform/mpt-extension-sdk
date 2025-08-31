@@ -159,9 +159,7 @@ USE_APPLICATIONINSIGHTS = os.getenv("USE_APPLICATIONINSIGHTS", "False").lower() 
     "1",
     "t",
 }
-APPLICATIONINSIGHTS_CONNECTION_STRING = os.getenv(
-    "APPLICATIONINSIGHTS_CONNECTION_STRING", ""
-)
+APPLICATIONINSIGHTS_CONNECTION_STRING = os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING", "")
 
 MPT_API_BASE_URL = os.getenv("MPT_API_BASE_URL", "http://localhost:8000")
 MPT_API_TOKEN = os.getenv("MPT_API_TOKEN", "change-me!")
@@ -181,6 +179,9 @@ EXTENSION_CONFIG = {
     "DUE_DATE_DAYS": "30",
 }
 
-INITIALIZER = os.getenv(
-    "MPT_INITIALIZER", "mpt_extension_sdk.runtime.initializer.initialize"
+INITIALIZER = os.getenv("MPT_INITIALIZER", "mpt_extension_sdk.runtime.initializer.initialize")
+
+MPT_SETUP_CONTEXTS_FUNC = os.getenv(
+    "MPT_SETUP_CONTEXTS_FUNC",
+    "mpt_extension_sdk.runtime.events.utils.setup_contexts",
 )
