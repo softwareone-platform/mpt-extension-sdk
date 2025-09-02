@@ -5,9 +5,7 @@ from mpt_extension_sdk.constants import SECURITY_ALGORITHM
 from mpt_extension_sdk.core.security import JWTAuth
 
 
-def test_jwt_auth_success(
-    mpt_client, mock_auth_payload
-):
+def test_jwt_auth_success(mpt_client, mock_auth_payload):
     secret = "auth_secret"
     token = jwt.encode(mock_auth_payload, secret, algorithm=SECURITY_ALGORITHM)
 

@@ -1,4 +1,3 @@
-
 import pytest
 from requests import HTTPError, JSONDecodeError, Response
 

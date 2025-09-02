@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 class JWTAuth(HttpBearer):
     """JWT authentication using JSON Web Tokens."""
+
     jwt_algos: ClassVar[list[str]] = [SECURITY_ALGORITHM]
 
     def __init__(

@@ -10,6 +10,7 @@ class AirTableError(Exception):
 
 class AirTableHttpError(AirTableError):
     """Exception raised for HTTP errors in the AirTable API."""
+
     def __init__(self, status_code: int, content: str):
         self.status_code = status_code
         self.content = content
@@ -18,6 +19,7 @@ class AirTableHttpError(AirTableError):
 
 class AirTableAPIError(AirTableHttpError):
     """Exception raised for errors in the AirTable API."""
+
     def __init__(self, status_code: int, payload) -> None:
         super().__init__(status_code, json.dumps(payload))
         self.payload = payload
@@ -33,6 +35,7 @@ class AirTableAPIError(AirTableHttpError):
 
 def wrap_airtable_http_error(func):
     """Wrap a function to catch AirTable HTTP errors."""
+
     @wraps(func)
     def _wrapper(*args, **kwargs):
         try:
@@ -41,8 +44,6 @@ def wrap_airtable_http_error(func):
             try:
                 raise AirTableAPIError(err.response.status_code, err.response.json())
             except JSONDecodeError:
-                raise AirTableHttpError(
-                    err.response.status_code, err.response.content.decode()
-                )
+                raise AirTableHttpError(err.response.status_code, err.response.content.decode())
 
     return _wrapper

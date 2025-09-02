@@ -13,6 +13,7 @@ from mpt_extension_sdk.runtime.events.producers import (
 
 class Command(BaseCommand):  # pragma: no cover
     """Command to consume events."""
+
     help = CONSUME_EVENTS_HELP_TEXT
     producer_classes: ClassVar[list] = [
         OrderEventProducer,

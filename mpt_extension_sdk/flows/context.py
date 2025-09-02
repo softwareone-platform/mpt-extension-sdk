@@ -8,6 +8,7 @@ ORDER_TYPE_TERMINATION = "Termination"
 @dataclass
 class Context:
     """Represents the context for an order."""
+
     order: dict
 
     @property

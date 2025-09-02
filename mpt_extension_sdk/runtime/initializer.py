@@ -27,9 +27,7 @@ JSON_EXT_VARIABLES = {
 def initialize(options, group=DEFAULT_APP_CONFIG_GROUP, name=DEFAULT_APP_CONFIG_NAME):
     """Initialize the SDK."""
     rich.reconfigure(theme=Theme({"repr.mpt_id": "bold light_salmon3"}))
-    django_settings_module = options.get(
-        "django_settings_module", DJANGO_SETTINGS_MODULE
-    )
+    django_settings_module = options.get("django_settings_module", DJANGO_SETTINGS_MODULE)
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", django_settings_module)
     import django  # noqa: PLC0415
     from django.conf import settings  # noqa: PLC0415

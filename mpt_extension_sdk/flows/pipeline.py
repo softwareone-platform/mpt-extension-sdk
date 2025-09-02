@@ -9,6 +9,7 @@ NextStep = Callable[[MPTClient, Context], None]
 
 class Step(ABC):
     """Abstract base class for pipeline steps."""
+
     @abstractmethod
     def __call__(
         self,
@@ -26,6 +27,7 @@ def _default_error_handler(error: Exception, context: Context, next_step: NextSt
 
 class Cursor:
     """A cursor for navigating through pipeline steps."""
+
     def __init__(self, steps, error_handler):
         self.queue = steps
         self.error_handler = error_handler
@@ -45,6 +47,7 @@ class Cursor:
 
 class Pipeline:
     """A pipeline for processing steps."""
+
     def __init__(self, *steps):
         self.queue = steps
 

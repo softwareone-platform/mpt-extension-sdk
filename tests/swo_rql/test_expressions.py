@@ -10,16 +10,12 @@ def test_in_and_namespaces(mock_product_ids_for_expression):
 
 def test_query_expression_get_querying_orders(mock_product_ids_for_expression):
     products_str = ",".join(mock_product_ids_for_expression)
-    expected_rql_query = (
-        f"and(in(agreement.product.id,({products_str})),eq(status,Querying))"
-    )
+    expected_rql_query = f"and(in(agreement.product.id,({products_str})),eq(status,Querying))"
     expected_url = (
         f"/commerce/orders?{expected_rql_query}&select=audit,parameters,lines,subscriptions,"
         f"subscriptions.lines,agreement,buyer&order=audit.created.at"
     )
-    query = R().agreement.product.id.in_(mock_product_ids_for_expression) & R(
-        status="Querying"
-    )
+    query = R().agreement.product.id.in_(mock_product_ids_for_expression) & R(status="Querying")
     url = (
         f"/commerce/orders?{query}&select=audit,parameters,lines,subscriptions,"
         f"subscriptions.lines,agreement,buyer&order=audit.created.at"

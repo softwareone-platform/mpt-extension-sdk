@@ -17,7 +17,7 @@ services:
       context: .
       dockerfile: dev.Dockerfile
     working_dir: /extension_sdk
-    command: bash -c "ruff check . && flake8 . && uv lock --check && pytest"
+    command: bash -c "ruff format --check . && ruff check . && flake8 . && uv lock --check && pytest"
     volumes:
       - .:/extension_sdk
     environment:

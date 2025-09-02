@@ -1,4 +1,3 @@
-
 import click
 
 from mpt_extension_sdk.runtime import swoext

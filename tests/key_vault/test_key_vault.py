@@ -12,9 +12,7 @@ def test_get_secret(mocker, mock_key_vault_name, mock_secret_name, mock_key_vaul
     mock_secret_value.value = "mock_secret_value"
     mock_client = mocker.MagicMock()
     mocker.patch.object(key_vault, "_get_key_vault_client", return_value=mock_client)
-    mocker.patch.object(
-        key_vault, "_get_key_vault_url", return_value=mock_key_vault_url
-    )
+    mocker.patch.object(key_vault, "_get_key_vault_url", return_value=mock_key_vault_url)
     mocker.patch.object(mock_client, "get_secret", return_value=mock_secret_value)
     secret = key_vault.get_secret(mock_secret_name)
     assert secret == mock_secret_value.value
@@ -33,9 +31,7 @@ def test_get_secret_resource_not_found_error(
     mock_secret_value.value = "mock_secret_value"
     mock_client = mocker.MagicMock()
     mocker.patch.object(key_vault, "_get_key_vault_client", return_value=mock_client)
-    mocker.patch.object(
-        key_vault, "_get_key_vault_url", return_value=mock_key_vault_url
-    )
+    mocker.patch.object(key_vault, "_get_key_vault_url", return_value=mock_key_vault_url)
     mocker.patch.object(
         mock_client,
         "get_secret",
@@ -52,9 +48,7 @@ def test_set_secret(mocker, mock_key_vault_name, mock_secret_name, mock_key_vaul
     mock_secret_value.value = "mock_secret_value"
     mock_client = mocker.MagicMock()
     mocker.patch.object(key_vault, "_get_key_vault_client", return_value=mock_client)
-    mocker.patch.object(
-        key_vault, "_get_key_vault_url", return_value=mock_key_vault_url
-    )
+    mocker.patch.object(key_vault, "_get_key_vault_url", return_value=mock_key_vault_url)
     mocker.patch.object(mock_client, "set_secret", return_value=mock_secret_value.value)
     mocker.patch.object(mock_client, "get_secret", return_value=mock_secret_value)
     secret = key_vault.set_secret(mock_secret_name, mock_secret_value.value)
@@ -74,9 +68,7 @@ def test_set_secret_http_response_error(
     mock_secret_value.value = "mock_secret_value"
     mock_client = mocker.MagicMock()
     mocker.patch.object(key_vault, "_get_key_vault_client", return_value=mock_client)
-    mocker.patch.object(
-        key_vault, "_get_key_vault_url", return_value=mock_key_vault_url
-    )
+    mocker.patch.object(key_vault, "_get_key_vault_url", return_value=mock_key_vault_url)
     mocker.patch.object(
         mock_client,
         "set_secret",
