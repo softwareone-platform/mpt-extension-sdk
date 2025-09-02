@@ -30,6 +30,7 @@ def done_callback(futures, key, future):  # pragma: no cover
 
 class Dispatcher:
     """Event dispatcher."""
+
     def __init__(self, group=DEFAULT_APP_CONFIG_GROUP, name=DEFAULT_APP_CONFIG_NAME):
         self.registry: EventsRegistry = get_events_registry(group=group, name=name)
         self.queue = deque()
@@ -66,25 +67,18 @@ class Dispatcher:
             skipped = []
             while len(self.queue) > 0:
                 event_type, event = self.queue.pop()
-                logger.debug(
-                    "got event of type %s (%s) from queue...", event_type, event.id
-                )
-                listener = wrap_for_trace(
-                    self.registry.get_listener(event_type), event_type
-                )
+                logger.debug("got event of type %s (%s) from queue...", event_type, event.id)
+                listener = wrap_for_trace(self.registry.get_listener(event_type), event_type)
                 if (event.type, event.id) in self.futures:
                     logger.info(
-                        "An event for (%s, %s) is already processing, skip it",
-                        event.type, event.id
+                        "An event for (%s, %s) is already processing, skip it", event.type, event.id
                     )
                     skipped.append((event.type, event))
                 else:
                     future = self.executor.submit(listener, self.client, event)
                     self.futures[event.type, event.id] = future
                     future.add_done_callback(
-                        functools.partial(
-                            done_callback, self.futures, (event.type, event.id)
-                        )
+                        functools.partial(done_callback, self.futures, (event.type, event.id))
                     )
 
             self.queue.extendleft(skipped)

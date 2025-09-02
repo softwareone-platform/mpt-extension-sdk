@@ -8,6 +8,7 @@ EventListener = Callable[[Any, Event], None]
 
 class EventsRegistry:
     """Registry for event listeners."""
+
     def __init__(
         self,
     ) -> None:

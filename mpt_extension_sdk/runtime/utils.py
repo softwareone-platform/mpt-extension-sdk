@@ -20,9 +20,7 @@ from mpt_extension_sdk.constants import (
 from mpt_extension_sdk.runtime.errors import VariableNotWellFormedError
 
 
-def get_extension_app_config_name(
-    group=DEFAULT_APP_CONFIG_GROUP, name=DEFAULT_APP_CONFIG_NAME
-):
+def get_extension_app_config_name(group=DEFAULT_APP_CONFIG_GROUP, name=DEFAULT_APP_CONFIG_NAME):
     """Get the extension app config name for the specified group and name."""
     eps = entry_points()
     (app_config_ep,) = eps.select(group=group, name=name)
@@ -30,15 +28,12 @@ def get_extension_app_config_name(
     return f"{app_config.__module__}.{app_config.__name__}"
 
 
-def get_extension_app_config(
-    group=DEFAULT_APP_CONFIG_GROUP, name=DEFAULT_APP_CONFIG_NAME
-):
+def get_extension_app_config(group=DEFAULT_APP_CONFIG_GROUP, name=DEFAULT_APP_CONFIG_NAME):
     """Get the extension app config for the specified group and name."""
     app_config_name = get_extension_app_config_name(group=group, name=name)
     return next(
         filter(
-            lambda app: app_config_name
-            == get_app_name(app),
+            lambda app: app_config_name == get_app_name(app),
             apps.app_configs.values(),
         ),
         None,
@@ -66,18 +61,11 @@ def gradient(start_hex, end_hex, num_samples=10):  # pragma: no cover
     end_rgb = tuple(int(end_hex[idx : idx + 2], GRADIENT_HEX_BASE) for idx in range(1, 6, 2))
     gradient_colors = [start_hex]
     for sample in range(1, num_samples):
-        red = int(
-            start_rgb[0]
-            + (float(sample) / (num_samples - 1)) * (end_rgb[0] - start_rgb[0])
-        )
+        red = int(start_rgb[0] + (float(sample) / (num_samples - 1)) * (end_rgb[0] - start_rgb[0]))
         green = int(
-            start_rgb[1]
-            + (float(sample) / (num_samples - 1)) * (end_rgb[1] - start_rgb[1])
+            start_rgb[1] + (float(sample) / (num_samples - 1)) * (end_rgb[1] - start_rgb[1])
         )
-        blue = int(
-            start_rgb[2]
-            + (float(sample) / (num_samples - 1)) * (end_rgb[2] - start_rgb[2])
-        )
+        blue = int(start_rgb[2] + (float(sample) / (num_samples - 1)) * (end_rgb[2] - start_rgb[2]))
         gradient_colors.append(f"#{red:02X}{green:02X}{blue:02X}")
 
     return gradient_colors
@@ -149,14 +137,10 @@ def get_initializer_function():
     """Dynamically import and return the initializer function from settings.INITIALIZER."""
     # Read from environment variable instead of Django settings to avoid circular dependency
     # (Django settings need to be configured before we can read settings.INITIALIZER)
-    return os.getenv(
-        "MPT_INITIALIZER", "mpt_extension_sdk.runtime.initializer.initialize"
-    )
+    return os.getenv("MPT_INITIALIZER", "mpt_extension_sdk.runtime.initializer.initialize")
 
 
-def initialize_extension(
-    options, group=DEFAULT_APP_CONFIG_GROUP, name=DEFAULT_APP_CONFIG_NAME
-):
+def initialize_extension(options, group=DEFAULT_APP_CONFIG_GROUP, name=DEFAULT_APP_CONFIG_NAME):
     """Initialize the extension."""
     initialize_path = get_initializer_function()
     initialize_func = import_string(initialize_path)

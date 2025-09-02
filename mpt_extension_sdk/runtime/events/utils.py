@@ -48,14 +48,13 @@ def instrument_logging():  # pragma: no cover
 
 def wrap_for_trace(func, event_type):  # pragma: no cover
     """Wrap a function to add OpenTelemetry tracing."""
+
     @wraps(func)
     def opentelemetry_wrapper(client, event):
         tracer = trace.get_tracer(event_type)
         object_id = event.id
 
-        with tracer.start_as_current_span(
-            f"Event {event_type} for {object_id}"
-        ) as span:
+        with tracer.start_as_current_span(f"Event {event_type} for {object_id}") as span:
             try:
                 func(client, event)
             except Exception:

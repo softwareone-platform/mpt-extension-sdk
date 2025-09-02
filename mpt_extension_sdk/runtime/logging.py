@@ -6,6 +6,7 @@ from rich.logging import RichHandler as _RichHandler
 
 class ReprHighlighter(_ReprHighlighter):
     """Highlighter for MPT IDs."""
+
     accounts_prefixes = ("ACC", "BUY", "LCE", "MOD", "SEL", "USR", "AUSR", "UGR")
     catalog_prefixes = (
         "PRD",
@@ -40,4 +41,5 @@ class ReprHighlighter(_ReprHighlighter):
 
 class RichHandler(_RichHandler):
     """Rich handler for logging with color support."""
+
     HIGHLIGHTER_CLASS = ReprHighlighter

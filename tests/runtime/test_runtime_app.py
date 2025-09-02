@@ -60,10 +60,7 @@ def test_run_with_debug_py(mocker):
 def test_default():
     assert default_settings.ALLOWED_HOSTS is not None
     assert default_settings.SECRET_KEY is not None
-    assert (
-        "mpt_extension_sdk.runtime.djapp.apps.DjAppConfig"
-        in default_settings.INSTALLED_APPS
-    )
+    assert "mpt_extension_sdk.runtime.djapp.apps.DjAppConfig" in default_settings.INSTALLED_APPS
     assert (
         "mpt_extension_sdk.runtime.djapp.middleware.MPTClientMiddleware"
     ) in default_settings.MIDDLEWARE

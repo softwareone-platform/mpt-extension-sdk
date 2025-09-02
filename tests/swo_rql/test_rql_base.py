@@ -202,9 +202,7 @@ def test_and_or():
     r5 = r1 & r2 & (r3 | r4)
 
     assert r5.op == RQLQuery.AND
-    assert (
-        str(r5) == "and(eq(id,ID),eq(field,value),or(eq(other,value2),in(inop,(a,b))))"
-    )
+    assert str(r5) == "and(eq(id,ID),eq(field,value),or(eq(other,value2),in(inop,(a,b))))"
 
     r5 = r1 & r2 | r3
 
@@ -216,10 +214,7 @@ def test_and_or():
 
     r5 = (r1 & r2) | (r3 & r4)
 
-    assert (
-        str(r5)
-        == "or(and(eq(id,ID),eq(field,value)),and(eq(other,value2),in(inop,(a,b))))"
-    )
+    assert str(r5) == "or(and(eq(id,ID),eq(field,value)),and(eq(other,value2),in(inop,(a,b))))"
 
     r5 = (r1 & r2) | ~r3
 
@@ -313,9 +308,7 @@ def test_dotted_path_list(method, op):
 def test_dotted_path_bool(expr, value, expected_op):
     r = RQLQuery
 
-    assert (
-        str(getattr(r().asset.id, expr)(value)) == f"{expected_op}(asset.id,{expr}())"
-    )
+    assert str(getattr(r().asset.id, expr)(value)) == f"{expected_op}(asset.id,{expr}())"
 
 
 def test_dotted_path_already_evaluated():
@@ -328,9 +321,7 @@ def test_dotted_path_already_evaluated():
 def test_str():
     assert str(RQLQuery(id="ID")) == "eq(id,ID)"
     assert str(~RQLQuery(id="ID")) == "not(eq(id,ID))"
-    assert (
-        str(~RQLQuery(id="ID", field="value")) == "not(and(eq(id,ID),eq(field,value)))"
-    )
+    assert str(~RQLQuery(id="ID", field="value")) == "not(and(eq(id,ID),eq(field,value)))"
     assert not str(RQLQuery())
 
 

@@ -11,6 +11,7 @@ from mpt_extension_sdk.runtime.utils import initialize_extension
 
 class ExtensionWebApplication(BaseApplication):
     """Gunicorn application for the extension."""
+
     def __init__(self, app, options=None):
         self.options = options or {}
         self.application = app

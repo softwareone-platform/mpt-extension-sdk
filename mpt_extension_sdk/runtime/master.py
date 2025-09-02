@@ -27,6 +27,7 @@ def _display_path(path):  # pragma: no cover
 
 class Master:
     """Master process for managing worker processes."""
+
     def __init__(self, options, settings):
         self.workers = {}
         self.options = options
@@ -94,12 +95,8 @@ class Master:
                         exited_workers.append(worker_type)
                         logger.info("%s worker exited", worker_type.capitalize())
                     else:
-                        logger.info(
-                            "Process of type %s is dead, restart it", worker_type
-                        )
-                        self.start_worker_process(
-                            worker_type, self.proc_targets[worker_type]
-                        )
+                        logger.info("Process of type %s is dead, restart it", worker_type)
+                        self.start_worker_process(worker_type, self.proc_targets[worker_type])
             if exited_workers == list(self.workers.keys()):
                 self.stop_event.set()
 

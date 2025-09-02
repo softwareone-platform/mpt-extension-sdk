@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 class KeyVault(Session):
     """A client for interacting with Azure Key Vault."""
+
     def __init__(self, key_vault_name: str):
         """
         Initialize the KeyVault client with the provided Key Vault name.
@@ -62,7 +63,7 @@ class KeyVault(Session):
                 "Failed to set secret '%s' in Key Vault '%s': %s",
                 secret_name,
                 self.key_vault_name,
-                err  # noqa: TRY401
+                err,  # noqa: TRY401
             )
             return None
 

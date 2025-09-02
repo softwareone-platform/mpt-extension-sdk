@@ -10,6 +10,7 @@ class MPTError(Exception):
 
 class MPTHttpError(MPTError):
     """Represents an HTTP error."""
+
     def __init__(self, status_code: int, content: str):
         self.status_code = status_code
         self.content = content
@@ -18,6 +19,7 @@ class MPTHttpError(MPTError):
 
 class MPTAPIError(MPTHttpError):
     """Represents an API error."""
+
     def __init__(self, status_code, payload):
         super().__init__(status_code, json.dumps(payload))
         self.payload = payload
@@ -40,6 +42,7 @@ class MPTAPIError(MPTHttpError):
 
 def wrap_mpt_http_error(func):
     """Wrap a function to catch MPT HTTP errors."""
+
     @wraps(func)
     def _wrapper(*args, **kwargs):
         try:
@@ -57,6 +60,7 @@ def wrap_mpt_http_error(func):
 
 class ValidationError:
     """Represents a validation error."""
+
     def __init__(self, err_id, message):
         self.id = err_id
         self.message = message

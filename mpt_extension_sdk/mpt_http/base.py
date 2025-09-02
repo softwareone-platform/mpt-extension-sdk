@@ -8,6 +8,7 @@ from mpt_extension_sdk.constants import POOL_MAX_SIZE, USER_AGENT
 
 class MPTClient(Session):
     """Client for interacting with the MPT API."""
+
     def __init__(self, base_url, api_token):
         super().__init__()
         retries = Retry(

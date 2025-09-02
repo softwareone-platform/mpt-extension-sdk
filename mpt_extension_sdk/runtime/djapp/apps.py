@@ -9,6 +9,7 @@ ext = Extension()
 
 class DjAppConfig(AppConfig):
     """Django AppConfig for the extension."""
+
     name = "mpt_extension_sdk.runtime.djapp"
 
     def ready(self):
@@ -27,6 +28,7 @@ class DjAppConfig(AppConfig):
 
 class ExtensionConfig(DjAppConfig):
     """Configuration for the extension."""
+
     name = "mpt_extension_sdk"
     verbose_name = "SWO Extension SDK"
     extension = ext

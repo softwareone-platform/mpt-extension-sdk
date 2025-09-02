@@ -7,6 +7,7 @@ _CLIENT = None
 
 class MPTClientMiddleware:  # pragma: no cover
     """Middleware to set up MPTClient for each request."""
+
     def __init__(self, get_response):
         self.get_response = get_response
 
