@@ -4,39 +4,37 @@ version = "4.1.1"
 description = "Extensions SDK for SoftwareONE Marketplace Platform"
 authors = ["SoftwareOne AG"]
 readme = "README.md"
-license = {text = "Apache-2.0 license"}
-dependencies = [
-    "azure-identity>=1.21.0,<2",
-    "azure-keyvault-secrets>=4.9.0,<5",
-    "azure-monitor-opentelemetry-exporter==1.0.0b25",
-    "click==8.1.*",
-    "debugpy==1.8.*",
-    "django==4.2.*",
-    "django-ninja==1.1.*",
-    "gunicorn==23.0.*",
-    "jinja2==3.1.*",
-    "markdown-it-py==3.0.*",
-    "openpyxl==3.1.*",
-    "opentelemetry-api==1.30.*",
-    "opentelemetry-instrumentation-django==0.51b0",
-    "opentelemetry-instrumentation-logging==0.51b0",
-    "opentelemetry-instrumentation-requests==0.51b0",
-    "opentelemetry-sdk==1.30.*",
-    "phonenumbers==8.13.*",
-    "pyairtable==2.3.*",
-    "pyfiglet==1.0.*",
-    "pyjwt==2.8.*",
-    "pymsteams==0.2.*",
-    "regex>=2024.7.24,<2025",
-    "requests==2.32.*",
-    "rich==14.1.*",
-    "types-openpyxl==3.1.*",
-    "typing-extensions==4.14.*",
-    "watchfiles==0.21.*",
-]
+license = "Apache-2.0"
 
-[project.scripts]
-swoext = "mpt_extension_sdk.runtime.swoext:main"
+[tool.poetry.dependencies]
+python = ">=3.12,<4"
+azure-identity = "^1.21.0"
+azure-keyvault-secrets = "^4.9.0"
+azure-monitor-opentelemetry-exporter = "1.0.0b25"
+click = "8.1.*"
+debugpy = "1.8.*"
+django = "4.2.*" # should it be a dependency of the extension ? it is already a dependency of the sdk.
+django-ninja = "1.1.*"
+gunicorn = "23.0.*"
+jinja2 = "3.1.*"
+markdown-it-py = "3.0.*"
+openpyxl = "3.1.*"
+opentelemetry-api = "1.30.*"
+opentelemetry-instrumentation-django = "0.51b0"
+opentelemetry-instrumentation-logging = "0.51b0"
+opentelemetry-instrumentation-requests = "0.51b0"
+opentelemetry-sdk = "1.30.*"
+phonenumbers = "8.13.*"
+pyairtable = "2.3.*"
+pyfiglet = "1.0.*"
+pyjwt = "2.8.*"
+pymsteams = "0.2.*"
+regex = "^2024.7.24"
+requests = "2.32.*"
+rich = "13.7.*"
+types-openpyxl = "3.1.*"
+typing-extensions = "4.14.*"
+watchfiles = "0.21.*"
 
 [tool.poetry.group.dev.dependencies]
 freezegun = "1.4.*"
@@ -58,7 +56,7 @@ types-openpyxl = "3.1.*"
 types-requests = "2.31.*"
 
 [tool.poetry.scripts]
-swosdk = 'mpt_extension_sdk.runtime.swoext:main'
+swoext = 'mpt_extension_sdk.runtime.swoext:main'
 
 
 [tool.poetry.plugins."swo.mpt.sdk"]
@@ -68,11 +66,6 @@ swosdk = 'mpt_extension_sdk.runtime.swoext:main'
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
-
-[tool.hatch.build]
-include = [
-  "mpt_extension_sdk/**"
-]
 
 [tool.pytest.ini_options]
 testpaths = "tests"
@@ -91,6 +84,8 @@ relative_files = true
 omit = [
   "security.py",
   "django.py",
+  "run.py",
+  "default.py",
   "swoext.py",
   "__init__.py",
 ]

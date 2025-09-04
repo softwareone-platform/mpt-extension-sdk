@@ -730,7 +730,7 @@ def webhook(settings):
     }
 
 
-@pytest.fixture
+@pytest.fixture()
 def assets_factory(lines_factory):
     def _assets(
         asset_id="AST-1000-2000-3000",
@@ -753,7 +753,7 @@ def assets_factory(lines_factory):
     return _assets
 
 
-@pytest.fixture
+@pytest.fixture()
 def subscriptions_factory(lines_factory):
     def _subscriptions(
         subscription_id="SUB-1000-2000-3000",
@@ -763,7 +763,7 @@ def subscriptions_factory(lines_factory):
         commitment_date=None,
         lines=None,
     ):
-        start_date = start_date.isoformat() if start_date else dt.datetime.now(dt.UTC).isoformat()
+        start_date = start_date.isoformat() if start_date else datetime.now(UTC).isoformat()
         lines = lines_factory() if lines is None else lines
         return [
             {
@@ -891,11 +891,11 @@ def mock_product_id_for_expression():
     return "PRD-1"
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_process_id():
     return "12345"
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_gunicorn_options():
     return {"component": "api", "debug": False}
