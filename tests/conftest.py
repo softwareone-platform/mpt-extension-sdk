@@ -82,7 +82,8 @@ def mock_gunicorn_logging_config():
         "disable_existing_loggers": False,
         "formatters": {
             "verbose": {
-                "format": "{asctime} {name} {levelname} (pid: {process}) {message}",
+                "format": "{asctime} {name} {levelname} (pid: {process}, thread: {thread})"
+                " {message}",
                 "style": "{",
             },
             "rich": {
@@ -140,8 +141,9 @@ def runtime_master_options_factory(
 
 @pytest.fixture()
 def mock_highlights(mock_logging_all_prefixes):
-    return _ReprHighlighter.highlights + [
-        rf"(?P<mpt_id>(?:{'|'.join(mock_logging_all_prefixes)})(?:-\d{{4}})*)"
+    return [
+        *_ReprHighlighter.highlights,
+        rf"(?P<mpt_id>(?:{'|'.join(mock_logging_all_prefixes)})(?:-\d{{4}})*)",
     ]
 
 
@@ -729,6 +731,29 @@ def webhook(settings):
 
 
 @pytest.fixture()
+def assets_factory(lines_factory):
+    def _assets(
+        asset_id="AST-1000-2000-3000",
+        product_name="Awesome product",
+        vendor_subscription_id="a-sub-id",
+        lines=None,
+    ):
+        lines = lines_factory() if lines is None else lines
+        return [
+            {
+                "id": asset_id,
+                "name": f"Subscription for {product_name}",
+                "lines": lines,
+                "externalIds": {"vendor": vendor_subscription_id},
+                "status": "Active",
+                "price": {"PPx1": 3148.80000, "currency": "USD"},
+            }
+        ]
+
+    return _assets
+
+
+@pytest.fixture()
 def subscriptions_factory(lines_factory):
     def _subscriptions(
         subscription_id="SUB-1000-2000-3000",
@@ -738,9 +763,7 @@ def subscriptions_factory(lines_factory):
         commitment_date=None,
         lines=None,
     ):
-        start_date = (
-            start_date.isoformat() if start_date else datetime.now(UTC).isoformat()
-        )
+        start_date = start_date.isoformat() if start_date else datetime.now(UTC).isoformat()
         lines = lines_factory() if lines is None else lines
         return [
             {
@@ -846,3 +869,33 @@ def mock_mpt_api_error_payload():
             "error1": "error1",
         },
     }
+
+
+@pytest.fixture()
+def mock_app_group_name():
+    return "swo.mpt.sdk"
+
+
+@pytest.fixture()
+def mock_notify_category_id():
+    return "NTC-0000-0006"
+
+
+@pytest.fixture()
+def mock_product_ids_for_expression():
+    return ["PRD-1", "PRD-2"]
+
+
+@pytest.fixture()
+def mock_product_id_for_expression():
+    return "PRD-1"
+
+
+@pytest.fixture()
+def mock_process_id():
+    return "12345"
+
+
+@pytest.fixture()
+def mock_gunicorn_options():
+    return {"component": "api", "debug": False}

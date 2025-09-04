@@ -1,14 +1,13 @@
 from urllib.parse import urljoin
 
 import pytest
-from freezegun import freeze_time
 from responses import matchers
 
 from mpt_extension_sdk.mpt_http.mpt import (
-    NotifyCategories,
     complete_order,
     create_agreement,
     create_agreement_subscription,
+    create_asset,
     create_listing,
     create_subscription,
     fail_order,
@@ -18,7 +17,6 @@ from mpt_extension_sdk.mpt_http.mpt import (
     get_agreements_by_customer_deployments,
     get_agreements_by_external_id_values,
     get_agreements_by_ids,
-    get_agreements_by_next_sync,
     get_agreements_by_query,
     get_all_agreements,
     get_authorizations_by_currency_and_seller_id,
@@ -28,16 +26,20 @@ from mpt_extension_sdk.mpt_http.mpt import (
     get_listing_by_id,
     get_listings_by_price_list_and_seller_and_authorization,
     get_order_subscription_by_external_id,
+    get_product_items_by_period,
     get_product_items_by_skus,
     get_product_onetime_items_by_ids,
     get_product_template_or_default,
     get_rendered_template,
+    get_template_by_name,
     get_webhook,
     notify,
     query_order,
     set_processing_template,
+    terminate_subscription,
     update_agreement,
     update_agreement_subscription,
+    update_asset,
     update_order,
     update_subscription,
 )
@@ -220,6 +222,91 @@ def test_update_order_error(mpt_client, requests_mocker, mpt_error_factory):
 
     with pytest.raises(MPTAPIError) as cv:
         update_order(mpt_client, "ORD-0000", parameters={})
+
+    assert cv.value.payload["status"] == 404
+
+
+def test_create_asset(mpt_client, requests_mocker, assets_factory):
+    asset = assets_factory()[0]
+    requests_mocker.post(
+        urljoin(mpt_client.base_url, "commerce/orders/ORD-0000/assets"),
+        json=asset,
+        status=201,
+        match=[
+            matchers.json_params_matcher(asset),
+        ],
+    )
+
+    created_asset = create_asset(mpt_client, "ORD-0000", asset)
+    assert created_asset == asset
+
+
+def test_create_asset_error(mpt_client, requests_mocker, mpt_error_factory):
+    requests_mocker.post(
+        urljoin(mpt_client.base_url, "commerce/orders/ORD-0000/assets"),
+        status=404,
+        json=mpt_error_factory(404, "Not Found", "Order not found"),
+    )
+
+    with pytest.raises(MPTAPIError) as cv:
+        create_asset(mpt_client, "ORD-0000", {})
+
+    assert cv.value.payload["status"] == 404
+
+
+def test_update_asset(mpt_client, requests_mocker, assets_factory):
+    asset = assets_factory()
+    requests_mocker.put(
+        urljoin(
+            mpt_client.base_url,
+            "commerce/orders/ORD-0000/assets/AST-1234",
+        ),
+        json=asset,
+        match=[
+            matchers.json_params_matcher(
+                {
+                    "parameters": {
+                        "fulfillment": [
+                            {
+                                "externalId": "a-param",
+                                "name": "a-param",
+                                "value": "a-value",
+                                "type": "SingleLineText",
+                            }
+                        ],
+                    },
+                },
+            ),
+        ],
+    )
+
+    updated_asset = update_asset(
+        mpt_client,
+        "ORD-0000",
+        "AST-1234",
+        parameters={
+            "fulfillment": [
+                {
+                    "externalId": "a-param",
+                    "name": "a-param",
+                    "value": "a-value",
+                    "type": "SingleLineText",
+                }
+            ]
+        },
+    )
+    assert updated_asset == asset
+
+
+def test_update_asset_error(mpt_client, requests_mocker, mpt_error_factory):
+    requests_mocker.put(
+        urljoin(mpt_client.base_url, "commerce/orders/ORD-0000/assets/AST-1234"),
+        status=404,
+        json=mpt_error_factory(404, "Not Found", "Order not found"),
+    )
+
+    with pytest.raises(MPTAPIError) as cv:
+        update_asset(mpt_client, "ORD-0000", "AST-1234", parameters={})
 
     assert cv.value.payload["status"] == 404
 
@@ -457,6 +544,27 @@ def test_get_product_template_or_default(mpt_client, requests_mocker, name):
         mpt_client,
         "PRD-1111",
         "Processing",
+        name,
+    ) == {"id": "TPL-0000"}
+
+@pytest.mark.parametrize("name", ["template_name", None])
+def test_get_product_template_by_name(mpt_client, requests_mocker, name):
+    url = f"catalog/products/PRD-1111/templates?eq(name,{name})"
+    requests_mocker.get(
+        urljoin(
+            mpt_client.base_url,
+            url,
+        ),
+        json={
+            "data": [
+                {"id": "TPL-0000"},
+            ]
+        },
+    )
+
+    assert get_template_by_name(
+        mpt_client,
+        "PRD-1111",
         name,
     ) == {"id": "TPL-0000"}
 
@@ -726,6 +834,116 @@ def test_get_product_onetime_items_by_ids_error(
     assert cv.value.payload["status"] == 500
 
 
+def test_get_product_items_by_period(mpt_client, requests_mocker):
+    product_id = "PRD-1234-5678"
+    period = "one-time"
+    requests_mocker.get(
+        urljoin(
+            mpt_client.base_url,
+            f"catalog/items?and(eq(product.id,{product_id}),eq(terms.period,{period}))"
+            "&limit=10&offset=0",
+        ),
+        json={
+            "$meta": {
+                "pagination": {"offset": 0, "limit": 10, "total": 1},
+                "omitted": ["parameters", "audit"],
+            },
+            "data": [
+                {
+                    "id": "ITM-7664-8222-0193",
+                    "name": "Acrobat Sign Solutions for Business (50 transactions) (AWS)",
+                    "description": "With app security, a world-class cloud infrastructure.",
+                    "externalIds": {"vendor": "65322572CA"},
+                    "group": {"id": "IGR-7664-8222-0002", "name": "Items"},
+                    "unit": {
+                        "id": "UNT-2501",
+                        "description": "transaction",
+                        "name": "transaction",
+                    },
+                    "terms": {"model": "one-time", "period": "one-time"},
+                    "quantityNotApplicable": False,
+                    "status": "Pending",
+                    "product": {
+                        "id": "PRD-7664-8222",
+                        "name": "Lukasz Test Adobe VIP Marketplace for Commercial",
+                        "externalIds": {},
+                        "icon": "/v1/catalog/products/PRD-7664-8222/icon",
+                        "status": "Published",
+                    },
+                },
+            ],
+        },
+    )
+
+    get_product_items_by_period(mpt_client, product_id, period)
+
+
+def test_get_product_items_by_period_vendors(mpt_client, requests_mocker):
+    product_id = "PRD-1234-5678"
+    period = "one-time"
+    vendors = ("65327674CA", "65327669CA")
+
+    requests_mocker.get(
+        urljoin(
+            mpt_client.base_url,
+            f"catalog/items?and(eq(product.id,{product_id}),eq(terms.period,{period}))"
+            "&limit=10&offset=0",
+        ),
+        json={
+            "$meta": {
+                "pagination": {"offset": 0, "limit": 10, "total": 1},
+                "omitted": ["parameters", "audit"],
+            },
+            "data": [
+                {
+                    "id": "ITM-7664-8222-0193",
+                    "name": "Acrobat Sign Solutions for Business (50 transactions) (AWS)",
+                    "description": "With app security, a world-class cloud infrastructure.",
+                    "externalIds": {"vendor": "65327674CA"},
+                    "group": {"id": "IGR-7664-8222-0002", "name": "Items"},
+                    "unit": {
+                        "id": "UNT-2501",
+                        "description": "transaction",
+                        "name": "transaction",
+                    },
+                    "terms": {"model": "one-time", "period": "one-time"},
+                    "quantityNotApplicable": False,
+                    "status": "Pending",
+                    "product": {
+                        "id": "PRD-7664-8222",
+                        "name": "Lukasz Test Adobe VIP Marketplace for Commercial",
+                        "externalIds": {},
+                        "icon": "/v1/catalog/products/PRD-7664-8222/icon",
+                        "status": "Published",
+                    },
+                },
+            ],
+        },
+    )
+
+    get_product_items_by_period(mpt_client, product_id, period, vendors)
+
+
+def test_get_product_items_by_period_error(
+    mpt_client, requests_mocker, mpt_error_factory
+):
+    product_id = "PRD-1234-5678"
+    period = "one-time"
+    rql_query = f"and(eq(product.id,{product_id}),eq(terms.period,{period}))"
+    url = f"catalog/items?{rql_query}&limit=10&offset=0"
+
+    requests_mocker.get(
+        urljoin(mpt_client.base_url, url),
+        status=500,
+        json=mpt_error_factory(500, "Internal server error", "Whatever"),
+    )
+
+    with pytest.raises(MPTAPIError) as cv:
+        get_product_items_by_period(mpt_client, product_id, period)
+
+    assert cv.value.payload["status"] == 500
+
+
 def test_get_agreements_by_ids(mocker):
     rql_query = (
         "and(in(id,(AGR-0001)),eq(status,Active))"
@@ -971,32 +1189,6 @@ def test_create_agreement_subscription(
     assert created_subscription == subscription
 
 
-@freeze_time("2024-01-04 03:00:00")
-def test_get_agreements_by_next_sync(mocker):
-    param_condition = (
-        f"any(parameters.fulfillment,and(eq(externalId,{'nextSync'})"
-        f",lt(displayValue,2024-01-04)))"
-    )
-    status_condition = "eq(status,Active)"
-
-    rql_query = (
-        f"and({status_condition},{param_condition})"
-        "&select=lines,parameters,subscriptions,product,listing"
-    )
-
-    mocked_get_by_query = mocker.patch(
-        "mpt_extension_sdk.mpt_http.mpt.get_agreements_by_query",
-        return_value=[{"id": "AGR-0001"}],
-    )
-
-    mocked_client = mocker.MagicMock()
-
-    assert get_agreements_by_next_sync(mocked_client, "nextSync") == [
-        {"id": "AGR-0001"}
-    ]
-    mocked_get_by_query.assert_called_once_with(mocked_client, rql_query)
-
-
 def test_get_buyer(mpt_client, requests_mocker):
     buyer_id = "buyer_id"
     requests_mocker.get(
@@ -1007,7 +1199,13 @@ def test_get_buyer(mpt_client, requests_mocker):
     assert get_buyer(mpt_client, buyer_id) == {"data": []}
 
 
-def test_notify(mpt_operations_client, requests_mocker, mocker, notify_post_resp):
+def test_notify(
+    mpt_operations_client,
+    requests_mocker,
+    mocker,
+    notify_post_resp,
+    mock_notify_category_id,
+):
     """Tests the basic notification functionality by:
     1. Verifying GET request is made to fetch contacts with proper query parameters
     2. Verifying POST request is made to create a notification batch with the correct payload
@@ -1028,7 +1226,7 @@ def test_notify(mpt_operations_client, requests_mocker, mocker, notify_post_resp
         match=[
             matchers.json_params_matcher(
                 {
-                    "category": {"id": NotifyCategories.ORDERS.value},
+                    "category": {"id": mock_notify_category_id},
                     "subject": "subject",
                     "body": "message_body",
                     "contacts": recipients,
@@ -1040,7 +1238,7 @@ def test_notify(mpt_operations_client, requests_mocker, mocker, notify_post_resp
 
     notify(
         mpt_operations_client,
-        NotifyCategories.ORDERS.value,
+        mock_notify_category_id,
         "account_id",
         "buyer_id",
         "subject",
@@ -1048,7 +1246,13 @@ def test_notify(mpt_operations_client, requests_mocker, mocker, notify_post_resp
     )
 
 
-def test_notify_gt_1k(mpt_operations_client, requests_mocker, mocker, notify_post_resp):
+def test_notify_gt_1k(
+    mpt_operations_client,
+    requests_mocker,
+    mocker,
+    notify_post_resp,
+    mock_notify_category_id,
+):
     """Test that notify function properly handles pagination when there are more than
     1000 contacts.
 
@@ -1079,7 +1283,7 @@ def test_notify_gt_1k(mpt_operations_client, requests_mocker, mocker, notify_pos
             match=[
                 matchers.json_params_matcher(
                     {
-                        "category": {"id": NotifyCategories.ORDERS.value},
+                        "category": {"id": mock_notify_category_id},
                         "subject": "subject",
                         "body": "message_body",
                         "contacts": contacts,
@@ -1091,7 +1295,7 @@ def test_notify_gt_1k(mpt_operations_client, requests_mocker, mocker, notify_pos
 
     notify(
         mpt_operations_client,
-        NotifyCategories.ORDERS.value,
+        mock_notify_category_id,
         "account_id",
         "buyer_id",
         "subject",
@@ -1099,7 +1303,9 @@ def test_notify_gt_1k(mpt_operations_client, requests_mocker, mocker, notify_pos
     )
 
 
-def test_notify_error(mpt_operations_client, requests_mocker, mocker):
+def test_notify_error(
+    mpt_operations_client, requests_mocker, mocker, mock_notify_category_id
+):
     """Test that notify function connection error is propagated up to the caller."""
     mocker.patch(
         "mpt_extension_sdk.mpt_http.mpt._paginated",
@@ -1110,7 +1316,7 @@ def test_notify_error(mpt_operations_client, requests_mocker, mocker):
     with pytest.raises(ConnectionError):
         notify(
             mpt_operations_client,
-            NotifyCategories.ORDERS.value,
+            mock_notify_category_id,
             "account_id",
             "buyer_id",
             "subject",
@@ -1179,7 +1385,7 @@ def test_get_agreements_by_customer_deployments(mpt_client, requests_mocker, agr
             f"any(parameters.fulfillment,and("
             f"eq(externalId,{deployment_id_parameter}),"
             f"in(displayValue,({deployments_list}))))"
-            f"&select=lines,parameters,subscriptions,product,listing"
+            f"&select=lines,parameters,subscriptions,subscriptions.parameters,product,listing"
             "&limit=10&offset=0",
         ),
         json={
@@ -1197,3 +1403,36 @@ def test_get_agreements_by_customer_deployments(mpt_client, requests_mocker, agr
         mpt_client, deployment_id_parameter, deployments_list
     )
     assert retrieved_agreement == [agreement]
+
+
+def test_terminate_subscription(mpt_client, requests_mocker, subscriptions_factory):
+    subscription = subscriptions_factory()
+    reason = "test reason"
+    requests_mocker.post(
+        urljoin(
+            mpt_client.base_url,
+            f"commerce/subscriptions/{subscription[0]["id"]}/terminate",
+        ),
+        status=200,
+        match=[matchers.json_params_matcher({"description": reason})],
+        json=subscription,
+    )
+
+    terminate_subscription(mpt_client, subscription[0]["id"], reason)
+
+
+def test_terminate_subscription_error(
+    mpt_client, requests_mocker, subscriptions_factory
+):
+    subscription = subscriptions_factory()
+    reason = "test reason"
+    requests_mocker.post(
+        urljoin(
+            mpt_client.base_url,
+            f"commerce/subscriptions/{subscription[0]["id"]}/terminate",
+        ),
+        body=ConnectionError(),
+    )
+
+    with pytest.raises(ConnectionError):
+        terminate_subscription(mpt_client, subscription[0]["id"], reason)

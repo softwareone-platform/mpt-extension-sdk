@@ -10,7 +10,6 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
-import json
 import os
 from pathlib import Path
 
@@ -25,6 +24,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
+
+# SECURITY WARNING: keep the secret key used in production secret!
+SECRET_KEY = os.getenv(
+    "MPT_DJANGO_SECRET_KEY",
+    "",
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -128,7 +133,7 @@ APPLICATIONINSIGHTS_CONNECTION_STRING = os.getenv(
 USE_APPLICATIONINSIGHTS = APPLICATIONINSIGHTS_CONNECTION_STRING != ""
 
 
-if USE_APPLICATIONINSIGHTS:
+if USE_APPLICATIONINSIGHTS:  # pragma: no cover
     logger_provider = LoggerProvider()
     set_logger_provider(logger_provider)
     exporter = AzureMonitorLogExporter(
@@ -141,7 +146,7 @@ LOGGING = {
     "disable_existing_loggers": False,
     "formatters": {
         "verbose": {
-            "format": "{asctime} {name} {levelname} (pid: {process}) {message}",
+            "format": "{asctime} {name} {levelname} (pid: {process}, thread: {thread}) {message}",
             "style": "{",
         },
         "rich": {
@@ -149,7 +154,7 @@ LOGGING = {
             "style": "{",
         },
         "opentelemetry": {
-            "format": "(pid: {process}) {message}",
+            "format": "(pid: {process}, thread: {thread}) {message}",
             "style": "{",
         },
     },
@@ -203,16 +208,18 @@ MPT_API_TOKEN = os.getenv("MPT_API_TOKEN", "change-me!")
 MPT_API_TOKEN_OPERATIONS = os.getenv("MPT_API_TOKEN_OPERATIONS", "change-me!")
 MPT_PRODUCTS_IDS = os.getenv("MPT_PRODUCTS_IDS", "PRD-1111-1111")
 MPT_PORTAL_BASE_URL = os.getenv("MPT_PORTAL_BASE_URL", "https://portal.s1.show")
+MPT_KEY_VAULT_NAME = os.getenv("MPT_KEY_VAULT_NAME", "mpt-key-vault")
 
 MPT_ORDERS_API_POLLING_INTERVAL_SECS = int(
     os.getenv("MPT_ORDERS_API_POLLING_INTERVAL_SECS", "120")
 )
 
-# TODO: Should be synced with the initializer.py::initialize function
-MPT_NOTIFY_CATEGORIES = json.loads(
-    os.getenv("MPT_NOTIFY_CATEGORIES", '{"ORDERS": "NTC-0000-0006"}')
-)
-
 EXTENSION_CONFIG = {
     "DUE_DATE_DAYS": "30",
+    "ORDER_CREATION_WINDOW_HOURS": os.getenv("EXT_ORDER_CREATION_WINDOW_HOURS", "24"),
 }
+
+MPT_SETUP_CONTEXTS_FUNC = os.getenv(
+    "MPT_SETUP_CONTEXTS_FUNC",
+    "mpt_extension_sdk.runtime.events.utils.setup_contexts",
+)

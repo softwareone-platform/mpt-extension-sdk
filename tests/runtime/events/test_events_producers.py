@@ -12,13 +12,14 @@ def test_event_producer_get_processing_orders(
     requests_mocker,
     mock_settings_product_ids,
     mock_get_order_for_producer,
+    mock_app_group_name,
 ):
     limit = 10
     offset = 0
     rql_query = f"and(in(agreement.product.id,({mock_settings_product_ids})),eq(status,processing))"
     url = (
         f"/v1/commerce/orders?{rql_query}"
-        "&select=audit,parameters,lines,subscriptions,subscriptions.lines,agreement,buyer&order=audit.created.at"
+        "&select=audit,parameters,lines,subscriptions,subscriptions.lines,agreement,buyer,seller&order=audit.created.at"
         f"&limit={limit}&offset={offset}"
     )
     requests_mocker.get(
@@ -26,7 +27,7 @@ def test_event_producer_get_processing_orders(
         json=mock_get_order_for_producer,
     )
 
-    dispatcher = Dispatcher()
+    dispatcher = Dispatcher(group=mock_app_group_name)
     dispatcher.start()
     dispatcher.dispatch_event(mock_wrap_event)
 
@@ -44,6 +45,7 @@ def test_event_producer_get_processing_orders_invalid_response(
     requests_mocker,
     mock_settings_product_ids,
     mock_generic_response_error,
+    mock_app_group_name,
     caplog,
 ):
     limit = 10
@@ -51,7 +53,7 @@ def test_event_producer_get_processing_orders_invalid_response(
     rql_query = f"and(in(agreement.product.id,({mock_settings_product_ids})),eq(status,processing))"
     url = (
         f"/v1/commerce/orders?{rql_query}"
-        "&select=audit,parameters,lines,subscriptions,subscriptions.lines,agreement,buyer&order=audit.created.at"
+        "&select=audit,parameters,lines,subscriptions,subscriptions.lines,agreement,buyer,seller&order=audit.created.at"
         f"&limit={limit}&offset={offset}"
     )
     requests_mocker.get(
@@ -60,7 +62,7 @@ def test_event_producer_get_processing_orders_invalid_response(
         json=mock_generic_response_error,
     )
 
-    dispatcher = Dispatcher()
+    dispatcher = Dispatcher(group=mock_app_group_name)
     dispatcher.start()
     dispatcher.dispatch_event(mock_wrap_event)
 
@@ -73,9 +75,11 @@ def test_event_producer_get_processing_orders_invalid_response(
 
 
 def test_event_producers_has_more_pages(
-    mock_wrap_event, mock_meta_with_pagination_has_more_pages
+    mock_wrap_event,
+    mock_meta_with_pagination_has_more_pages,
+    mock_app_group_name,
 ):
-    dispatcher = Dispatcher()
+    dispatcher = Dispatcher(group=mock_app_group_name)
     dispatcher.start()
     dispatcher.dispatch_event(mock_wrap_event)
 
@@ -88,9 +92,11 @@ def test_event_producers_has_more_pages(
 
 
 def test_event_producers_has_no_more_pages(
-    mock_wrap_event, mock_meta_with_pagination_has_no_more_pages
+    mock_wrap_event,
+    mock_meta_with_pagination_has_no_more_pages,
+    mock_app_group_name,
 ):
-    dispatcher = Dispatcher()
+    dispatcher = Dispatcher(group=mock_app_group_name)
     dispatcher.start()
     dispatcher.dispatch_event(mock_wrap_event)
 
@@ -102,8 +108,8 @@ def test_event_producers_has_no_more_pages(
     assert has_more_pages is False
 
 
-def test_event_producer_start():
-    dispatcher = Dispatcher()
+def test_event_producer_start(mock_app_group_name):
+    dispatcher = Dispatcher(group=mock_app_group_name)
     dispatcher.start()
     order_event_producer = OrderEventProducer(dispatcher)
     order_event_producer.start()
@@ -114,8 +120,8 @@ def test_event_producer_start():
     assert is_running
 
 
-def test_event_producer_stop():
-    dispatcher = Dispatcher()
+def test_event_producer_stop(mock_app_group_name):
+    dispatcher = Dispatcher(group=mock_app_group_name)
     dispatcher.start()
     order_event_producer = OrderEventProducer(dispatcher)
     order_event_producer.start()
@@ -126,8 +132,8 @@ def test_event_producer_stop():
     assert not is_running
 
 
-def test_event_producer_sleep():
-    dispatcher = Dispatcher()
+def test_event_producer_sleep(mock_app_group_name):
+    dispatcher = Dispatcher(group=mock_app_group_name)
     dispatcher.start()
     order_event_producer = OrderEventProducer(dispatcher)
     order_event_producer.start()

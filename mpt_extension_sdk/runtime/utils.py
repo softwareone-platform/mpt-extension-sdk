@@ -4,6 +4,9 @@ import sys
 from importlib.metadata import entry_points
 
 from django.apps import apps
+from django.contrib import admin
+from django.urls import path
+from django.utils.module_loading import import_string
 from pyfiglet import Figlet
 from rich.console import Console
 from rich.text import Text
@@ -85,10 +88,9 @@ def show_banner():  # pragma: no cover
 
     for line in banner_lines:
         colored_line = Text()
-        for i in range(len(line)):
-            char = line[i : i + 1]
-            char.stylize(colors[i])
-            colored_line = Text.assemble(colored_line, char)
+        for idx, line_char in enumerate(line):
+            line_char.stylize(colors[idx])
+            colored_line = Text.assemble(colored_line, line_char)
         console.print(colored_line)
 
 
@@ -105,3 +107,42 @@ def get_extension_variables(json_ext_variables):
 
         variables[var[0][4:]] = value
     return variables
+
+
+def get_api_url(extension):
+    if extension:
+        api_url = extension.api.urls
+        return api_url
+    return None
+
+
+def get_urlpatterns(extension):
+    urlpatterns = [
+        path("admin/", admin.site.urls),
+    ]
+
+    api_url = get_api_url(extension)
+
+    if api_url:
+        urlpatterns.append(path("api/", api_url))
+
+    return urlpatterns
+
+
+def get_initializer_function():
+    """
+    Dynamically import and return the initializer function from settings.INITIALIZER.
+    """
+    # Read from environment variable instead of Django settings to avoid circular dependency
+    # (Django settings need to be configured before we can read settings.INITIALIZER)
+    return os.getenv(
+        "MPT_INITIALIZER", "mpt_extension_sdk.runtime.initializer.initialize"
+    )
+
+
+def initialize_extension(
+    options, group=DEFAULT_APP_CONFIG_GROUP, name=DEFAULT_APP_CONFIG_NAME
+):
+    initialize_path = get_initializer_function()
+    initialize_func = import_string(initialize_path)
+    initialize_func(options, group=group, name=name)

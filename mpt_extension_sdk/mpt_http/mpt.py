@@ -1,6 +1,5 @@
 import logging
-from datetime import date
-from enum import Enum
+from collections.abc import Iterable
 from functools import cache
 from itertools import batched
 
@@ -10,8 +9,6 @@ from mpt_extension_sdk.mpt_http.base import MPTClient
 from mpt_extension_sdk.mpt_http.wrap_http_error import wrap_mpt_http_error
 
 logger = logging.getLogger(__name__)
-
-NotifyCategories = Enum("NotifyCategories", settings.MPT_NOTIFY_CATEGORIES)
 
 
 def _has_more_pages(page):
@@ -105,6 +102,22 @@ def set_processing_template(mpt_client, order_id, template):
 
 
 @wrap_mpt_http_error
+def create_asset(mpt_client, order_id, asset):
+    """Create a new asset for an order."""
+    response = mpt_client.post(f"/commerce/orders/{order_id}/assets", json=asset)
+    response.raise_for_status()
+    return response.json()
+
+
+@wrap_mpt_http_error
+def update_asset(mpt_client, order_id, asset_id, **kwargs):
+    """Update an order asset."""
+    response = mpt_client.put(f"/commerce/orders/{order_id}/assets/{asset_id}", json=kwargs)
+    response.raise_for_status()
+    return response.json()
+
+
+@wrap_mpt_http_error
 def create_subscription(mpt_client, order_id, subscription):
     response = mpt_client.post(
         f"/commerce/orders/{order_id}/subscriptions",
@@ -125,9 +138,8 @@ def update_subscription(mpt_client, order_id, subscription_id, **kwargs):
 
 
 @wrap_mpt_http_error
-def get_order_subscription_by_external_id(
-    mpt_client, order_id, subscription_external_id
-):
+def get_order_subscription_by_external_id(mpt_client, order_id, subscription_external_id):
+    """Retrieve an order subscription by its external ID."""
     response = mpt_client.get(
         f"/commerce/orders/{order_id}/subscriptions?eq(externalIds.vendor,{subscription_external_id})&limit=1",
     )
@@ -139,9 +151,9 @@ def get_order_subscription_by_external_id(
 
 @wrap_mpt_http_error
 def get_product_items_by_skus(mpt_client, product_id, skus):
-    rql_query = (
-        f"and(eq(product.id,{product_id}),in(externalIds.vendor,({','.join(skus)})))"
-    )
+    """Retrieve product items by their SKUs."""
+    skus_str = ",".join(skus)
+    rql_query = f"and(eq(product.id,{product_id}),in(externalIds.vendor,({skus_str})))"
     url = f"/catalog/items?{rql_query}"
     return _paginated(mpt_client, url)
 
@@ -168,6 +180,14 @@ def get_product_template_or_default(mpt_client, product_id, status, name=None):
     return templates["data"][0]
 
 
+def get_template_by_name(mpt_client, product_id, template_name):
+    url = f"/catalog/products/{product_id}/templates?eq(name,{template_name})"
+    response = mpt_client.get(url)
+    response.raise_for_status()
+    templates = response.json()
+    return templates["data"][0]
+
+
 @wrap_mpt_http_error
 def update_agreement(mpt_client, agreement_id, **kwargs):
     response = mpt_client.put(
@@ -182,21 +202,6 @@ def update_agreement(mpt_client, agreement_id, **kwargs):
 def get_agreements_by_query(mpt_client, query):
     url = f"/commerce/agreements?{query}"
     return _paginated(mpt_client, url)
-
-
-def get_agreements_by_next_sync(mpt_client, next_sync_parameter):
-    today = date.today().isoformat()
-    param_condition = (
-        f"any(parameters.fulfillment,and(eq(externalId,{next_sync_parameter})"
-        f",lt(displayValue,{today})))"
-    )
-    status_condition = "eq(status,Active)"
-
-    rql_query = (
-        f"and({status_condition},{param_condition})"
-        "&select=lines,parameters,subscriptions,product,listing"
-    )
-    return get_agreements_by_query(mpt_client, rql_query)
 
 
 @wrap_mpt_http_error
@@ -237,6 +242,40 @@ def get_product_onetime_items_by_ids(mpt_client, product_id, item_ids):
     return _paginated(mpt_client, url)
 
 
+@wrap_mpt_http_error
+def get_product_items_by_period(
+    mpt_client,
+    product_id: str,
+    period: str,
+    vendor_external_ids: Iterable[str] | None = None,
+):
+    """
+    Fetches product items based on a specified period and filters.
+
+    Args:
+        mpt_client: Client in tance to interact with the required API.
+        product_id (str): The unique identifier of the product to fetch items for.
+        period (str): The period for which to fetch the product items.
+        vendor_external_ids (Iterable[str] | None):
+            Optional. A list of vendor external IDs to filter out the product items by. Defaults
+            to None.
+
+    Returns:
+        list:
+            A paginated list of product items matching the specified criteria.
+
+    """
+    product_cond = f"eq(product.id,{product_id})"
+    vendors_cond = ""
+    if vendor_external_ids:
+        vendor_ids = ",".join(vendor_external_ids)
+        vendors_cond = f",in(externalIds.vendor,({vendor_ids})))"
+    rql_query = f"and({product_cond},eq(terms.period,{period}){vendors_cond})"
+    url = f"/catalog/items?{rql_query}"
+
+    return _paginated(mpt_client, url)
+
+
 def get_agreements_by_ids(mpt_client, ids):
     rql_query = (
         f"and(in(id,({','.join(ids)})),eq(status,Active))"
@@ -257,9 +296,8 @@ def get_all_agreements(
 
 
 @wrap_mpt_http_error
-def get_authorizations_by_currency_and_seller_id(
-    mpt_client, product_id, currency, owner_id
-):
+def get_authorizations_by_currency_and_seller_id(mpt_client, product_id, currency, owner_id):
+    """Retrieve authorizations by product ID, currency, and owner ID."""
     authorization_filter = (
         f"eq(product.id,{product_id})&eq(currency,{currency})&eq(owner.id,{owner_id})"
     )
@@ -328,9 +366,8 @@ def get_listing_by_id(mpt_client, listing_id):
 
 
 @wrap_mpt_http_error
-def get_agreement_subscription_by_external_id(
-    mpt_client, agreement_id, subscription_external_id
-):
+def get_agreement_subscription_by_external_id(mpt_client, agreement_id, subscription_external_id):
+    """Retrieve an agreement subscription by external ID."""
     response = mpt_client.get(
         f"/commerce/subscriptions?eq(externalIds.vendor,{subscription_external_id})"
         f"&eq(agreement.id,{agreement_id})"
@@ -359,15 +396,14 @@ def get_agreements_by_external_id_values(mpt_client, external_id, display_values
 
 
 @wrap_mpt_http_error
-def get_agreements_by_customer_deployments(
-    mpt_client, deployment_id_parameter, deployment_ids
-):
+def get_agreements_by_customer_deployments(mpt_client, deployment_id_parameter, deployment_ids):
+    """Retrieve agreements by customer deployments."""
     deployments_list = ",".join(deployment_ids)
     rql_query = (
         f"any(parameters.fulfillment,and("
         f"eq(externalId,{deployment_id_parameter}),"
         f"in(displayValue,({deployments_list}))))"
-        f"&select=lines,parameters,subscriptions,product,listing"
+        f"&select=lines,parameters,subscriptions,subscriptions.parameters,product,listing"
     )
 
     url = f"/commerce/agreements?{rql_query}"
@@ -391,25 +427,12 @@ def notify(
     subject: str,
     message_body: str,
     limit: int = 1000,
-):
+) -> None:
     """
     Sends notifications to multiple recipients in batches for a specific buyer and
     category through the MPTClient service. The function retrieves recipients,
     groups them into manageable batches, and sends notifications using the provided
     message details.
-
-    Args:
-        mpt_client (MPTClient): Client object for interacting with MPT service.
-        category_id (str): Identifier for the category of recipients or messages.
-        account_id (str): Identifier for the associated account.
-        buyer_id (str): Identifier for the buyer related to the notification.
-        subject (str): Subject/title of the notification to be sent.
-        message_body (str): Content/body of the notification message.
-        limit (int): Maximum number of recipients to process per batch. Defaults
-            to 1000.
-
-    Returns:
-        None
     """
     recipients = _paginated(
         mpt_client,
@@ -433,3 +456,21 @@ def notify(
             },
         )
         response.raise_for_status()
+
+
+@wrap_mpt_http_error
+def terminate_subscription(mpt_client: MPTClient, subscription_id: str, reason: str) -> dict:
+    """
+    Terminates a subscription by calling the MPT API.
+
+    Raises:
+        HTTPError: If the HTTP request fails, an HTTPError is raised with
+            information about the issue.
+    """
+    response = mpt_client.post(
+        f"/commerce/subscriptions/{subscription_id}/terminate",
+        json={"description": reason},
+    )
+    response.raise_for_status()
+
+    return response.json()

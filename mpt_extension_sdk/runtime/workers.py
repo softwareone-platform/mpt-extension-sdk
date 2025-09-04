@@ -2,7 +2,11 @@ from django.core.management import call_command
 from django.core.wsgi import get_wsgi_application
 from gunicorn.app.base import BaseApplication
 
-from mpt_extension_sdk.runtime.initializer import initialize
+from mpt_extension_sdk.constants import (
+    DEFAULT_APP_CONFIG_GROUP,
+    DEFAULT_APP_CONFIG_NAME,
+)
+from mpt_extension_sdk.runtime.utils import initialize_extension
 
 
 class ExtensionWebApplication(BaseApplication):
@@ -25,19 +29,24 @@ class ExtensionWebApplication(BaseApplication):
 
 
 def start_event_consumer(options):
-    initialize(options)
+    initialize_extension(options)
     call_command("consume_events")
 
 
-def start_gunicorn(options):
-    initialize(options)
+def start_gunicorn(
+    options,
+    group=DEFAULT_APP_CONFIG_GROUP,
+    name=DEFAULT_APP_CONFIG_NAME,
+):
+    initialize_extension(options, group=group, name=name)
 
     logging_config = {
         "version": 1,
         "disable_existing_loggers": False,
         "formatters": {
             "verbose": {
-                "format": "{asctime} {name} {levelname} (pid: {process}) {message}",
+                "format":
+                    "{asctime} {name} {levelname} (pid: {process}, thread: {thread}) {message}",
                 "style": "{",
             },
             "rich": {

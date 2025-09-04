@@ -1,4 +1,5 @@
 import logging
+import os
 import signal
 import threading
 import time
@@ -14,20 +15,21 @@ logger = logging.getLogger(__name__)
 
 
 HANDLED_SIGNALS = (signal.SIGINT, signal.SIGTERM)
-PROCESS_CHECK_INTERVAL_SECS = 5
+PROCESS_CHECK_INTERVAL_SECS = int(os.environ.get("PROCESS_CHECK_INTERVAL_SECS", 5))
 
 
-def _display_path(path):
+def _display_path(path):  # pragma: no cover
     try:
         return f'"{path.relative_to(Path.cwd())}"'
-    except ValueError:  # pragma: no cover
+    except ValueError:
         return f'"{path}"'
 
 
 class Master:
-    def __init__(self, options):
+    def __init__(self, options, settings):
         self.workers = {}
         self.options = options
+        self.settings = settings
         self.stop_event = threading.Event()
         self.monitor_event = threading.Event()
         self.watch_filter = PythonFilter(ignore_paths=None)
@@ -51,9 +53,7 @@ class Master:
                     "gunicorn": start_gunicorn,
                 }
             case "consumer":
-                self.proc_targets = {
-                    "event-consumer": start_event_consumer,
-                }
+                self.proc_targets = {"event-consumer": start_event_consumer}
             case _:
                 self.proc_targets = {
                     "event-consumer": start_event_consumer,
