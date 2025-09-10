@@ -3,7 +3,6 @@ from ninja import NinjaAPI
 
 from mpt_extension_sdk.core.events.registry import EventsRegistry
 from mpt_extension_sdk.runtime import utils
-from mpt_extension_sdk.runtime.events.utils import setup_contexts
 from mpt_extension_sdk.runtime.utils import (
     get_api_url,
     get_events_registry,
@@ -70,14 +69,6 @@ def test_get_extension_variables_json_error(
         get_extension_variables(mock_json_ext_variables)
 
     assert "Variable EXT_PRODUCT_SEGMENT not well formatted" in str(e.value)
-
-
-def test_setup_contexts(mpt_client, order_factory):
-    """Test setup_contexts function with a single order."""
-    orders = [order_factory()]
-    contexts = setup_contexts(mpt_client, orders)
-    assert len(contexts) == 1
-    assert contexts[0].order == orders[0]
 
 
 def test_get_api_urls_no_extension():
