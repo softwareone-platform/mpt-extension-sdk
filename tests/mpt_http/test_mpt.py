@@ -6,12 +6,14 @@ from responses import matchers
 from mpt_extension_sdk.mpt_http.mpt import (
     complete_order,
     create_agreement,
+    create_agreement_asset,
     create_agreement_subscription,
     create_asset,
     create_listing,
     create_subscription,
     fail_order,
     get_agreement,
+    get_agreement_asset_by_external_id,
     get_agreement_subscription,
     get_agreement_subscription_by_external_id,
     get_agreements_by_customer_deployments,
@@ -25,6 +27,7 @@ from mpt_extension_sdk.mpt_http.mpt import (
     get_licensee,
     get_listing_by_id,
     get_listings_by_price_list_and_seller_and_authorization,
+    get_order_asset_by_external_id,
     get_order_subscription_by_external_id,
     get_product_items_by_period,
     get_product_items_by_skus,
@@ -304,6 +307,79 @@ def test_update_asset_error(mpt_client, requests_mocker, mpt_error_factory):
         update_asset(mpt_client, "ORD-0000", "AST-1234", parameters={})
 
     assert cv.value.payload["status"] == 404
+
+
+def test_create_agreement_asset(mpt_client, requests_mocker, assets_factory):
+    asset = assets_factory()
+    requests_mocker.post(
+        urljoin(mpt_client.base_url, "commerce/assets"),
+        json=asset,
+        status=201,
+        match=[matchers.json_params_matcher(asset)],
+    )
+
+    created_asset = create_agreement_asset(mpt_client, asset)
+
+    assert created_asset == asset
+
+
+def test_get_agreement_asset_by_external_id(mpt_client, requests_mocker, assets_factory):
+    agreement_id = "agreement_id"
+    assets = assets_factory()
+    asset_external_id = assets[0]["externalIds"]["vendor"]
+    requests_mocker.get(
+        urljoin(
+            mpt_client.base_url,
+            f"commerce/assets?eq(externalIds.vendor,{asset_external_id})"
+            f"&eq(agreement.id,{agreement_id})"
+            f"&in(status,(Active,Updating))"
+            f"&select=agreement.id&limit=1",
+        ),
+        json={
+            "$meta": {
+                "pagination": {
+                    "offset": 0,
+                    "limit": 10,
+                    "total": 1,
+                },
+            },
+            "data": assets,
+        },
+    )
+
+    result = get_agreement_asset_by_external_id(mpt_client, agreement_id, asset_external_id)
+
+    assert result == assets[0]
+
+
+@pytest.mark.parametrize(
+    ("total", "data", "expected"),
+    [
+        (0, [], None),
+        (1, [{"id": "AST-1234"}], {"id": "AST-1234"}),
+    ],
+)
+def test_get_order_asset_by_external_id(mpt_client, requests_mocker, total, data, expected):
+    requests_mocker.get(
+        urljoin(
+            mpt_client.base_url,
+            "/v1/commerce/orders/ORD-1234/assets?eq(externalIds.vendor,a-ast-id)&limit=1",
+        ),
+        json={
+            "$meta": {
+                "pagination": {
+                    "offset": 0,
+                    "limit": 0,
+                    "total": total,
+                },
+            },
+            "data": data,
+        },
+    )
+
+    result = get_order_asset_by_external_id(mpt_client, "ORD-1234", "a-ast-id")
+
+    assert result == expected
 
 
 def test_create_subscription(mpt_client, requests_mocker, subscriptions_factory):
