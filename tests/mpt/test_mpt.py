@@ -6,10 +6,10 @@ from responses import matchers
 from mpt_extension_sdk.mpt_http.mpt import (
     complete_order,
     create_agreement,
-    create_agreement_asset,
     create_agreement_subscription,
     create_asset,
     create_listing,
+    create_order_asset,
     create_subscription,
     fail_order,
     get_agreement,
@@ -42,8 +42,8 @@ from mpt_extension_sdk.mpt_http.mpt import (
     terminate_subscription,
     update_agreement,
     update_agreement_subscription,
-    update_asset,
     update_order,
+    update_order_asset,
     update_subscription,
 )
 from mpt_extension_sdk.mpt_http.wrap_http_error import MPTAPIError
@@ -229,7 +229,7 @@ def test_update_order_error(mpt_client, requests_mocker, mpt_error_factory):
     assert cv.value.payload["status"] == 404
 
 
-def test_create_asset(mpt_client, requests_mocker, assets_factory):
+def test_create_order_asset(mpt_client, requests_mocker, assets_factory):
     asset = assets_factory()[0]
     requests_mocker.post(
         urljoin(mpt_client.base_url, "commerce/orders/ORD-0000/assets"),
@@ -240,11 +240,12 @@ def test_create_asset(mpt_client, requests_mocker, assets_factory):
         ],
     )
 
-    created_asset = create_asset(mpt_client, "ORD-0000", asset)
+    created_asset = create_order_asset(mpt_client, "ORD-0000", asset)
+
     assert created_asset == asset
 
 
-def test_create_asset_error(mpt_client, requests_mocker, mpt_error_factory):
+def test_create_order_asset_error(mpt_client, requests_mocker, mpt_error_factory):
     requests_mocker.post(
         urljoin(mpt_client.base_url, "commerce/orders/ORD-0000/assets"),
         status=404,
@@ -252,12 +253,12 @@ def test_create_asset_error(mpt_client, requests_mocker, mpt_error_factory):
     )
 
     with pytest.raises(MPTAPIError) as cv:
-        create_asset(mpt_client, "ORD-0000", {})
+        create_order_asset(mpt_client, "ORD-0000", {})
 
     assert cv.value.payload["status"] == 404
 
 
-def test_update_asset(mpt_client, requests_mocker, assets_factory):
+def test_update_order_asset(mpt_client, requests_mocker, assets_factory):
     asset = assets_factory()
     requests_mocker.put(
         urljoin(
@@ -283,7 +284,7 @@ def test_update_asset(mpt_client, requests_mocker, assets_factory):
         ],
     )
 
-    updated_asset = update_asset(
+    updated_asset = update_order_asset(
         mpt_client,
         "ORD-0000",
         "AST-1234",
@@ -301,7 +302,7 @@ def test_update_asset(mpt_client, requests_mocker, assets_factory):
     assert updated_asset == asset
 
 
-def test_update_asset_error(mpt_client, requests_mocker, mpt_error_factory):
+def test_update_order_asset_error(mpt_client, requests_mocker, mpt_error_factory):
     requests_mocker.put(
         urljoin(mpt_client.base_url, "commerce/orders/ORD-0000/assets/AST-1234"),
         status=404,
@@ -309,12 +310,12 @@ def test_update_asset_error(mpt_client, requests_mocker, mpt_error_factory):
     )
 
     with pytest.raises(MPTAPIError) as cv:
-        update_asset(mpt_client, "ORD-0000", "AST-1234", parameters={})
+        update_order_asset(mpt_client, "ORD-0000", "AST-1234", parameters={})
 
     assert cv.value.payload["status"] == 404
 
 
-def test_create_agreement_asset(mpt_client, requests_mocker, assets_factory):
+def test_create_asset(mpt_client, requests_mocker, assets_factory):
     asset = assets_factory()
     requests_mocker.post(
         urljoin(mpt_client.base_url, "commerce/assets"),
@@ -323,7 +324,7 @@ def test_create_agreement_asset(mpt_client, requests_mocker, assets_factory):
         match=[matchers.json_params_matcher(asset)],
     )
 
-    created_asset = create_agreement_asset(mpt_client, asset)
+    created_asset = create_asset(mpt_client, asset)
 
     assert created_asset == asset
 
