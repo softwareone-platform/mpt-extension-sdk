@@ -109,7 +109,15 @@ def set_processing_template(mpt_client, order_id, template):
 
 
 @wrap_mpt_http_error
-def create_asset(mpt_client, order_id, asset):
+def create_asset(mpt_client, asset):
+    """Create a new asset."""
+    response = mpt_client.post("/commerce/assets", json=asset)
+    response.raise_for_status()
+    return response.json()
+
+
+@wrap_mpt_http_error
+def create_order_asset(mpt_client, order_id, asset):
     """Create a new asset for an order."""
     response = mpt_client.post(f"/commerce/orders/{order_id}/assets", json=asset)
     response.raise_for_status()
@@ -117,17 +125,9 @@ def create_asset(mpt_client, order_id, asset):
 
 
 @wrap_mpt_http_error
-def update_asset(mpt_client, order_id, asset_id, **kwargs):
+def update_order_asset(mpt_client, order_id, asset_id, **kwargs):
     """Update an order asset."""
     response = mpt_client.put(f"/commerce/orders/{order_id}/assets/{asset_id}", json=kwargs)
-    response.raise_for_status()
-    return response.json()
-
-
-@wrap_mpt_http_error
-def create_agreement_asset(mpt_client, asset):
-    """Create a new agreement asset."""
-    response = mpt_client.post("/commerce/assets", json=asset)
     response.raise_for_status()
     return response.json()
 
