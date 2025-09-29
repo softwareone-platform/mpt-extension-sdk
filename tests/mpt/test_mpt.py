@@ -1108,7 +1108,7 @@ def test_get_product_items_by_period_error(
 def test_get_agreements_by_ids(mocker):
     rql_query = (
         "and(in(id,(AGR-0001)),eq(status,Active))"
-        "&select=lines,parameters,subscriptions,product,listing"
+        "&select=assets,lines,parameters,subscriptions,product,listing"
     )
 
     mocked_get_by_query = mocker.patch(
@@ -1126,7 +1126,7 @@ def test_get_all_agreements(mocker, settings):
     product_condition = f"in(product.id,({','.join(settings.MPT_PRODUCTS_IDS)}))"
     rql_query = (
         f"and(eq(status,Active),{product_condition})"
-        f"&select=lines,parameters,subscriptions,product,listing"
+        f"&select=assets,lines,parameters,subscriptions,product,listing"
     )
 
     mocked_get_by_query = mocker.patch(

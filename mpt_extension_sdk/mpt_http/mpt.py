@@ -329,21 +329,23 @@ def get_product_items_by_period(
 
 
 def get_agreements_by_ids(mpt_client, ids):
+    """Retrieve agreements by their IDs."""
+    ids_str = ",".join(ids)
     rql_query = (
-        f"and(in(id,({','.join(ids)})),eq(status,Active))"
-        "&select=lines,parameters,subscriptions,product,listing"
+        f"and(in(id,({ids_str})),eq(status,Active))"
+        "&select=assets,lines,parameters,subscriptions,product,listing"
     )
     return get_agreements_by_query(mpt_client, rql_query)
 
 
-def get_all_agreements(
-    mpt_client,
-):
-    product_condition = f"in(product.id,({','.join(settings.MPT_PRODUCTS_IDS)}))"
+def get_all_agreements(mpt_client):
+    """Retrieve all active agreements for specific products."""
+    product_ids_str = ",".join(settings.MPT_PRODUCTS_IDS)
+    product_condition = f"in(product.id,({product_ids_str}))"
 
     return get_agreements_by_query(
         mpt_client,
-        f"and(eq(status,Active),{product_condition})&select=lines,parameters,subscriptions,product,listing",
+        f"and(eq(status,Active),{product_condition})&select=assets,lines,parameters,subscriptions,product,listing",
     )
 
 
