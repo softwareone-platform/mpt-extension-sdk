@@ -118,6 +118,14 @@ def create_order_asset(mpt_client, order_id, asset):
 
 
 @wrap_mpt_http_error
+def update_asset(mpt_client, asset_id, **kwargs):
+    """Update an asset."""
+    response = mpt_client.put(f"/commerce/assets/{asset_id}", json=kwargs)
+    response.raise_for_status()
+    return response.json()
+
+
+@wrap_mpt_http_error
 def update_order_asset(mpt_client, order_id, asset_id, **kwargs):
     """Update an order asset."""
     response = mpt_client.put(f"/commerce/orders/{order_id}/assets/{asset_id}", json=kwargs)
@@ -137,6 +145,14 @@ def get_agreement_asset_by_external_id(mpt_client, agreement_id, asset_external_
     response.raise_for_status()
     assets = response.json()
     return assets["data"][0] if assets["data"] else None
+
+
+@wrap_mpt_http_error
+def get_asset_by_id(mpt_client, asset_id):
+    """Get an asset by ID."""
+    response = mpt_client.get(f"/commerce/assets/{asset_id}")
+    response.raise_for_status()
+    return response.json()
 
 
 @wrap_mpt_http_error
