@@ -656,53 +656,44 @@ def test_get_order_subscription_by_external_id(mpt_client, requests_mocker, tota
     assert get_order_subscription_by_external_id(mpt_client, "ORD-1234", "a-sub-id") == expected
 
 
-@pytest.mark.parametrize("name", ["template_name", None])
-def test_get_product_template_or_default(mpt_client, requests_mocker, name):
-    name_or_default_filter = "eq(default,true)"
-    if name:
-        name_or_default_filter = f"or({name_or_default_filter},eq(name,{name}))"
-    rql_filter = f"and(eq(type,OrderProcessing),{name_or_default_filter})"
+@pytest.mark.parametrize(
+    ("name", "response", "expected_result"),
+    [("template_name", [{"id": "TPL-0000"}], {"id": "TPL-0000"}), ("missing_template", [], None)],
+)
+def test_get_product_template_or_default(
+    mpt_client, requests_mocker, name, response, expected_result
+):
+    rql_filter = f"and(eq(type,OrderProcessing),or(eq(default,true),eq(name,{name})))"
     url = f"catalog/products/PRD-1111/templates?{rql_filter}&order=default&limit=1"
-    requests_mocker.get(
-        urljoin(
-            mpt_client.base_url,
-            url,
-        ),
-        json={
-            "data": [
-                {"id": "TPL-0000"},
-            ]
-        },
-    )
+    requests_mocker.get(urljoin(mpt_client.base_url, url), json={"data": response})
 
-    assert get_product_template_or_default(
-        mpt_client,
-        "PRD-1111",
-        "Processing",
-        name,
-    ) == {"id": "TPL-0000"}
+    result = get_product_template_or_default(mpt_client, "PRD-1111", "Processing", name)
+
+    assert result == expected_result
 
 
-@pytest.mark.parametrize("name", ["template_name", None])
-def test_get_product_template_by_name(mpt_client, requests_mocker, name):
+@pytest.mark.parametrize("name", ["", None])
+def test_get_product_template_or_default_empty_name(mpt_client, requests_mocker, name):
+    rql_filter = "eq(default,true)"
+    url = f"catalog/products/PRD-1111/templates?{rql_filter}&order=default&limit=1"
+    requests_mocker.get(urljoin(mpt_client.base_url, url), json={"data": [{"id": "TPL-0000"}]})
+
+    result = get_product_template_or_default(mpt_client, "PRD-1111", "Processing", name)
+
+    assert result == {"id": "TPL-0000"}
+
+
+@pytest.mark.parametrize(
+    ("name", "response", "expected_result"),
+    [("template_name", [{"id": "TPL-0000"}], {"id": "TPL-0000"}), ("missing_template", [], None)],
+)
+def test_get_product_template_by_name(mpt_client, requests_mocker, name, response, expected_result):
     url = f"catalog/products/PRD-1111/templates?eq(name,{name})"
-    requests_mocker.get(
-        urljoin(
-            mpt_client.base_url,
-            url,
-        ),
-        json={
-            "data": [
-                {"id": "TPL-0000"},
-            ]
-        },
-    )
+    requests_mocker.get(urljoin(mpt_client.base_url, url), json={"data": response})
 
-    assert get_template_by_name(
-        mpt_client,
-        "PRD-1111",
-        name,
-    ) == {"id": "TPL-0000"}
+    result = get_template_by_name(mpt_client, "PRD-1111", name)
+
+    assert result == expected_result
 
 
 def test_update_agreement(mpt_client, requests_mocker):

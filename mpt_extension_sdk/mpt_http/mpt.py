@@ -241,16 +241,17 @@ def get_product_template_or_default(mpt_client, product_id, status, name=None):
     response = mpt_client.get(url)
     response.raise_for_status()
     templates = response.json()
-    return templates["data"][0]
+    return templates["data"][0] if templates["data"] else None
 
 
+@wrap_mpt_http_error
 def get_template_by_name(mpt_client, product_id, template_name):
     """Retrieve a product template by name."""
     url = f"/catalog/products/{product_id}/templates?eq(name,{template_name})"
     response = mpt_client.get(url)
     response.raise_for_status()
     templates = response.json()
-    return templates["data"][0]
+    return templates["data"][0] if templates["data"] else None
 
 
 @wrap_mpt_http_error
