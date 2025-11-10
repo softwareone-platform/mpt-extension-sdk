@@ -9,9 +9,11 @@ from mpt_extension_sdk.mpt_http.mpt import (
     create_agreement_subscription,
     create_asset,
     create_listing,
+    create_order_asset,
     create_subscription,
     fail_order,
     get_agreement,
+    get_agreement_asset_by_external_id,
     get_agreement_subscription,
     get_agreement_subscription_by_external_id,
     get_agreements_by_customer_deployments,
@@ -19,12 +21,14 @@ from mpt_extension_sdk.mpt_http.mpt import (
     get_agreements_by_ids,
     get_agreements_by_query,
     get_all_agreements,
+    get_asset_by_id,
     get_authorizations_by_currency_and_seller_id,
     get_buyer,
     get_gc_price_list_by_currency,
     get_licensee,
     get_listing_by_id,
     get_listings_by_price_list_and_seller_and_authorization,
+    get_order_asset_by_external_id,
     get_order_subscription_by_external_id,
     get_product_items_by_period,
     get_product_items_by_skus,
@@ -41,6 +45,7 @@ from mpt_extension_sdk.mpt_http.mpt import (
     update_agreement_subscription,
     update_asset,
     update_order,
+    update_order_asset,
     update_subscription,
 )
 from mpt_extension_sdk.mpt_http.wrap_http_error import MPTAPIError
@@ -227,6 +232,20 @@ def test_update_order_error(mpt_client, requests_mocker, mpt_error_factory):
 
 
 def test_create_asset(mpt_client, requests_mocker, assets_factory):
+    asset = assets_factory()
+    requests_mocker.post(
+        urljoin(mpt_client.base_url, "commerce/assets"),
+        json=asset,
+        status=201,
+        match=[matchers.json_params_matcher(asset)],
+    )
+
+    created_asset = create_asset(mpt_client, asset)
+
+    assert created_asset == asset
+
+
+def test_create_order_asset(mpt_client, requests_mocker, assets_factory):
     asset = assets_factory()[0]
     requests_mocker.post(
         urljoin(mpt_client.base_url, "commerce/orders/ORD-0000/assets"),
@@ -237,11 +256,12 @@ def test_create_asset(mpt_client, requests_mocker, assets_factory):
         ],
     )
 
-    created_asset = create_asset(mpt_client, "ORD-0000", asset)
+    created_asset = create_order_asset(mpt_client, "ORD-0000", asset)
+
     assert created_asset == asset
 
 
-def test_create_asset_error(mpt_client, requests_mocker, mpt_error_factory):
+def test_create_order_asset_error(mpt_client, requests_mocker, mpt_error_factory):
     requests_mocker.post(
         urljoin(mpt_client.base_url, "commerce/orders/ORD-0000/assets"),
         status=404,
@@ -249,12 +269,69 @@ def test_create_asset_error(mpt_client, requests_mocker, mpt_error_factory):
     )
 
     with pytest.raises(MPTAPIError) as cv:
-        create_asset(mpt_client, "ORD-0000", {})
+        create_order_asset(mpt_client, "ORD-0000", {})
 
     assert cv.value.payload["status"] == 404
 
 
 def test_update_asset(mpt_client, requests_mocker, assets_factory):
+    asset = assets_factory()
+    requests_mocker.put(
+        urljoin(
+            mpt_client.base_url,
+            "commerce/assets/AST-1234",
+        ),
+        json=asset,
+        match=[
+            matchers.json_params_matcher(
+                {
+                    "parameters": {
+                        "fulfillment": [
+                            {
+                                "externalId": "a-param",
+                                "name": "a-param",
+                                "value": "a-value",
+                                "type": "SingleLineText",
+                            }
+                        ],
+                    },
+                },
+            ),
+        ],
+    )
+
+    updated_asset = update_asset(
+        mpt_client,
+        "AST-1234",
+        parameters={
+            "fulfillment": [
+                {
+                    "externalId": "a-param",
+                    "name": "a-param",
+                    "value": "a-value",
+                    "type": "SingleLineText",
+                }
+            ]
+        },
+    )
+
+    assert updated_asset == asset
+
+
+def test_update_asset_error(mpt_client, requests_mocker, mpt_error_factory):
+    requests_mocker.put(
+        urljoin(mpt_client.base_url, "commerce/assets/AST-1234"),
+        status=404,
+        json=mpt_error_factory(404, "Not Found", "Order not found"),
+    )
+
+    with pytest.raises(MPTAPIError) as cv:
+        update_asset(mpt_client, "AST-1234", parameters={})
+
+    assert cv.value.payload["status"] == 404
+
+
+def test_update_order_asset(mpt_client, requests_mocker, assets_factory):
     asset = assets_factory()
     requests_mocker.put(
         urljoin(
@@ -280,7 +357,7 @@ def test_update_asset(mpt_client, requests_mocker, assets_factory):
         ],
     )
 
-    updated_asset = update_asset(
+    updated_asset = update_order_asset(
         mpt_client,
         "ORD-0000",
         "AST-1234",
@@ -298,7 +375,7 @@ def test_update_asset(mpt_client, requests_mocker, assets_factory):
     assert updated_asset == asset
 
 
-def test_update_asset_error(mpt_client, requests_mocker, mpt_error_factory):
+def test_update_order_asset_error(mpt_client, requests_mocker, mpt_error_factory):
     requests_mocker.put(
         urljoin(mpt_client.base_url, "commerce/orders/ORD-0000/assets/AST-1234"),
         status=404,
@@ -306,9 +383,93 @@ def test_update_asset_error(mpt_client, requests_mocker, mpt_error_factory):
     )
 
     with pytest.raises(MPTAPIError) as cv:
-        update_asset(mpt_client, "ORD-0000", "AST-1234", parameters={})
+        update_order_asset(mpt_client, "ORD-0000", "AST-1234", parameters={})
 
     assert cv.value.payload["status"] == 404
+
+
+def test_get_agreement_asset_by_external_id(mpt_client, requests_mocker, assets_factory):
+    agreement_id = "agreement_id"
+    assets = assets_factory()
+    asset_external_id = assets[0]["externalIds"]["vendor"]
+    requests_mocker.get(
+        urljoin(
+            mpt_client.base_url,
+            f"commerce/assets?eq(externalIds.vendor,{asset_external_id})"
+            f"&eq(agreement.id,{agreement_id})"
+            f"&in(status,(Active,Updating))"
+            f"&select=agreement.id&limit=1",
+        ),
+        json={
+            "$meta": {
+                "pagination": {
+                    "offset": 0,
+                    "limit": 10,
+                    "total": 1,
+                },
+            },
+            "data": assets,
+        },
+    )
+
+    result = get_agreement_asset_by_external_id(mpt_client, agreement_id, asset_external_id)
+
+    assert result == assets[0]
+
+
+@pytest.mark.parametrize(
+    ("total", "data", "expected"),
+    [
+        (0, [], None),
+        (1, [{"id": "AST-1234"}], {"id": "AST-1234"}),
+    ],
+)
+def test_get_order_asset_by_external_id(mpt_client, requests_mocker, total, data, expected):
+    requests_mocker.get(
+        urljoin(
+            mpt_client.base_url,
+            "/v1/commerce/orders/ORD-1234/assets?eq(externalIds.vendor,a-ast-id)&limit=1",
+        ),
+        json={
+            "$meta": {
+                "pagination": {
+                    "offset": 0,
+                    "limit": 0,
+                    "total": total,
+                },
+            },
+            "data": data,
+        },
+    )
+
+    result = get_order_asset_by_external_id(mpt_client, "ORD-1234", "a-ast-id")
+
+    assert result == expected
+
+
+def test_get_asset_by_id(mpt_client, requests_mocker, assets_factory):
+    asset = assets_factory()[0]
+    requests_mocker.get(
+        urljoin(mpt_client.base_url, f"commerce/assets/{asset['id']}"),
+        json={"data": asset},
+    )
+
+    result = get_asset_by_id(mpt_client, asset["id"])
+
+    assert result["data"] == asset
+
+
+def test_get_asset_by_id_error(mpt_client, requests_mocker, mpt_error_factory, assets_factory):
+    requests_mocker.get(
+        urljoin(mpt_client.base_url, "commerce/assets/fake-id"),
+        status=404,
+        json=mpt_error_factory(404, "Not Found", "Order not found"),
+    )
+
+    with pytest.raises(MPTAPIError) as exc_info:
+        get_asset_by_id(mpt_client, "fake-id")
+
+    assert exc_info.value.payload["status"] == 404
 
 
 def test_create_subscription(mpt_client, requests_mocker, subscriptions_factory):
@@ -947,7 +1108,7 @@ def test_get_product_items_by_period_error(
 def test_get_agreements_by_ids(mocker):
     rql_query = (
         "and(in(id,(AGR-0001)),eq(status,Active))"
-        "&select=lines,parameters,subscriptions,product,listing"
+        "&select=assets,lines,parameters,subscriptions,product,listing"
     )
 
     mocked_get_by_query = mocker.patch(
@@ -965,7 +1126,7 @@ def test_get_all_agreements(mocker, settings):
     product_condition = f"in(product.id,({','.join(settings.MPT_PRODUCTS_IDS)}))"
     rql_query = (
         f"and(eq(status,Active),{product_condition})"
-        f"&select=lines,parameters,subscriptions,product,listing"
+        f"&select=assets,lines,parameters,subscriptions,product,listing"
     )
 
     mocked_get_by_query = mocker.patch(

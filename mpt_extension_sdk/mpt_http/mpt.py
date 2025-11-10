@@ -102,7 +102,15 @@ def set_processing_template(mpt_client, order_id, template):
 
 
 @wrap_mpt_http_error
-def create_asset(mpt_client, order_id, asset):
+def create_asset(mpt_client, asset):
+    """Create a new asset."""
+    response = mpt_client.post("/commerce/assets", json=asset)
+    response.raise_for_status()
+    return response.json()
+
+
+@wrap_mpt_http_error
+def create_order_asset(mpt_client, order_id, asset):
     """Create a new asset for an order."""
     response = mpt_client.post(f"/commerce/orders/{order_id}/assets", json=asset)
     response.raise_for_status()
@@ -110,11 +118,55 @@ def create_asset(mpt_client, order_id, asset):
 
 
 @wrap_mpt_http_error
-def update_asset(mpt_client, order_id, asset_id, **kwargs):
+def update_asset(mpt_client, asset_id, **kwargs):
+    """Update an asset."""
+    response = mpt_client.put(f"/commerce/assets/{asset_id}", json=kwargs)
+    response.raise_for_status()
+    return response.json()
+
+
+@wrap_mpt_http_error
+def update_order_asset(mpt_client, order_id, asset_id, **kwargs):
     """Update an order asset."""
     response = mpt_client.put(f"/commerce/orders/{order_id}/assets/{asset_id}", json=kwargs)
     response.raise_for_status()
     return response.json()
+
+
+@wrap_mpt_http_error
+def get_agreement_asset_by_external_id(mpt_client, agreement_id, asset_external_id):
+    """Retrieve an agreement asset by external ID."""
+    response = mpt_client.get(
+        f"/commerce/assets?eq(externalIds.vendor,{asset_external_id})"
+        f"&eq(agreement.id,{agreement_id})"
+        f"&eq(status,Active)"
+        f"&select=agreement.id&limit=1"
+    )
+    response.raise_for_status()
+    assets = response.json()
+    return assets["data"][0] if assets["data"] else None
+
+
+@wrap_mpt_http_error
+def get_asset_by_id(mpt_client, asset_id):
+    """Get an asset by ID."""
+    response = mpt_client.get(f"/commerce/assets/{asset_id}")
+    response.raise_for_status()
+    return response.json()
+
+
+@wrap_mpt_http_error
+def get_order_asset_by_external_id(mpt_client, order_id, asset_external_id):
+    """Retrieve an order asset by its external ID."""
+    response = mpt_client.get(
+        f"/commerce/orders/{order_id}/assets?eq(externalIds.vendor,{asset_external_id})&limit=1",
+    )
+    response.raise_for_status()
+    assets = response.json()
+    if assets["$meta"]["pagination"]["total"] == 1:
+        return assets["data"][0]
+
+    return None
 
 
 @wrap_mpt_http_error
@@ -277,21 +329,23 @@ def get_product_items_by_period(
 
 
 def get_agreements_by_ids(mpt_client, ids):
+    """Retrieve agreements by their IDs."""
+    ids_str = ",".join(ids)
     rql_query = (
-        f"and(in(id,({','.join(ids)})),eq(status,Active))"
-        "&select=lines,parameters,subscriptions,product,listing"
+        f"and(in(id,({ids_str})),eq(status,Active))"
+        "&select=assets,lines,parameters,subscriptions,product,listing"
     )
     return get_agreements_by_query(mpt_client, rql_query)
 
 
-def get_all_agreements(
-    mpt_client,
-):
-    product_condition = f"in(product.id,({','.join(settings.MPT_PRODUCTS_IDS)}))"
+def get_all_agreements(mpt_client):
+    """Retrieve all active agreements for specific products."""
+    product_ids_str = ",".join(settings.MPT_PRODUCTS_IDS)
+    product_condition = f"in(product.id,({product_ids_str}))"
 
     return get_agreements_by_query(
         mpt_client,
-        f"and(eq(status,Active),{product_condition})&select=lines,parameters,subscriptions,product,listing",
+        f"and(eq(status,Active),{product_condition})&select=assets,lines,parameters,subscriptions,product,listing",
     )
 
 
