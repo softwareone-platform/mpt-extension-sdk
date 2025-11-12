@@ -608,14 +608,14 @@ def test_get_product_items_by_skus_error(mpt_client, requests_mocker, mpt_error_
 
     requests_mocker.get(
         urljoin(mpt_client.base_url, url),
-        status=500,
-        json=mpt_error_factory(500, "Internal server error", "Whatever"),
+        status=400,
+        json=mpt_error_factory(400, "Bad request", "Whatever"),
     )
 
     with pytest.raises(MPTAPIError) as cv:
         get_product_items_by_skus(mpt_client, product_id, skus)
 
-    assert cv.value.payload["status"] == 500
+    assert cv.value.payload["status"] == 400
 
 
 def test_get_webhoook(mpt_client, requests_mocker, webhook):
@@ -857,14 +857,14 @@ def test_get_agreements_by_query_error(mpt_client, requests_mocker, mpt_error_fa
     url = f"{url}&limit=10&offset=0"
     requests_mocker.get(
         urljoin(mpt_client.base_url, url),
-        status=500,
-        json=mpt_error_factory(500, "Internal server error", "Whatever"),
+        status=400,
+        json=mpt_error_factory(400, "Bad request", "Whatever"),
     )
 
     with pytest.raises(MPTAPIError) as cv:
         get_agreements_by_query(mpt_client, rql_query)
 
-    assert cv.value.payload["status"] == 500
+    assert cv.value.payload["status"] == 400
 
 
 def test_get_subscriptions_by_query(mpt_client, requests_mocker):
@@ -911,14 +911,14 @@ def test_get_subscriptions_by_query_error(mpt_client, requests_mocker, mpt_error
     url = f"{url}&limit=10&offset=0"
     requests_mocker.get(
         urljoin(mpt_client.base_url, url),
-        status=500,
-        json=mpt_error_factory(500, "Internal server error", "Whatever"),
+        status=400,
+        json=mpt_error_factory(400, "Bad request", "Whatever"),
     )
 
     with pytest.raises(MPTAPIError) as cv:
         get_subscriptions_by_query(mpt_client, rql_query)
 
-    assert cv.value.payload["status"] == 500
+    assert cv.value.payload["status"] == 400
 
 
 def test_get_rendered_template(mpt_client, requests_mocker):
@@ -993,14 +993,14 @@ def test_get_product_onetime_items_by_ids_error(mpt_client, requests_mocker, mpt
 
     requests_mocker.get(
         urljoin(mpt_client.base_url, url),
-        status=500,
-        json=mpt_error_factory(500, "Internal server error", "Whatever"),
+        status=400,
+        json=mpt_error_factory(400, "Bad request", "Whatever"),
     )
 
     with pytest.raises(MPTAPIError) as cv:
         get_product_onetime_items_by_ids(mpt_client, product_id, ids)
 
-    assert cv.value.payload["status"] == 500
+    assert cv.value.payload["status"] == 400
 
 
 def test_get_product_items_by_period(mpt_client, requests_mocker):
@@ -1101,14 +1101,14 @@ def test_get_product_items_by_period_error(mpt_client, requests_mocker, mpt_erro
 
     requests_mocker.get(
         urljoin(mpt_client.base_url, url),
-        status=500,
-        json=mpt_error_factory(500, "Internal server error", "Whatever"),
+        status=400,
+        json=mpt_error_factory(400, "Bad request", "Whatever"),
     )
 
     with pytest.raises(MPTAPIError) as cv:
         get_product_items_by_period(mpt_client, product_id, period)
 
-    assert cv.value.payload["status"] == 500
+    assert cv.value.payload["status"] == 400
 
 
 def test_get_agreements_by_ids(mocker):
