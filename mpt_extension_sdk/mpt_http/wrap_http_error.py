@@ -2,10 +2,15 @@ import json
 from functools import wraps
 
 from requests import HTTPError, JSONDecodeError
+from requests.exceptions import RetryError
 
 
 class MPTError(Exception):
     """Represents a generic MPT error."""
+
+
+class MPTMaxRetryError(MPTError):
+    """Represents a maximum request retry error."""
 
 
 class MPTHttpError(MPTError):
@@ -40,6 +45,15 @@ class MPTAPIError(MPTHttpError):
         return str(self.payload)
 
 
+def transform_http_error(err):
+    """Transform an HTTP error to an MPT error."""
+    try:
+        payload = err.response.json()
+    except JSONDecodeError:
+        return MPTHttpError(err.response.status_code, err.response.content.decode())
+    return MPTAPIError(err.response.status_code, payload)
+
+
 def wrap_mpt_http_error(func):
     """Wrap a function to catch MPT HTTP errors."""
 
@@ -48,12 +62,9 @@ def wrap_mpt_http_error(func):
         try:
             return func(*args, **kwargs)
         except HTTPError as err:
-            response = err.response
-            try:
-                payload = response.json()
-            except JSONDecodeError:
-                raise MPTHttpError(response.status_code, response.content.decode()) from err
-            raise MPTAPIError(response.status_code, payload) from err
+            raise transform_http_error(err) from err
+        except RetryError as retry_error:
+            raise MPTMaxRetryError(str(retry_error))
 
     return _wrapper
 
