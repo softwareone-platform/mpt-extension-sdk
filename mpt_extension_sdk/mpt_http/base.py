@@ -21,6 +21,13 @@ class MPTClient(Session):
                 pool_maxsize=36,
             ),
         )
+        self.mount(
+            "https://",
+            HTTPAdapter(
+                max_retries=retries,
+                pool_maxsize=36,
+            ),
+        )
         self.headers.update(
             {
                 "User-Agent": USER_AGENT,
