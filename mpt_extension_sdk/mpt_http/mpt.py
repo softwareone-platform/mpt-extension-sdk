@@ -254,6 +254,18 @@ def get_template_by_name(mpt_client, product_id, template_name):
 
 
 @wrap_mpt_http_error
+def get_asset_template_by_name(mpt_client, product_id, template_name):
+    """Retrieve an asset template by name."""
+    rql_filter = f"and(eq(type,Asset),eq(name,{template_name}))"
+    url = f"/catalog/products/{product_id}/templates?{rql_filter}&limit=1"
+    response = mpt_client.get(url)
+    response.raise_for_status()
+
+    templates = response.json()
+    return templates["data"][0] if templates["data"] else None
+
+
+@wrap_mpt_http_error
 def update_agreement(mpt_client, agreement_id, **kwargs):
     """Update an agreement."""
     response = mpt_client.put(

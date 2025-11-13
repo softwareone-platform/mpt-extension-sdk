@@ -22,6 +22,7 @@ from mpt_extension_sdk.mpt_http.mpt import (
     get_agreements_by_query,
     get_all_agreements,
     get_asset_by_id,
+    get_asset_template_by_name,
     get_authorizations_by_currency_and_seller_id,
     get_buyer,
     get_gc_price_list_by_currency,
@@ -692,6 +693,19 @@ def test_get_product_template_by_name(mpt_client, requests_mocker, name, respons
     requests_mocker.get(urljoin(mpt_client.base_url, url), json={"data": response})
 
     result = get_template_by_name(mpt_client, "PRD-1111", name)
+
+    assert result == expected_result
+
+
+@pytest.mark.parametrize(
+    ("name", "response", "expected_result"),
+    [("template_name", [{"id": "TPL-0000"}], {"id": "TPL-0000"}), ("missing_template", [], None)],
+)
+def test_get_asset_template_by_name(mpt_client, requests_mocker, name, response, expected_result):
+    url = f"catalog/products/PRD-1111/templates?and(eq(type,Asset),eq(name,{name}))&limit=1"
+    requests_mocker.get(urljoin(mpt_client.base_url, url), json={"data": response})
+
+    result = get_asset_template_by_name(mpt_client, "PRD-1111", name)
 
     assert result == expected_result
 
