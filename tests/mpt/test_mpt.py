@@ -1159,7 +1159,8 @@ def test_get_agreement(mpt_client, requests_mocker, agreement):
     requests_mocker.get(
         urljoin(
             mpt_client.base_url,
-            f"commerce/agreements/{agreement_id}?select=seller,buyer,listing,product,subscriptions",
+            f"commerce/agreements/{agreement_id}?"
+            f"select=seller,buyer,listing,product,subscriptions,assets,lines,parameters",
         ),
         json=agreement,
     )
@@ -1171,7 +1172,8 @@ def test_get_agreement_error(mpt_client, requests_mocker, mpt_error_factory):
     requests_mocker.get(
         urljoin(
             mpt_client.base_url,
-            "commerce/agreements/AGR-1234?select=seller,buyer,listing,product,subscriptions",
+            "commerce/agreements/AGR-1234?"
+            "select=seller,buyer,listing,product,subscriptions,assets,lines,parameters",
         ),
         status=404,
         json=mpt_error_factory(404, "Not Found", "Agreement not found"),

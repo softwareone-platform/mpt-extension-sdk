@@ -34,9 +34,9 @@ def _paginated(mpt_client, url, limit=10):
 
 @wrap_mpt_http_error
 def get_agreement(mpt_client, agreement_id):
-    response = mpt_client.get(
-        f"/commerce/agreements/{agreement_id}?select=seller,buyer,listing,product,subscriptions"
-    )
+    """Retrieve an agreement by ID."""
+    query = "select=seller,buyer,listing,product,subscriptions,assets,lines,parameters"
+    response = mpt_client.get(f"/commerce/agreements/{agreement_id}?{query}")
     response.raise_for_status()
     return response.json()
 
