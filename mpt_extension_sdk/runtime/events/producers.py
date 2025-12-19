@@ -83,7 +83,7 @@ class OrderEventProducer(EventProducer):
         )
         url = (
             f"/commerce/orders?{rql_query}&select=audit,parameters,lines,subscriptions,"
-            f"subscriptions.lines,agreement,buyer,seller&order=audit.created.at"
+            f"subscriptions.lines,agreement,buyer,seller,authorization.externalIds&order=audit.created.at"
         )
         page = None
         limit = 10
