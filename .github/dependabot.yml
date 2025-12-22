@@ -7,7 +7,7 @@ updates:
       day: "monday"
       time: "08:00"
       timezone: "UTC"
-    versioning-strategy: "auto"
+    versioning-strategy: "increase"
     groups:
       python-production:
         dependency-type: "production"
@@ -22,6 +22,10 @@ updates:
         versions: [">=5.0.0"]
       - dependency-name: "django-ninja"
         versions: [">=1.2.0"]
+      - dependency-name: "opentelemetry-sdk"
+        versions: [">=1.31.0"]
+      - dependency-name: "opentelemetry-instrumentation"
+        versions: [">=1.31.0"]
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
