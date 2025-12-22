@@ -17,6 +17,12 @@ updates:
       prefix: "deps"
       include: "scope"
     open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: "django"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "django-ninja"
+        update-types:
+          ["version-update:semver-major", "version-update:semver-minor"]
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
