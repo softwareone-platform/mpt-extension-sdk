@@ -735,8 +735,8 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "azure-identity", specifier = ">=1.21.0,<2" },
-    { name = "azure-keyvault-secrets", specifier = ">=4.9.0,<5" },
+    { name = "azure-identity", specifier = "==1.24.*" },
+    { name = "azure-keyvault-secrets", specifier = "==4.10.*" },
     { name = "azure-monitor-opentelemetry-exporter", specifier = "==1.0.0b25" },
     { name = "click", specifier = "==8.1.*" },
     { name = "debugpy", specifier = "==1.8.*" },
@@ -756,7 +756,7 @@ requires-dist = [
     { name = "pyfiglet", specifier = "==1.0.*" },
     { name = "pyjwt", specifier = "==2.8.*" },
     { name = "pymsteams", specifier = "==0.2.*" },
-    { name = "regex", specifier = ">=2024.7.24,<2025" },
+    { name = "regex", specifier = "==2024.11.*" },
     { name = "requests", specifier = "==2.32.*" },
     { name = "rich", specifier = "==14.1.*" },
     { name = "types-openpyxl", specifier = "==3.1.*" },
@@ -766,7 +766,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "flake8", specifier = ">=7.3.0" },
+    { name = "flake8", specifier = "==7.3.0" },
     { name = "freezegun", specifier = "==1.4.*" },
     { name = "ipdb", specifier = "==0.13.*" },
     { name = "ipython", specifier = "==8.*" },
