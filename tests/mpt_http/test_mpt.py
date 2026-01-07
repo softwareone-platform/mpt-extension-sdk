@@ -26,6 +26,7 @@ from mpt_extension_sdk.mpt_http.mpt import (
     get_authorizations_by_currency_and_seller_id,
     get_buyer,
     get_gc_price_list_by_currency,
+    get_item_prices_by_pricelist_id,
     get_licensee,
     get_listing_by_id,
     get_listings_by_price_list_and_seller_and_authorization,
@@ -1269,6 +1270,20 @@ def test_get_listings_by_currency_and_by_seller_id(mpt_client, requests_mocker):
         )
         == []
     )
+
+
+def test_get_item_prices_by_pricelist_id(mpt_client, requests_mocker):
+    price_list_id = "price_list_id"
+    item_id = "item_id"
+    requests_mocker.get(
+        urljoin(
+            mpt_client.base_url,
+            f"catalog/price-lists/{price_list_id}/items?eq(item.id,{item_id})",
+        ),
+        json={"data": []},
+    )
+
+    assert get_item_prices_by_pricelist_id(mpt_client, price_list_id, item_id) == []
 
 
 def test_get_listing_by_id(mpt_client, requests_mocker):
