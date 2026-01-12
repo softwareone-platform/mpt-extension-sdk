@@ -28,7 +28,7 @@ dependencies = [
     "pyfiglet==1.0.*",
     "pyjwt==2.10.*",
     "pymsteams==0.2.*",
-    "regex==2024.11.*",
+    "regex>=2024.11,<2025.12",
     "requests==2.32.*",
     "rich==14.2.*",
     "types-openpyxl==3.1.*",
