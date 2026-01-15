@@ -428,9 +428,22 @@ def get_listings_by_price_list_and_seller_and_authorization(
 
 
 @wrap_mpt_http_error
-def get_item_prices_by_pricelist_id(mpt_client, price_list_id, item_id):
-    """Retrieve item prices by price list ID."""
-    response = mpt_client.get(f"/catalog/price-lists/{price_list_id}/items?eq(item.id,{item_id})")
+def get_item_prices_by_pricelist_id(mpt_client, price_list_id, item_ids):
+    """
+    Retrieve item prices by price list ID.
+
+    Args:
+        mpt_client: Client instance to interact with the required API.
+        price_list_id: The ID of the price list to retrieve item prices for.
+        item_ids: The IDs list to retrieve prices.
+
+    Returns:
+        list: A list of item prices.
+    """
+    item_ids_str = ",".join(item_ids)
+    response = mpt_client.get(
+        f"/catalog/price-lists/{price_list_id}/items?in(item.id,({item_ids_str}))"
+    )
     response.raise_for_status()
     return response.json()["data"]
 
