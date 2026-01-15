@@ -19,13 +19,9 @@ updates:
     open-pull-requests-limit: 5
     ignore:
       - dependency-name: "django"
-        versions: [">=5.0.0"]
+        versions: ["*"]
       - dependency-name: "django-ninja"
-        versions: [">=1.2.0"]
-      - dependency-name: "opentelemetry-sdk"
-        versions: [">=1.31.0"]
-      - dependency-name: "opentelemetry-instrumentation"
-        versions: [">=1.31.0"]
+        versions: ["*"]
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
