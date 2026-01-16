@@ -1,8 +1,8 @@
 import click
 from django.utils.module_loading import import_string
 
-from mpt_extension_sdk.runtime import get_version
 from mpt_extension_sdk.runtime.utils import show_banner
+from mpt_extension_sdk.runtime.version import get_version
 
 
 def print_version(ctx, param, value):
@@ -27,14 +27,14 @@ def cli(ctx):
     show_banner()
 
 
-for cmd in map(
+cmds = map(
     import_string,
     (
         "mpt_extension_sdk.runtime.commands.run.run",
         "mpt_extension_sdk.runtime.commands.django.django",
     ),
-):
-    cli.add_command(cmd)
+)
+[cli.add_command(cmd) for cmd in cmds]
 
 
 def make_django_command(name, django_command=None, help_value=None):

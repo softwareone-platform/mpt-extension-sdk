@@ -1,11 +1,6 @@
-from typing import Any
+from mpt_extension_sdk.runtime.djapp.conf.product_utils import extract_product_ids, get_for_product
 
-
-def extract_product_ids(product_ids: str) -> list[str]:
-    """Extract product IDs from a comma-separated string."""
-    return product_ids.split(",")
-
-
-def get_for_product(settings, variable_name: str, product_id: str) -> Any:
-    """A shortcut to return product scoped variable from the extension settings."""
-    return settings.EXTENSION_CONFIG[variable_name][product_id]
+__all__ = [
+    "extract_product_ids",
+    "get_for_product",
+]
