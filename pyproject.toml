@@ -44,24 +44,26 @@ app_config = "mpt_extension_sdk.runtime.djapp.apps:ExtensionConfig"
 
 [dependency-groups]
 dev = [
-    "flake8==7.3.0", # force flake version to have same formatting everywhere, bump in pre-commit also
-    "freezegun>=1.4,<1.6",
+    "flake8==7.3.*", # force flake8 version to have same formatting everywhere, also update in pre-commit config
+    # "flake8-aaa==0.17.*", # also update pre-commit config TODO: add it on next iteration
+    "flake8-pyproject==1.2.*", # also update pre-commit config
+    "freezegun==1.5.*",
     "ipdb==0.13.*",
-    "ipython>=8,<10",
-    "mypy>=1.8,<1.20",
-    "pre-commit>=3.6,<4.6",
-    "pytest>=7.4,<9.1",
-    "pytest-cov>=4.1,<7.1",
-    "pytest-deadfixtures>=2.2,<3.2",
-    "pytest-django>=4.7,<4.12",
-    "pytest-mock>=3.12,<3.16",
-    "pytest-randomly>=3.15,<4.1",
-    "pytest-xdist>=3.5,<3.9",
-    "responses>=0.24,<0.26",
-    "ruff==0.14.13",  # force ruff version to have same formatting everywhere, bump in pre-commit also
+    "ipython==9.*",
+    "mypy==1.19.*",
+    "pre-commit==4.5.*",
+    "pytest==9.0.*",
+    "pytest-cov==7.0.*",
+    "pytest-deadfixtures==3.1.*",
+    "pytest-django==4.11.*",
+    "pytest-mock==3.15.*",
+    "pytest-randomly==4.0.*",
+    "pytest-xdist==3.8.*",
+    "responses==0.25.*",
+    "ruff==0.14.11", # force ruff version to have same formatting everywhere, also update in pre-commit config
     "types-openpyxl==3.1.*",
-    "types-requests>=2.31,<2.33",
-    "wemake-python-styleguide>=1.3,<1.6",
+    "types-requests==2.32.*",
+    "wemake-python-styleguide==1.5.*", # also update pre-commit config
 ]
 
 [build-system]
@@ -90,6 +92,59 @@ relative_files = true
 omit = [
   "django.py",
   "__init__.py",
+]
+
+[tool.flake8]
+allowed-domain-names = ["result"]
+allowed-module-metadata = ["__all__"]
+aaa_act_block_style = "large"
+doctests = true
+extend-ignore = ["WPS226"]
+extend-exclude = [
+  ".coverage",
+  ".github",
+  ".idea",
+  ".mypy_cache",
+  ".pytest_cache",
+  ".ruff_cache",
+  "uv.lock",
+  ".venv"
+]
+format = "wemake"
+max-imports = 17
+max-line-length = 100
+select = ["E999", "WPS"]
+show-source = true
+statistics = false
+# To be fixed and removed
+per-file-ignores = [
+  "tests/**/*.py: WPS",
+  "tests/*.py: WPS",
+  "mpt_extension_sdk/core/utils.py: WPS100 WPS453",
+  "mpt_extension_sdk/mpt_http/mpt.py: WPS202 WPS118 WPS211",
+  "mpt_extension_sdk/mpt_http/utils.py: WPS100",
+  "mpt_extension_sdk/mpt_http/wrap_http_error.py: WPS110 WPS430 WPS505",
+  "mpt_extension_sdk/runtime/__init__.py: WPS412",
+  "mpt_extension_sdk/runtime/djapp/conf/__init__.py: WPS412",
+  "mpt_extension_sdk/airtable/wrap_http_error.py: WPS110 WPS430 WPS231 WPS505 WPS328",
+  "mpt_extension_sdk/core/events/dataclasses.py: WPS110",
+  "mpt_extension_sdk/flows/context.py: WPS214",
+  "mpt_extension_sdk/key_vault/base.py: WPS615",
+  "mpt_extension_sdk/runtime/commands/run.py: WPS400 WPS216",
+  "mpt_extension_sdk/runtime/djapp/conf/default.py: WPS407",
+  "mpt_extension_sdk/runtime/djapp/management/commands/consume_events.py: WPS403 WPS213 WPS110",
+  "mpt_extension_sdk/runtime/djapp/middleware.py: WPS420 WPS122 WPS211 WPS121",
+  "mpt_extension_sdk/runtime/errors.py: WPS453",
+  "mpt_extension_sdk/runtime/events/dispatcher.py: WPS420 WPS230 WPS529",
+  "mpt_extension_sdk/runtime/events/producers.py: WPS210",
+  "mpt_extension_sdk/runtime/events/utils.py: WPS100 WPS430",
+  "mpt_extension_sdk/runtime/initializer.py: WPS407 WPS210",
+  "mpt_extension_sdk/runtime/logging.py: WPS115",
+  "mpt_extension_sdk/runtime/master.py: WPS220 WPS214 WPS230",
+  "mpt_extension_sdk/runtime/swoext.py: WPS110 WPS430",
+  "mpt_extension_sdk/runtime/utils.py: WPS100 WPS202 WPS460 WPS210 WPS221 WPS349 WPS110 WPS430 WPS237 WPS202 WPS460",
+  "mpt_extension_sdk/swo_rql/__init__.py: WPS111 WPS410 WPS412",
+  "mpt_extension_sdk/swo_rql/query_builder.py: WPS210 WPS231 WPS110 WPS214 WPS115 WPS111 WPS478 WPS221 WPS211 WPS237",
 ]
 
 [tool.ruff]
