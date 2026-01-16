@@ -1274,16 +1274,16 @@ def test_get_listings_by_currency_and_by_seller_id(mpt_client, requests_mocker):
 
 def test_get_item_prices_by_pricelist_id(mpt_client, requests_mocker):
     price_list_id = "price_list_id"
-    item_id = "item_id"
+    item_ids = ["item_id", "item_id2"]
     requests_mocker.get(
         urljoin(
             mpt_client.base_url,
-            f"catalog/price-lists/{price_list_id}/items?eq(item.id,{item_id})",
+            f"catalog/price-lists/{price_list_id}/items?in(item.id,({'.'.join(item_ids)}))",
         ),
         json={"data": []},
     )
 
-    assert get_item_prices_by_pricelist_id(mpt_client, price_list_id, item_id) == []
+    assert get_item_prices_by_pricelist_id(mpt_client, price_list_id, item_ids) == []
 
 
 def test_get_listing_by_id(mpt_client, requests_mocker):
