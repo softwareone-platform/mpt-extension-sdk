@@ -1,8 +1,8 @@
 import click
 from django.utils.module_loading import import_string
 
-from mpt_extension_sdk.runtime import get_version
 from mpt_extension_sdk.runtime.utils import show_banner
+from mpt_extension_sdk.runtime.version import get_version
 
 
 def print_version(ctx, param, value):
@@ -27,16 +27,6 @@ def cli(ctx):
     show_banner()
 
 
-for cmd in map(
-    import_string,
-    (
-        "mpt_extension_sdk.runtime.commands.run.run",
-        "mpt_extension_sdk.runtime.commands.django.django",
-    ),
-):
-    cli.add_command(cmd)
-
-
 def make_django_command(name, django_command=None, help_value=None):
     """A wrapper to convert a Django subcommand a Click command."""
     if django_command is None:
@@ -59,11 +49,25 @@ def make_django_command(name, django_command=None, help_value=None):
     return inner
 
 
-cli.add_command(make_django_command("shell", help_value="Open Django console"))
+def register_commands():
+    """Register django and extension run commands."""
+    cmds = map(
+        import_string,
+        (
+            "mpt_extension_sdk.runtime.commands.run.run",
+            "mpt_extension_sdk.runtime.commands.django.django",
+        ),
+    )
+
+    for cmd in cmds:
+        cli.add_command(cmd)
+
+    cli.add_command(make_django_command("shell", help_value="Open Django console"))
 
 
 def main():
     """Main entry point for the CLI."""
+    register_commands()
     cli(standalone_mode=False)
 
 

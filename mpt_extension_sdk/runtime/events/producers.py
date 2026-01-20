@@ -11,7 +11,7 @@ from django.utils.module_loading import import_string
 
 from mpt_extension_sdk.core.events.dataclasses import Event
 from mpt_extension_sdk.core.utils import setup_client
-from mpt_extension_sdk.swo_rql import RQLQuery
+from mpt_extension_sdk.swo_rql import R as RQLQuery
 
 logger = logging.getLogger(__name__)
 

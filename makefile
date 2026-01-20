@@ -17,7 +17,7 @@ help:
 	@echo "  make help             - Display this help message."
 
 bash:
-	  $(DC) run --rm -it app bash
+	  $(DC) run --rm -e PYTHONPATH=/extension_sdk -it app bash
 
 build:
 	  $(DC) build
@@ -40,7 +40,7 @@ review:
 	  coderabbit review --prompt-only
 
 shell:
-	  $(DC) run --rm -it app bash -c "swoext shell"
+	  $(DC) run --rm -e PYTHONPATH=/extension_sdk -it app bash -c "swoext shell"
 
 test:
 	  $(DC) run --rm app pytest $(if $(args),$(args),.)
