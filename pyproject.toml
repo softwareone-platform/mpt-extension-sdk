@@ -14,7 +14,7 @@ dependencies = [
     "debugpy==1.8.*",
     "django==4.2.*",
     "django-ninja==1.1.*",
-    "gunicorn==23.0.*",
+    "gunicorn==24.1.*",
     "opentelemetry-api==1.39.0",
     "opentelemetry-instrumentation-django==0.60.*",
     "opentelemetry-instrumentation-logging==0.60.*",
@@ -23,7 +23,7 @@ dependencies = [
     "pyfiglet==1.0.*",
     "pyjwt==2.10.*",
     "requests==2.32.*",
-    "rich==14.2.*",
+    "rich==14.3.*",
     "typing-extensions==4.15.*",
     "watchfiles==1.1.*",
 ]
