@@ -876,11 +876,6 @@ def mock_product_id_for_expression():
 
 
 @pytest.fixture
-def mock_process_id():
-    return "12345"
-
-
-@pytest.fixture
 def mock_gunicorn_options():
     return {"component": "api", "debug": False}
 
