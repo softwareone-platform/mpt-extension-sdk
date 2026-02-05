@@ -63,3 +63,51 @@ make check-all     # run checks and tests
 make format        # auto-format code and imports
 make review        # check the code in the cli by running CodeRabbit
 ```
+
+## Migration Guide
+
+### API Version Change (February 2026)
+
+The MPT Extension SDK now uses the standardized API path `/public/v1/` instead of `/v1/`.
+
+#### What Changed
+
+- **MPTClient** now automatically appends `/public/v1/` to the base URL
+- The `MPT_API_BASE_URL` environment variable should **not** include any version path
+
+#### Migration Steps
+
+**Before:**
+```bash
+# Old configuration (deprecated)
+export MPT_API_BASE_URL=https://api.example.com/v1
+```
+
+**After:**
+```bash
+# New configuration (recommended)
+export MPT_API_BASE_URL=https://api.example.com
+```
+
+#### Backward Compatibility
+
+The SDK maintains backward compatibility with old configurations:
+- URLs with `/v1/` or `/v1` will trigger a deprecation warning but continue to work
+- URLs with `/public/v1` are also supported
+- All formats will produce the correct final URL: `https://api.example.com/public/v1/`
+
+#### Example
+
+```python
+from mpt_extension_sdk.mpt_http.base import MPTClient
+
+# Recommended usage
+client = MPTClient(base_url="https://api.example.com", api_token="your-token")
+# Results in: https://api.example.com/public/v1/
+
+# Old format (will show deprecation warning)
+client = MPTClient(base_url="https://api.example.com/v1/", api_token="your-token")
+# Still works, results in: https://api.example.com/public/v1/
+```
+
+**Action Required:** Update your `MPT_API_BASE_URL` configuration to remove any version path suffixes.

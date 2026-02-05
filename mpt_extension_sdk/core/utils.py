@@ -5,15 +5,9 @@ from mpt_extension_sdk.mpt_http.base import MPTClient
 
 def setup_client():
     """Set up the main client."""
-    return MPTClient(
-        f"{settings.MPT_API_BASE_URL}/v1/",
-        settings.MPT_API_TOKEN,
-    )
+    return MPTClient(settings.MPT_API_BASE_URL, settings.MPT_API_TOKEN)
 
 
 def setup_operations_client():
     """Set up the operations client."""
-    return MPTClient(
-        f"{settings.MPT_API_BASE_URL}/v1/",
-        settings.MPT_API_TOKEN_OPERATIONS,
-    )
+    return MPTClient(settings.MPT_API_BASE_URL, settings.MPT_API_TOKEN_OPERATIONS)

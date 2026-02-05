@@ -15,9 +15,6 @@ class MPTClientMiddleware:  # pragma: no cover
         """Set up MPTClient for the request."""
         global _CLIENT  # noqa: PLW0603
         if not _CLIENT:
-            _CLIENT = MPTClient(
-                f"{settings.MPT_API_BASE_URL}/v1/",
-                settings.MPT_API_TOKEN,
-            )
+            _CLIENT = MPTClient(settings.MPT_API_BASE_URL, settings.MPT_API_TOKEN)
         request.client = _CLIENT
         return self.get_response(request)

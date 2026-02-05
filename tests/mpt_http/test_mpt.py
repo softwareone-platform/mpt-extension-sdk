@@ -425,7 +425,7 @@ def test_get_order_asset_by_external_id(mpt_client, requests_mocker, total, data
     requests_mocker.get(
         urljoin(
             mpt_client.base_url,
-            "/v1/commerce/orders/ORD-1234/assets?eq(externalIds.vendor,a-ast-id)&limit=1",
+            "commerce/orders/ORD-1234/assets?eq(externalIds.vendor,a-ast-id)&limit=1",
         ),
         json={
             "$meta": {
@@ -641,7 +641,7 @@ def test_get_order_subscription_by_external_id(mpt_client, requests_mocker, tota
     requests_mocker.get(
         urljoin(
             mpt_client.base_url,
-            "/v1/commerce/orders/ORD-1234/subscriptions?eq(externalIds.vendor,a-sub-id)&limit=1",
+            "commerce/orders/ORD-1234/subscriptions?eq(externalIds.vendor,a-sub-id)&limit=1",
         ),
         json={
             "$meta": {

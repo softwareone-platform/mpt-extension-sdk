@@ -49,10 +49,7 @@ def test_retry_error_responses(requests_mocker):
         )
 
     requests_mocker.add(
-        responses.GET,
-        "https://test/504",
-        body="upstream request timeout",
-        status=504,
+        responses.GET, "https://test/public/v1/504", body="upstream request timeout", status=504
     )
     with pytest.raises(MPTMaxRetryError):
         fail_response()
