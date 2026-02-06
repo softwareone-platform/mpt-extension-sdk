@@ -5,16 +5,12 @@ from mpt_extension_sdk.mpt_http.base import MPTClient
 
 @pytest.fixture
 def mock_mpt_client(mocker):
-    """Create an instance of the MPT client used by the extension."""
-    return mocker.MagicMock(spec=MPTClient)
+    return mocker.Mock(spec=MPTClient)
 
 
 @pytest.fixture
 def mock_get_agreements_by_query(mocker):
-    return mocker.patch(
-        "mpt_extension_sdk.mpt_http.mpt.get_agreements_by_query",
-        spec=True,
-    )
+    return mocker.patch("mpt_extension_sdk.mpt_http.mpt.get_agreements_by_query", spec=True)
 
 
 @pytest.fixture(scope="session")

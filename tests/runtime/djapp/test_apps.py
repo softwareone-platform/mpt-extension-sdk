@@ -7,35 +7,34 @@ from mpt_extension_sdk.runtime.djapp.apps import ExtensionConfig
 
 
 def test_app_config():
-    assert isinstance(ExtensionConfig.extension, Extension)
+    result = ExtensionConfig.extension
+
+    assert isinstance(result, Extension)
 
 
 def test_products_empty(settings):
     settings.MPT_PRODUCTS_IDS = ""
-
     app = apps.get_app_config("mpt_extension_sdk")
-    with pytest.raises(ImproperlyConfigured) as e:
-        app.ready()
 
-    assert "MPT_PRODUCTS_IDS is missing or empty" in str(e.value)
+    with pytest.raises(ImproperlyConfigured, match="MPT_PRODUCTS_IDS is missing or empty"):
+        app.ready()
 
 
 def test_products_not_defined(settings):
     delattr(settings, "MPT_PRODUCTS_IDS")
-
     app = apps.get_app_config("mpt_extension_sdk")
-    with pytest.raises(ImproperlyConfigured) as e:
-        app.ready()
 
-    assert "MPT_PRODUCTS_IDS is missing or empty" in str(e.value)
+    with pytest.raises(ImproperlyConfigured, match="MPT_PRODUCTS_IDS is missing or empty"):
+        app.ready()
 
 
 def test_webhook_secret_not_defined(settings):
     settings.MPT_PRODUCTS_IDS = ["PRD-1111-1111"]
     settings.EXTENSION_CONFIG = {}
-
     app = apps.get_app_config("mpt_extension_sdk")
-    with pytest.raises(ImproperlyConfigured) as e:
-        app.ready()
 
-    assert "Please, specify it in EXT_WEBHOOKS_SECRETS environment variable." in str(e.value)
+    with pytest.raises(
+        ImproperlyConfigured,
+        match="Please, specify it in EXT_WEBHOOKS_SECRETS environment variable",
+    ):
+        app.ready()

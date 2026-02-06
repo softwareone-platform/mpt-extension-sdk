@@ -54,13 +54,7 @@ from mpt_extension_sdk.mpt_http.mpt import (
 from mpt_extension_sdk.mpt_http.wrap_http_error import MPTAPIError
 
 
-def test_fail_order(
-    mpt_client,
-    requests_mocker,
-    order_factory,
-    mock_status_notes,
-):
-    """Test the call to switch an order to Failed."""
+def test_fail_order(mpt_client, requests_mocker, order_factory, mock_status_notes):
     order = order_factory()
     requests_mocker.post(
         urljoin(mpt_client.base_url, "commerce/orders/ORD-0000/fail"),
@@ -77,12 +71,12 @@ def test_fail_order(
         ],
     )
 
-    failed_order = fail_order(mpt_client, "ORD-0000", mock_status_notes)
-    assert failed_order == order
+    result = fail_order(mpt_client, "ORD-0000", mock_status_notes)
+
+    assert result == order
 
 
 def test_complete_order(mpt_client, requests_mocker, order_factory):
-    """Test the call to switch an order to Completed."""
     order = order_factory()
     requests_mocker.post(
         urljoin(mpt_client.base_url, "commerce/orders/ORD-0000/complete"),
@@ -96,16 +90,12 @@ def test_complete_order(mpt_client, requests_mocker, order_factory):
         ],
     )
 
-    completed_order = complete_order(
-        mpt_client,
-        "ORD-0000",
-        {"id": "templateId"},
-    )
-    assert completed_order == order
+    result = complete_order(mpt_client, "ORD-0000", {"id": "templateId"})
+
+    assert result == order
 
 
 def test_complete_order_error(mpt_client, requests_mocker, mpt_error_factory):
-    """Test the call to switch an order to Completed when it fails."""
     requests_mocker.post(
         urljoin(mpt_client.base_url, "commerce/orders/ORD-0000/complete"),
         status=404,
@@ -119,7 +109,6 @@ def test_complete_order_error(mpt_client, requests_mocker, mpt_error_factory):
 
 
 def test_query_order(mpt_client, requests_mocker, order_factory):
-    """Test the call to switch an order to Query."""
     order = order_factory()
     requests_mocker.post(
         urljoin(mpt_client.base_url, "commerce/orders/ORD-0000/query"),
@@ -142,7 +131,7 @@ def test_query_order(mpt_client, requests_mocker, order_factory):
         ],
     )
 
-    qorder = query_order(
+    result = query_order(
         mpt_client,
         "ORD-0000",
         parameters={
@@ -156,11 +145,11 @@ def test_query_order(mpt_client, requests_mocker, order_factory):
             ]
         },
     )
-    assert qorder == order
+
+    assert result == order
 
 
 def test_query_order_error(mpt_client, requests_mocker, mpt_error_factory):
-    """Test the call to switch an order to Query when it fails."""
     requests_mocker.post(
         urljoin(mpt_client.base_url, "commerce/orders/ORD-0000/query"),
         status=404,
@@ -174,7 +163,6 @@ def test_query_order_error(mpt_client, requests_mocker, mpt_error_factory):
 
 
 def test_update_order(mpt_client, requests_mocker, order_factory):
-    """Test the call to update an order."""
     order = order_factory()
     requests_mocker.put(
         urljoin(mpt_client.base_url, "commerce/orders/ORD-0000"),
@@ -197,7 +185,7 @@ def test_update_order(mpt_client, requests_mocker, order_factory):
         ],
     )
 
-    updated_order = update_order(
+    result = update_order(
         mpt_client,
         "ORD-0000",
         parameters={
@@ -211,11 +199,11 @@ def test_update_order(mpt_client, requests_mocker, order_factory):
             ]
         },
     )
-    assert updated_order == order
+
+    assert result == order
 
 
 def test_update_order_error(mpt_client, requests_mocker, mpt_error_factory):
-    """Test the call to update an order when it fails."""
     requests_mocker.put(
         urljoin(mpt_client.base_url, "commerce/orders/ORD-0000"),
         status=404,
@@ -237,9 +225,9 @@ def test_create_asset(mpt_client, requests_mocker, assets_factory):
         match=[matchers.json_params_matcher(asset)],
     )
 
-    created_asset = create_asset(mpt_client, asset)
+    result = create_asset(mpt_client, asset)
 
-    assert created_asset == asset
+    assert result == asset
 
 
 def test_create_order_asset(mpt_client, requests_mocker, assets_factory):
@@ -253,9 +241,9 @@ def test_create_order_asset(mpt_client, requests_mocker, assets_factory):
         ],
     )
 
-    created_asset = create_order_asset(mpt_client, "ORD-0000", asset)
+    result = create_order_asset(mpt_client, "ORD-0000", asset)
 
-    assert created_asset == asset
+    assert result == asset
 
 
 def test_create_order_asset_error(mpt_client, requests_mocker, mpt_error_factory):
@@ -297,7 +285,7 @@ def test_update_asset(mpt_client, requests_mocker, assets_factory):
         ],
     )
 
-    updated_asset = update_asset(
+    result = update_asset(
         mpt_client,
         "AST-1234",
         parameters={
@@ -312,7 +300,7 @@ def test_update_asset(mpt_client, requests_mocker, assets_factory):
         },
     )
 
-    assert updated_asset == asset
+    assert result == asset
 
 
 def test_update_asset_error(mpt_client, requests_mocker, mpt_error_factory):
@@ -354,7 +342,7 @@ def test_update_order_asset(mpt_client, requests_mocker, assets_factory):
         ],
     )
 
-    updated_asset = update_order_asset(
+    result = update_order_asset(
         mpt_client,
         "ORD-0000",
         "AST-1234",
@@ -369,7 +357,8 @@ def test_update_order_asset(mpt_client, requests_mocker, assets_factory):
             ]
         },
     )
-    assert updated_asset == asset
+
+    assert result == asset
 
 
 def test_update_order_asset_error(mpt_client, requests_mocker, mpt_error_factory):
@@ -470,7 +459,6 @@ def test_get_asset_by_id_error(mpt_client, requests_mocker, mpt_error_factory, a
 
 
 def test_create_subscription(mpt_client, requests_mocker, subscriptions_factory):
-    """Test the call to create a subscription."""
     subscription = subscriptions_factory()[0]
     requests_mocker.post(
         urljoin(mpt_client.base_url, "commerce/orders/ORD-0000/subscriptions"),
@@ -481,16 +469,16 @@ def test_create_subscription(mpt_client, requests_mocker, subscriptions_factory)
         ],
     )
 
-    created_subscription = create_subscription(
+    result = create_subscription(
         mpt_client,
         "ORD-0000",
         subscription,
     )
-    assert created_subscription == subscription
+
+    assert result == subscription
 
 
 def test_create_subscription_error(mpt_client, requests_mocker, mpt_error_factory):
-    """Test the call to create a subscription when it fails."""
     requests_mocker.post(
         urljoin(mpt_client.base_url, "commerce/orders/ORD-0000/subscriptions"),
         status=404,
@@ -504,7 +492,6 @@ def test_create_subscription_error(mpt_client, requests_mocker, mpt_error_factor
 
 
 def test_update_subscription(mpt_client, requests_mocker, subscriptions_factory):
-    """Test the call to update a subscription."""
     subscription = subscriptions_factory()
     requests_mocker.put(
         urljoin(
@@ -530,7 +517,7 @@ def test_update_subscription(mpt_client, requests_mocker, subscriptions_factory)
         ],
     )
 
-    updated_subscription = update_subscription(
+    result = update_subscription(
         mpt_client,
         "ORD-0000",
         "SUB-1234",
@@ -545,11 +532,11 @@ def test_update_subscription(mpt_client, requests_mocker, subscriptions_factory)
             ]
         },
     )
-    assert updated_subscription == subscription
+
+    assert result == subscription
 
 
 def test_update_subscription_error(mpt_client, requests_mocker, mpt_error_factory):
-    """Test the call to update a subscription when it fails."""
     requests_mocker.put(
         urljoin(mpt_client.base_url, "commerce/orders/ORD-0000/subscriptions/SUB-1234"),
         status=404,
@@ -563,7 +550,6 @@ def test_update_subscription_error(mpt_client, requests_mocker, mpt_error_factor
 
 
 def test_get_product_items_by_skus(mpt_client, requests_mocker):
-    """Tests the call to retrieve all the item of a product that matches a list of vendor SKUs."""
     product_id = "PRD-1234-5678"
     skus = ["sku1", "sku2"]
     rql_query = f"and(eq(product.id,{product_id}),in(externalIds.vendor,({','.join(skus)})))"
@@ -598,16 +584,16 @@ def test_get_product_items_by_skus(mpt_client, requests_mocker):
         },
     )
 
-    assert get_product_items_by_skus(mpt_client, product_id, skus) == data
+    result = get_product_items_by_skus(mpt_client, product_id, skus)
+
+    assert result == data
 
 
 def test_get_product_items_by_skus_error(mpt_client, requests_mocker, mpt_error_factory):
-    """Tests the call to retrieve all the item of a product that matches a list of vendor SKUs."""
     product_id = "PRD-1234-5678"
     skus = ["sku1", "sku2"]
     rql_query = f"and(eq(product.id,{product_id}),in(externalIds.vendor,({','.join(skus)})))"
     url = f"catalog/items?{rql_query}&limit=10&offset=0"
-
     requests_mocker.get(
         urljoin(mpt_client.base_url, url),
         status=400,
@@ -626,8 +612,9 @@ def test_get_webhoook(mpt_client, requests_mocker, webhook):
         json=webhook,
     )
 
-    api_webhook = get_webhook(mpt_client, webhook["id"])
-    assert api_webhook == webhook
+    result = get_webhook(mpt_client, webhook["id"])
+
+    assert result == webhook
 
 
 @pytest.mark.parametrize(
@@ -655,7 +642,9 @@ def test_get_order_subscription_by_external_id(mpt_client, requests_mocker, tota
         },
     )
 
-    assert get_order_subscription_by_external_id(mpt_client, "ORD-1234", "a-sub-id") == expected
+    result = get_order_subscription_by_external_id(mpt_client, "ORD-1234", "a-sub-id")
+
+    assert result == expected
 
 
 @pytest.mark.parametrize(
@@ -727,12 +716,9 @@ def test_update_agreement(mpt_client, requests_mocker):
         ],
     )
 
-    updated_agreement = update_agreement(
-        mpt_client,
-        "AGR-1111",
-        externalIds={"vendor": "1234"},
-    )
-    assert updated_agreement == {"id": "AGR-1111"}
+    result = update_agreement(mpt_client, "AGR-1111", externalIds={"vendor": "1234"})
+
+    assert result == {"id": "AGR-1111"}
 
 
 def test_update_agreement_error(mpt_client, requests_mocker, mpt_error_factory):
@@ -775,7 +761,7 @@ def test_update_agreement_subscription(mpt_client, requests_mocker, subscription
         ],
     )
 
-    updated_subscription = update_agreement_subscription(
+    result = update_agreement_subscription(
         mpt_client,
         "SUB-1234",
         parameters={
@@ -789,7 +775,8 @@ def test_update_agreement_subscription(mpt_client, requests_mocker, subscription
             ]
         },
     )
-    assert updated_subscription == subscription
+
+    assert result == subscription
 
 
 def test_update_agreement_subscription_error(mpt_client, requests_mocker, mpt_error_factory):
@@ -812,7 +799,9 @@ def test_get_agreement_subscription(mpt_client, requests_mocker, subscriptions_f
         json=sub,
     )
 
-    assert get_agreement_subscription(mpt_client, sub["id"]) == sub
+    result = get_agreement_subscription(mpt_client, sub["id"])
+
+    assert result == sub
 
 
 def test_get_agreement_subscription_error(mpt_client, requests_mocker, mpt_error_factory):
@@ -831,7 +820,6 @@ def test_get_agreement_subscription_error(mpt_client, requests_mocker, mpt_error
 def test_get_agreements_by_query(mpt_client, requests_mocker):
     rql_query = "any-rql-query&select=any-obj"
     url = f"commerce/agreements?{rql_query}"
-
     page1_url = f"{url}&limit=10&offset=0"
     page2_url = f"{url}&limit=10&offset=10"
     data = [{"id": f"AGR-{idx}"} for idx in range(13)]
@@ -862,13 +850,14 @@ def test_get_agreements_by_query(mpt_client, requests_mocker):
         },
     )
 
-    assert get_agreements_by_query(mpt_client, rql_query) == data
+    result = get_agreements_by_query(mpt_client, rql_query)
+
+    assert result == data
 
 
 def test_get_agreements_by_query_error(mpt_client, requests_mocker, mpt_error_factory):
     rql_query = "any-rql-query&select=any-obj"
     url = f"commerce/agreements?{rql_query}"
-
     url = f"{url}&limit=10&offset=0"
     requests_mocker.get(
         urljoin(mpt_client.base_url, url),
@@ -885,7 +874,6 @@ def test_get_agreements_by_query_error(mpt_client, requests_mocker, mpt_error_fa
 def test_get_subscriptions_by_query(mpt_client, requests_mocker):
     rql_query = "any-rql-query&select=any-obj"
     url = f"commerce/subscriptions?{rql_query}"
-
     page1_url = f"{url}&limit=10&offset=0"
     page2_url = f"{url}&limit=10&offset=10"
     data = [{"id": f"AGR-{idx}"} for idx in range(13)]
@@ -916,13 +904,14 @@ def test_get_subscriptions_by_query(mpt_client, requests_mocker):
         },
     )
 
-    assert get_subscriptions_by_query(mpt_client, rql_query) == data
+    result = get_subscriptions_by_query(mpt_client, rql_query)
+
+    assert result == data
 
 
 def test_get_subscriptions_by_query_error(mpt_client, requests_mocker, mpt_error_factory):
     rql_query = "any-rql-query&select=any-obj"
     url = f"commerce/subscriptions?{rql_query}"
-
     url = f"{url}&limit=10&offset=0"
     requests_mocker.get(
         urljoin(mpt_client.base_url, url),
@@ -942,7 +931,9 @@ def test_get_rendered_template(mpt_client, requests_mocker):
         json="rendered-template",
     )
 
-    assert get_rendered_template(mpt_client, "ORD-1234") == "rendered-template"
+    result = get_rendered_template(mpt_client, "ORD-1234")
+
+    assert result == "rendered-template"
 
 
 def test_get_rendered_template_error(mpt_client, requests_mocker, mpt_error_factory):
@@ -995,7 +986,9 @@ def test_get_product_onetime_items_by_ids(mpt_client, requests_mocker):
         },
     )
 
-    assert get_product_onetime_items_by_ids(mpt_client, product_id, ids) == data
+    result = get_product_onetime_items_by_ids(mpt_client, product_id, ids)
+
+    assert result == data
 
 
 def test_get_product_onetime_items_by_ids_error(mpt_client, requests_mocker, mpt_error_factory):
@@ -1005,7 +998,6 @@ def test_get_product_onetime_items_by_ids_error(mpt_client, requests_mocker, mpt
         f"and(eq(product.id,{product_id}),in(id,({','.join(ids)})),eq(terms.period,OneTime))"
     )
     url = f"catalog/items?{rql_query}&limit=10&offset=0"
-
     requests_mocker.get(
         urljoin(mpt_client.base_url, url),
         status=400,
@@ -1059,14 +1051,15 @@ def test_get_product_items_by_period(mpt_client, requests_mocker):
         },
     )
 
-    get_product_items_by_period(mpt_client, product_id, period)
+    result = get_product_items_by_period(mpt_client, product_id, period)
+
+    assert result is not None
 
 
 def test_get_product_items_by_period_vendors(mpt_client, requests_mocker):
     product_id = "PRD-1234-5678"
     period = "one-time"
     vendors = ("65327674CA", "65327669CA")
-
     requests_mocker.get(
         urljoin(
             mpt_client.base_url,
@@ -1105,7 +1098,9 @@ def test_get_product_items_by_period_vendors(mpt_client, requests_mocker):
         },
     )
 
-    get_product_items_by_period(mpt_client, product_id, period, vendors)
+    result = get_product_items_by_period(mpt_client, product_id, period, vendors)
+
+    assert result is not None
 
 
 def test_get_product_items_by_period_error(mpt_client, requests_mocker, mpt_error_factory):
@@ -1113,7 +1108,6 @@ def test_get_product_items_by_period_error(mpt_client, requests_mocker, mpt_erro
     period = "one-time"
     rql_query = f"and(eq(product.id,{product_id}),eq(terms.period,{period}))"
     url = f"catalog/items?{rql_query}&limit=10&offset=0"
-
     requests_mocker.get(
         urljoin(mpt_client.base_url, url),
         status=400,
@@ -1131,15 +1125,15 @@ def test_get_agreements_by_ids(mocker):
         "and(in(id,(AGR-0001)),eq(status,Active))"
         "&select=assets,lines,parameters,subscriptions,product,listing"
     )
-
     mocked_get_by_query = mocker.patch(
         "mpt_extension_sdk.mpt_http.mpt.get_agreements_by_query",
         return_value=[{"id": "AGR-0001"}],
     )
-
     mocked_client = mocker.MagicMock()
 
-    assert get_agreements_by_ids(mocked_client, ["AGR-0001"]) == [{"id": "AGR-0001"}]
+    result = get_agreements_by_ids(mocked_client, ["AGR-0001"])
+
+    assert result == [{"id": "AGR-0001"}]
     mocked_get_by_query.assert_called_once_with(mocked_client, rql_query)
 
 
@@ -1149,15 +1143,15 @@ def test_get_all_agreements(mocker, settings):
         f"and(eq(status,Active),{product_condition})"
         f"&select=assets,lines,parameters,subscriptions,product,listing"
     )
-
     mocked_get_by_query = mocker.patch(
         "mpt_extension_sdk.mpt_http.mpt.get_agreements_by_query",
         return_value=[{"id": "AGR-0001"}],
     )
-
     mocked_client = mocker.MagicMock()
 
-    assert get_all_agreements(mocked_client) == [{"id": "AGR-0001"}]
+    result = get_all_agreements(mocked_client)
+
+    assert result == [{"id": "AGR-0001"}]
     mocked_get_by_query.assert_called_once_with(mocked_client, rql_query)
 
 
@@ -1172,7 +1166,9 @@ def test_get_agreement(mpt_client, requests_mocker, agreement):
         json=agreement,
     )
 
-    assert get_agreement(mpt_client, agreement_id) == agreement
+    result = get_agreement(mpt_client, agreement_id)
+
+    assert result == agreement
 
 
 def test_get_agreement_error(mpt_client, requests_mocker, mpt_error_factory):
@@ -1196,11 +1192,12 @@ def test_get_licensee(mpt_client, requests_mocker, agreement):
     licensee = agreement["licensee"]
     licensee_id = licensee["id"]
     requests_mocker.get(
-        urljoin(mpt_client.base_url, f"accounts/licensees/{licensee_id}"),
-        json=licensee,
+        urljoin(mpt_client.base_url, f"accounts/licensees/{licensee_id}"), json=licensee
     )
 
-    assert get_licensee(mpt_client, licensee_id) == licensee
+    result = get_licensee(mpt_client, licensee_id)
+
+    assert result == licensee
 
 
 def test_get_licensee_error(mpt_client, requests_mocker, mpt_error_factory):
@@ -1229,10 +1226,11 @@ def test_get_authorizations_by_currency_and_seller_id(mpt_client, requests_mocke
         json={"data": []},
     )
 
-    assert (
-        get_authorizations_by_currency_and_seller_id(mpt_client, product_id, currency, owner_id)
-        == []
+    result = get_authorizations_by_currency_and_seller_id(
+        mpt_client, product_id, currency, owner_id
     )
+
+    assert result == []
 
 
 def test_get_gc_price_list_by_currency(mpt_client, requests_mocker):
@@ -1246,7 +1244,9 @@ def test_get_gc_price_list_by_currency(mpt_client, requests_mocker):
         json={"data": []},
     )
 
-    assert get_gc_price_list_by_currency(mpt_client, product_id, currency) == []
+    result = get_gc_price_list_by_currency(mpt_client, product_id, currency)
+
+    assert result == []
 
 
 def test_get_listings_by_currency_and_by_seller_id(mpt_client, requests_mocker):
@@ -1264,12 +1264,11 @@ def test_get_listings_by_currency_and_by_seller_id(mpt_client, requests_mocker):
         json={"data": []},
     )
 
-    assert (
-        get_listings_by_price_list_and_seller_and_authorization(
-            mpt_client, product_id, price_list_id, seller_id, authorization_id
-        )
-        == []
+    result = get_listings_by_price_list_and_seller_and_authorization(
+        mpt_client, product_id, price_list_id, seller_id, authorization_id
     )
+
+    assert result == []
 
 
 def test_get_item_prices_by_pricelist_id(mpt_client, requests_mocker):
@@ -1283,25 +1282,26 @@ def test_get_item_prices_by_pricelist_id(mpt_client, requests_mocker):
         json={"data": []},
     )
 
-    assert get_item_prices_by_pricelist_id(mpt_client, price_list_id, item_ids) == []
+    result = get_item_prices_by_pricelist_id(mpt_client, price_list_id, item_ids)
+
+    assert result == []
 
 
 def test_get_listing_by_id(mpt_client, requests_mocker):
     listing_id = "listing_id"
-
     requests_mocker.get(
-        urljoin(mpt_client.base_url, f"catalog/listings/{listing_id}"),
-        json={"data": []},
+        urljoin(mpt_client.base_url, f"catalog/listings/{listing_id}"), json={"data": []}
     )
 
-    assert get_listing_by_id(mpt_client, listing_id) == {"data": []}
+    result = get_listing_by_id(mpt_client, listing_id)
+
+    assert result == {"data": []}
 
 
 def test_get_subscription_by_external_id(mpt_client, requests_mocker, subscriptions_factory):
     subscription_external_id = "subscription_external_id"
     agreement_id = "agreement_id"
     subscriptions = subscriptions_factory()
-
     requests_mocker.get(
         urljoin(
             mpt_client.base_url,
@@ -1322,12 +1322,11 @@ def test_get_subscription_by_external_id(mpt_client, requests_mocker, subscripti
         },
     )
 
-    assert (
-        get_agreement_subscription_by_external_id(
-            mpt_client, agreement_id, subscription_external_id
-        )
-        == subscriptions[0]
+    result = get_agreement_subscription_by_external_id(
+        mpt_client, agreement_id, subscription_external_id
     )
+
+    assert result == subscriptions[0]
 
 
 def test_create_listing(mpt_client, requests_mocker):
@@ -1348,8 +1347,9 @@ def test_create_listing(mpt_client, requests_mocker):
         ],
     )
 
-    created_listing = create_listing(mpt_client, listing)
-    assert created_listing == listing
+    result = create_listing(mpt_client, listing)
+
+    assert result == listing
 
 
 def test_create_agreement(mpt_client, requests_mocker, agreement):
@@ -1362,8 +1362,9 @@ def test_create_agreement(mpt_client, requests_mocker, agreement):
         ],
     )
 
-    created_agreement = create_agreement(mpt_client, agreement)
-    assert created_agreement == agreement
+    result = create_agreement(mpt_client, agreement)
+
+    assert result == agreement
 
 
 def test_create_agreement_subscription(mpt_client, requests_mocker, subscriptions_factory):
@@ -1377,8 +1378,9 @@ def test_create_agreement_subscription(mpt_client, requests_mocker, subscription
         ],
     )
 
-    created_subscription = create_agreement_subscription(mpt_client, subscription)
-    assert created_subscription == subscription
+    result = create_agreement_subscription(mpt_client, subscription)
+
+    assert result == subscription
 
 
 def test_get_buyer(mpt_client, requests_mocker):
@@ -1388,7 +1390,9 @@ def test_get_buyer(mpt_client, requests_mocker):
         json={"data": []},
     )
 
-    assert get_buyer(mpt_client, buyer_id) == {"data": []}
+    result = get_buyer(mpt_client, buyer_id)
+
+    assert result == {"data": []}
 
 
 def test_notify(
@@ -1407,13 +1411,11 @@ def test_notify(
     3. Ensuring notification is sent successfully for valid contacts
     """
     recipients = [{"id": "CTT-0158-9018"}]
-
     mocker.patch(
         "mpt_extension_sdk.mpt_http.mpt._paginated",
         return_value=recipients,
         spec=True,
     )
-
     requests_mocker.post(
         urljoin(mpt_operations_client.base_url, "notifications/batches"),
         json=notify_post_resp,
@@ -1436,7 +1438,7 @@ def test_notify(
         "buyer_id",
         "subject",
         "message_body",
-    )
+    )  # act
 
 
 def test_notify_gt_1k(
@@ -1456,18 +1458,12 @@ def test_notify_gt_1k(
     """
     recipients = [{"id": "CTT-0158-9018"}]
     recipients1k = 1000 * recipients
-
     mocker.patch(
         "mpt_extension_sdk.mpt_http.mpt._paginated",
         return_value=2001 * recipients,
         spec=True,
     )
-
-    for contacts in (
-        recipients1k,
-        recipients1k,
-        recipients,
-    ):
+    for contacts in (recipients1k, recipients1k, recipients):
         requests_mocker.post(
             urljoin(mpt_operations_client.base_url, "notifications/batches"),
             json=notify_post_resp,
@@ -1490,11 +1486,10 @@ def test_notify_gt_1k(
         "buyer_id",
         "subject",
         "message_body",
-    )
+    )  # act
 
 
 def test_notify_error(mpt_operations_client, requests_mocker, mocker, mock_notify_category_id):
-    """Test that notify function connection error is propagated up to the caller."""
     mocker.patch(
         "mpt_extension_sdk.mpt_http.mpt._paginated",
         side_effect=ConnectionError(),
@@ -1529,8 +1524,9 @@ def test_set_processing_template(mpt_client, requests_mocker):
         ],
     )
 
-    created_template = set_processing_template(mpt_client, order_id, template)
-    assert created_template == template
+    result = set_processing_template(mpt_client, order_id, template)
+
+    assert result == template
 
 
 def test_get_agreements_by_external_id_values(mpt_client, requests_mocker, agreement):
@@ -1557,10 +1553,10 @@ def test_get_agreements_by_external_id_values(mpt_client, requests_mocker, agree
             "data": [agreement],
         },
     )
-    retrieved_agreement = get_agreements_by_external_id_values(
-        mpt_client, external_id, display_value
-    )
-    assert retrieved_agreement == [agreement]
+
+    result = get_agreements_by_external_id_values(mpt_client, external_id, display_value)
+
+    assert result == [agreement]
 
 
 def test_get_agreements_by_customer_deployments(mpt_client, requests_mocker, agreement):
@@ -1587,10 +1583,12 @@ def test_get_agreements_by_customer_deployments(mpt_client, requests_mocker, agr
             "data": [agreement],
         },
     )
-    retrieved_agreement = get_agreements_by_customer_deployments(
+
+    result = get_agreements_by_customer_deployments(
         mpt_client, deployment_id_parameter, deployments_list
     )
-    assert retrieved_agreement == [agreement]
+
+    assert result == [agreement]
 
 
 def test_terminate_subscription(mpt_client, requests_mocker, subscriptions_factory):
@@ -1606,7 +1604,9 @@ def test_terminate_subscription(mpt_client, requests_mocker, subscriptions_facto
         json=subscription,
     )
 
-    terminate_subscription(mpt_client, subscription[0]["id"], reason)
+    result = terminate_subscription(mpt_client, subscription[0]["id"], reason)
+
+    assert result is not None
 
 
 def test_terminate_subscription_error(mpt_client, requests_mocker, subscriptions_factory):
