@@ -9,19 +9,19 @@ from mpt_extension_sdk.airtable.wrap_http_error import (
 
 
 def test_airtable_http_error_str_and_repr():
-    err = AirTableHttpError(404, "Resource Not Found")
+    result = AirTableHttpError(404, "Resource Not Found")
 
-    assert str(err) == "404 - Resource Not Found"
-    assert "404 - Resource Not Found" in repr(err)
+    assert str(result) == "404 - Resource Not Found"
+    assert "404 - Resource Not Found" in repr(result)
 
 
 def test_airtable_api_error_str_and_repr():
     payload = {"error": {"message": "airtable api error"}}
 
-    err = AirTableAPIError(400, payload)
+    result = AirTableAPIError(400, payload)
 
-    assert str(err) == "400 - airtable api error"
-    assert "airtable api error" in repr(err)
+    assert str(result) == "400 - airtable api error"
+    assert "airtable api error" in repr(result)
 
 
 def test_wrap_airtable_http_error_api(mocker):

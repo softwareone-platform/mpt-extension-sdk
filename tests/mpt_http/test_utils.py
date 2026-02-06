@@ -1,13 +1,16 @@
+import pytest
+
 from mpt_extension_sdk.mpt_http.utils import find_first
 
 
-def test_find_first_match():
-    data = [1, 2, 3, 4]
-    result = find_first(lambda x: x > 2, data)
-    assert result == 3
+@pytest.mark.parametrize(
+    ("data", "predicate", "default", "expected"),
+    [
+        ([1, 2, 3, 4], lambda x: x > 2, None, 3),
+        ([1, 2, 3], lambda x: x > 5, "not found", "not found"),
+    ],
+)
+def test_find_first(data, predicate, default, expected):
+    result = find_first(predicate, data, default=default)
 
-
-def test_find_first_no_match_returns_default():
-    data = [1, 2, 3]
-    result = find_first(lambda x: x > 5, data, default="not found")
-    assert result == "not found"
+    assert result == expected

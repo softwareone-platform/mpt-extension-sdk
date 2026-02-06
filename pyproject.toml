@@ -37,7 +37,7 @@ app_config = "mpt_extension_sdk.runtime.djapp.apps:ExtensionConfig"
 [dependency-groups]
 dev = [
     "flake8==7.3.*", # force flake8 version to have same formatting everywhere, also update in pre-commit config
-    # "flake8-aaa==0.17.*", # also update pre-commit config TODO: add it on next iteration
+    "flake8-aaa==0.17.*", # also update pre-commit config
     "flake8-pyproject==1.2.*", # also update pre-commit config
     "freezegun==1.5.*",
     "ipdb==0.13.*",
@@ -70,7 +70,7 @@ include = [
 [tool.pytest.ini_options]
 testpaths = "tests"
 pythonpath = "."
-addopts = "--cov=mpt_extension_sdk --cov-report=term-missing --cov-report=html --cov-report=xml --import-mode=importlib"
+addopts = "--cov=mpt_extension_sdk --cov-report=term-missing --cov-report=xml --import-mode=importlib"
 DJANGO_SETTINGS_MODULE = "tests.django.settings"
 log_cli = false
 filterwarnings = [
@@ -105,7 +105,7 @@ extend-exclude = [
 format = "wemake"
 max-imports = 17
 max-line-length = 100
-select = ["E999", "WPS"]
+select = ["AAA", "E999", "WPS"]
 show-source = true
 statistics = false
 # To be fixed and removed
@@ -214,7 +214,7 @@ ignore = [
     "PT011", # pytest.raises({exception}) is too broad, set the match parameter or use a more specific exception
     "TRY003",  # long exception messages from `tryceratops`
 ]
-external = [ "WPS" ]
+external = [ "AAA", "WPS" ]
 
 # Plugin configs:
 [tool.ruff.lint.flake8-import-conventions]

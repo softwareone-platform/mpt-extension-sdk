@@ -9,10 +9,11 @@ def test_repr_highlighter(
     mock_logging_all_prefixes,
     mock_highlights,
 ):
-    repr_highlighter = ReprHighlighter()
-    assert repr_highlighter.accounts_prefixes == mock_logging_account_prefixes
-    assert repr_highlighter.catalog_prefixes == mock_logging_catalog_prefixes
-    assert repr_highlighter.commerce_prefixes == mock_logging_commerce_prefixes
-    assert repr_highlighter.aux_prefixes == mock_logging_aux_prefixes
-    assert repr_highlighter.all_prefixes == mock_logging_all_prefixes
-    assert repr_highlighter.highlights == mock_highlights
+    result = ReprHighlighter()
+
+    assert result.accounts_prefixes == mock_logging_account_prefixes
+    assert result.catalog_prefixes == mock_logging_catalog_prefixes
+    assert result.commerce_prefixes == mock_logging_commerce_prefixes
+    assert result.aux_prefixes == mock_logging_aux_prefixes
+    assert result.all_prefixes == mock_logging_all_prefixes
+    assert result.highlights == mock_highlights

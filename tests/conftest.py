@@ -777,9 +777,7 @@ def mock_settings_product_ids():
 
 
 @pytest.fixture
-def mock_get_order_for_producer(order, order_factory):
-    order = order_factory()
-
+def mock_get_order_for_producer(order):
     return {
         "data": [order],
         "$meta": {
