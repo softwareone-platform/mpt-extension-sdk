@@ -27,4 +27,6 @@ repos:
     hooks:
       - id: flake8
         additional_dependencies:
-          [flake8-pyproject==1.2.*, wemake-python-styleguide==1.5.*]
+          - flake8-aaa==0.17.*
+          - flake8-pyproject==1.2.*
+          - wemake-python-styleguide==1.5.*

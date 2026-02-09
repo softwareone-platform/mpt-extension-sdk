@@ -1,47 +1,40 @@
+import pytest
+
 from mpt_extension_sdk.core.events.registry import EventsRegistry
 from mpt_extension_sdk.runtime.utils import get_events_registry
 
 
+@pytest.fixture
+def events_registry():
+    registry = EventsRegistry()
+
+    @registry.listener("orders")
+    def test_listener(client, event):
+        pass
+
+    return registry
+
+
 def test_get_events_registry(mock_app_group_name):
-    registry = get_events_registry(group=mock_app_group_name)
-    assert isinstance(registry, EventsRegistry)
+    result = get_events_registry(group=mock_app_group_name)
+
+    assert isinstance(result, EventsRegistry)
 
 
-def test_registry_get_listener():
-    registry = EventsRegistry()
+def test_registry_get_listener(events_registry):
+    result = events_registry.get_listener("orders")
 
-    @registry.listener("orders")
-    def test_listener(client, event):
-        pass
-
-    assert registry.get_listener("orders") == test_listener
+    assert result.__name__ == "test_listener"
 
 
-def test_registry_get_registered_types():
-    registry = EventsRegistry()
+def test_registry_get_registered_types(events_registry):
+    result = events_registry.get_registered_types()
 
-    @registry.listener("orders")
-    def test_listener(client, event):
-        pass
-
-    assert registry.get_registered_types() == ["orders"]
+    assert result == ["orders"]
 
 
-def test_registry_is_event_supported():
-    registry = EventsRegistry()
+@pytest.mark.parametrize(("event", "expected_result"), [("orders", True), ("unknown", False)])
+def test_registry_is_event_supported(event, expected_result, events_registry):
+    result = events_registry.is_event_supported(event)
 
-    @registry.listener("orders")
-    def test_listener(client, event):
-        pass
-
-    assert registry.is_event_supported("orders")
-
-
-def test_registry_is_event_not_supported():
-    registry = EventsRegistry()
-
-    @registry.listener("orders")
-    def test_listener(client, event):
-        pass
-
-    assert not registry.is_event_supported("unknown")
+    assert result is expected_result

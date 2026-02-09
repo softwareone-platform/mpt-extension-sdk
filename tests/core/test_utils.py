@@ -5,7 +5,8 @@ from mpt_extension_sdk.mpt_http.base import MPTClient
 
 
 def test_setup_client():
-    client = setup_client()
-    assert isinstance(client, MPTClient)
-    assert client.base_url == f"{settings.MPT_API_BASE_URL}/public/v1/"
-    assert client.api_token == settings.MPT_API_TOKEN
+    result = setup_client()
+
+    assert isinstance(result, MPTClient)
+    assert result.base_url == f"{settings.MPT_API_BASE_URL}/public/v1/"
+    assert result.api_token == settings.MPT_API_TOKEN
