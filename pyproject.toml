@@ -9,7 +9,7 @@ license = {text = "Apache-2.0 license"}
 dependencies = [
     "azure-identity==1.25.*",
     "azure-keyvault-secrets==4.10.*",
-    "azure-monitor-opentelemetry-exporter==1.0.0b46",
+    "azure-monitor-opentelemetry-exporter==1.0.0b48",
     "click==8.3.*",
     "debugpy==1.8.*",
     "django==4.2.*",
