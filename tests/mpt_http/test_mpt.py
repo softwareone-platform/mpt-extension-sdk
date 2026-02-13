@@ -377,8 +377,8 @@ def test_get_agreement_asset_by_external_id(mpt_client, requests_mocker, assets_
     requests_mocker.get(
         urljoin(
             mpt_client.base_url,
-            f"commerce/assets?eq(externalIds.vendor,{asset_external_id})"
-            f"&eq(agreement.id,{agreement_id})"
+            f"commerce/assets?eq(externalIds.vendor,'{asset_external_id}')"
+            f"&eq(agreement.id,'{agreement_id}')"
             f"&in(status,(Active,Updating))"
             f"&select=agreement.id&limit=1",
         ),
@@ -410,7 +410,7 @@ def test_get_order_asset_by_external_id(mpt_client, requests_mocker, total, data
     requests_mocker.get(
         urljoin(
             mpt_client.base_url,
-            "commerce/orders/ORD-1234/assets?eq(externalIds.vendor,a-ast-id)&limit=1",
+            "commerce/orders/ORD-1234/assets?eq(externalIds.vendor,'a-ast-id')&limit=1",
         ),
         json={
             "$meta": {
@@ -548,7 +548,7 @@ def test_update_subscription_error(mpt_client, requests_mocker, mpt_error_factor
 def test_get_product_items_by_skus(mpt_client, requests_mocker):
     product_id = "PRD-1234-5678"
     skus = ["sku1", "sku2"]
-    rql_query = f"and(eq(product.id,{product_id}),in(externalIds.vendor,({','.join(skus)})))"
+    rql_query = f"and(eq(product.id,'{product_id}'),in(externalIds.vendor,({','.join(skus)})))"
     url = f"catalog/items?{rql_query}"
     page1_url = f"{url}&limit=10&offset=0"
     page2_url = f"{url}&limit=10&offset=10"
@@ -588,7 +588,7 @@ def test_get_product_items_by_skus(mpt_client, requests_mocker):
 def test_get_product_items_by_skus_error(mpt_client, requests_mocker, mpt_error_factory):
     product_id = "PRD-1234-5678"
     skus = ["sku1", "sku2"]
-    rql_query = f"and(eq(product.id,{product_id}),in(externalIds.vendor,({','.join(skus)})))"
+    rql_query = f"and(eq(product.id,'{product_id}'),in(externalIds.vendor,({','.join(skus)})))"
     url = f"catalog/items?{rql_query}&limit=10&offset=0"
     requests_mocker.get(
         urljoin(mpt_client.base_url, url),
@@ -624,7 +624,7 @@ def test_get_order_subscription_by_external_id(mpt_client, requests_mocker, tota
     requests_mocker.get(
         urljoin(
             mpt_client.base_url,
-            "commerce/orders/ORD-1234/subscriptions?eq(externalIds.vendor,a-sub-id)&limit=1",
+            "commerce/orders/ORD-1234/subscriptions?eq(externalIds.vendor,'a-sub-id')&limit=1",
         ),
         json={
             "$meta": {
@@ -650,7 +650,7 @@ def test_get_order_subscription_by_external_id(mpt_client, requests_mocker, tota
 def test_get_product_template_or_default(
     mpt_client, requests_mocker, name, response, expected_result
 ):
-    rql_filter = f"and(eq(type,OrderProcessing),or(eq(default,true),eq(name,{name})))"
+    rql_filter = f"and(eq(type,'OrderProcessing'),or(eq(default,'true'),eq(name,'{name}')))"
     url = f"catalog/products/PRD-1111/templates?{rql_filter}&order=default&limit=1"
     requests_mocker.get(urljoin(mpt_client.base_url, url), json={"data": response})
 
@@ -661,7 +661,7 @@ def test_get_product_template_or_default(
 
 @pytest.mark.parametrize("name", ["", None])
 def test_get_product_template_or_default_empty_name(mpt_client, requests_mocker, name):
-    rql_filter = "eq(default,true)"
+    rql_filter = "eq(default,'true')"
     url = f"catalog/products/PRD-1111/templates?{rql_filter}&order=default&limit=1"
     requests_mocker.get(urljoin(mpt_client.base_url, url), json={"data": [{"id": "TPL-0000"}]})
 
@@ -675,7 +675,7 @@ def test_get_product_template_or_default_empty_name(mpt_client, requests_mocker,
     [("template_name", [{"id": "TPL-0000"}], {"id": "TPL-0000"}), ("missing_template", [], None)],
 )
 def test_get_product_template_by_name(mpt_client, requests_mocker, name, response, expected_result):
-    url = f"catalog/products/PRD-1111/templates?eq(name,{name})"
+    url = f"catalog/products/PRD-1111/templates?eq(name,'{name}')"
     requests_mocker.get(urljoin(mpt_client.base_url, url), json={"data": response})
 
     result = get_template_by_name(mpt_client, "PRD-1111", name)
@@ -688,7 +688,7 @@ def test_get_product_template_by_name(mpt_client, requests_mocker, name, respons
     [("template_name", [{"id": "TPL-0000"}], {"id": "TPL-0000"}), ("missing_template", [], None)],
 )
 def test_get_asset_template_by_name(mpt_client, requests_mocker, name, response, expected_result):
-    url = f"catalog/products/PRD-1111/templates?and(eq(type,Asset),eq(name,{name}))&limit=1"
+    url = f"catalog/products/PRD-1111/templates?and(eq(type,'Asset'),eq(name,'{name}'))&limit=1"
     requests_mocker.get(urljoin(mpt_client.base_url, url), json={"data": response})
 
     result = get_asset_template_by_name(mpt_client, "PRD-1111", name)
@@ -949,7 +949,7 @@ def test_get_product_onetime_items_by_ids(mpt_client, requests_mocker):
     product_id = "PRD-1234-5678"
     ids = ["ITM-0001", "ITM-0002"]
     rql_query = (
-        f"and(eq(product.id,{product_id}),in(id,({','.join(ids)})),eq(terms.period,one-time))"
+        f"and(eq(product.id,'{product_id}'),in(id,({','.join(ids)})),eq(terms.period,'one-time'))"
     )
     url = f"catalog/items?{rql_query}"
     page1_url = f"{url}&limit=10&offset=0"
@@ -987,11 +987,12 @@ def test_get_product_onetime_items_by_ids(mpt_client, requests_mocker):
     assert result == data
 
 
+# FIXME: MPT-18072
 def test_get_product_onetime_items_by_ids_error(mpt_client, requests_mocker, mpt_error_factory):
     product_id = "PRD-1234-5678"
     ids = ["ITM-0001", "ITM-0002"]
     rql_query = (
-        f"and(eq(product.id,{product_id}),in(id,({','.join(ids)})),eq(terms.period,OneTime))"
+        f"and(eq(product.id,'{product_id}'),in(id,({','.join(ids)})),eq(terms.period,'OneTime'))"
     )
     url = f"catalog/items?{rql_query}&limit=10&offset=0"
     requests_mocker.get(
@@ -1012,7 +1013,7 @@ def test_get_product_items_by_period(mpt_client, requests_mocker):
     requests_mocker.get(
         urljoin(
             mpt_client.base_url,
-            f"catalog/items?and(eq(product.id,{product_id}),eq(terms.period,{period}))"
+            f"catalog/items?and(eq(product.id,'{product_id}'),eq(terms.period,'{period}'))"
             "&limit=10&offset=0",
         ),
         json={
@@ -1059,7 +1060,7 @@ def test_get_product_items_by_period_vendors(mpt_client, requests_mocker):
     requests_mocker.get(
         urljoin(
             mpt_client.base_url,
-            f"catalog/items?and(eq(product.id,{product_id}),eq(terms.period,{period}))"
+            f"catalog/items?and(eq(product.id,'{product_id}'),eq(terms.period,'{period}'))"
             "&limit=10&offset=0",
         ),
         json={
@@ -1102,7 +1103,7 @@ def test_get_product_items_by_period_vendors(mpt_client, requests_mocker):
 def test_get_product_items_by_period_error(mpt_client, requests_mocker, mpt_error_factory):
     product_id = "PRD-1234-5678"
     period = "one-time"
-    rql_query = f"and(eq(product.id,{product_id}),eq(terms.period,{period}))"
+    rql_query = f"and(eq(product.id,'{product_id}'),eq(terms.period,'{period}'))"
     url = f"catalog/items?{rql_query}&limit=10&offset=0"
     requests_mocker.get(
         urljoin(mpt_client.base_url, url),
@@ -1118,7 +1119,7 @@ def test_get_product_items_by_period_error(mpt_client, requests_mocker, mpt_erro
 
 def test_get_agreements_by_ids(mocker):
     rql_query = (
-        "and(in(id,(AGR-0001)),eq(status,Active))"
+        "and(in(id,(AGR-0001)),eq(status,'Active'))"
         "&select=assets,lines,parameters,subscriptions,product,listing"
     )
     mocked_get_by_query = mocker.patch(
@@ -1136,7 +1137,7 @@ def test_get_agreements_by_ids(mocker):
 def test_get_all_agreements(mocker, settings):
     product_condition = f"in(product.id,({','.join(settings.MPT_PRODUCTS_IDS)}))"
     rql_query = (
-        f"and(eq(status,Active),{product_condition})"
+        f"and(eq(status,'Active'),{product_condition})"
         f"&select=assets,lines,parameters,subscriptions,product,listing"
     )
     mocked_get_by_query = mocker.patch(
@@ -1216,8 +1217,8 @@ def test_get_authorizations_by_currency_and_seller_id(mpt_client, requests_mocke
     requests_mocker.get(
         urljoin(
             mpt_client.base_url,
-            f"catalog/authorizations?eq(product.id,{product_id})"
-            f"&eq(currency,{currency})&eq(owner.id,{owner_id})",
+            f"catalog/authorizations?eq(product.id,'{product_id}')"
+            f"&eq(currency,'{currency}')&eq(owner.id,'{owner_id}')",
         ),
         json={"data": []},
     )
@@ -1235,7 +1236,7 @@ def test_get_gc_price_list_by_currency(mpt_client, requests_mocker):
     requests_mocker.get(
         urljoin(
             mpt_client.base_url,
-            f"catalog/price-lists?eq(product.id,{product_id})&eq(currency,{currency})",
+            f"catalog/price-lists?eq(product.id,'{product_id}')&eq(currency,'{currency}')",
         ),
         json={"data": []},
     )
@@ -1245,6 +1246,7 @@ def test_get_gc_price_list_by_currency(mpt_client, requests_mocker):
     assert result == []
 
 
+# FIXME: MPT-18072
 def test_get_listings_by_currency_and_by_seller_id(mpt_client, requests_mocker):
     product_id = "product_id"
     price_list_id = "price_list_id"
@@ -1253,9 +1255,9 @@ def test_get_listings_by_currency_and_by_seller_id(mpt_client, requests_mocker):
     requests_mocker.get(
         urljoin(
             mpt_client.base_url,
-            f"catalog/listings?eq(product.id,{product_id})&"
-            f"eq(priceList.id,{price_list_id})&eq(seller.id,{seller_id})&"
-            f"q(authorization.id,{authorization_id})&eq(primary,True)",
+            f"catalog/listings?eq(product.id,'{product_id}')&"
+            f"eq(priceList.id,'{price_list_id}')&eq(seller.id,'{seller_id}')&"
+            f"q(authorization.id,{authorization_id})&eq(primary,'True')",
         ),
         json={"data": []},
     )
@@ -1267,6 +1269,7 @@ def test_get_listings_by_currency_and_by_seller_id(mpt_client, requests_mocker):
     assert result == []
 
 
+# FIXME: MPT-18072
 def test_get_item_prices_by_pricelist_id(mpt_client, requests_mocker):
     price_list_id = "price_list_id"
     item_ids = ["item_id", "item_id2"]
@@ -1301,8 +1304,8 @@ def test_get_subscription_by_external_id(mpt_client, requests_mocker, subscripti
     requests_mocker.get(
         urljoin(
             mpt_client.base_url,
-            f"commerce/subscriptions?eq(externalIds.vendor,{subscription_external_id})"
-            f"&eq(agreement.id,{agreement_id})"
+            f"commerce/subscriptions?eq(externalIds.vendor,'{subscription_external_id}')"
+            f"&eq(agreement.id,'{agreement_id}')"
             f"&in(status,(Active,Updating))"
             f"&select=agreement.id&limit=1",
         ),
@@ -1533,7 +1536,7 @@ def test_get_agreements_by_external_id_values(mpt_client, requests_mocker, agree
             mpt_client.base_url,
             f"commerce/agreements?"
             f"any(parameters.fulfillment,and("
-            f"eq(externalId,{external_id}),"
+            f"eq(externalId,'{external_id}'),"
             f"in(displayValue,({display_value}))))"
             f"&select=lines,parameters,subscriptions,product,listing"
             "&limit=10&offset=0",
@@ -1563,7 +1566,7 @@ def test_get_agreements_by_customer_deployments(mpt_client, requests_mocker, agr
             mpt_client.base_url,
             f"commerce/agreements?"
             f"any(parameters.fulfillment,and("
-            f"eq(externalId,{deployment_id_parameter}),"
+            f"eq(externalId,'{deployment_id_parameter}'),"
             f"in(displayValue,({deployments_list}))))"
             f"&select=lines,parameters,subscriptions,subscriptions.parameters,assets,product,listing"
             "&limit=10&offset=0",

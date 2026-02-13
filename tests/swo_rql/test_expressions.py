@@ -12,7 +12,7 @@ def test_in_and_namespaces(mock_product_ids_for_expression):
 
 def test_query_expression_get_querying_orders(mock_product_ids_for_expression):
     products_str = ",".join(mock_product_ids_for_expression)
-    expected_rql_query = f"and(in(agreement.product.id,({products_str})),eq(status,Querying))"
+    expected_rql_query = f"and(in(agreement.product.id,({products_str})),eq(status,'Querying'))"
     expected_url = (
         f"/commerce/orders?{expected_rql_query}&select=audit,parameters,lines,subscriptions,"
         f"subscriptions.lines,agreement,buyer&order=audit.created.at"
@@ -49,7 +49,7 @@ def test_improper_op(mock_product_id_for_expression):
 
     result = parse_kwargs(products_expr)
 
-    assert str(result) == f"['eq(product.id.inn,{mock_product_id_for_expression})']"
+    assert result == [f"eq(product.id.inn,'{mock_product_id_for_expression}')"]
 
 
 def test_parse_eq(mock_product_id_for_expression):
@@ -57,7 +57,7 @@ def test_parse_eq(mock_product_id_for_expression):
 
     result = parse_kwargs(products_expr)
 
-    assert str(result) == f"['eq(product.id,{mock_product_id_for_expression})']"
+    assert result == [f"eq(product.id,'{mock_product_id_for_expression}')"]
 
 
 def test_parse_like(mock_product_id_for_expression):
