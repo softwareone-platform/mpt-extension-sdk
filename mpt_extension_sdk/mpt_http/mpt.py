@@ -143,9 +143,9 @@ def update_order_asset(mpt_client, order_id, asset_id, **kwargs):
 def get_agreement_asset_by_external_id(mpt_client, agreement_id, asset_external_id):
     """Retrieve an agreement asset by external ID."""
     response = mpt_client.get(
-        f"/commerce/assets?eq(externalIds.vendor,{asset_external_id})"
-        f"&eq(agreement.id,{agreement_id})"
-        f"&eq(status,Active)"
+        f"/commerce/assets?eq(externalIds.vendor,'{asset_external_id}')"
+        f"&eq(agreement.id,'{agreement_id}')"
+        f"&eq(status,'Active')"
         f"&select=agreement.id&limit=1"
     )
     response.raise_for_status()
@@ -165,7 +165,7 @@ def get_asset_by_id(mpt_client, asset_id):
 def get_order_asset_by_external_id(mpt_client, order_id, asset_external_id):
     """Retrieve an order asset by its external ID."""
     response = mpt_client.get(
-        f"/commerce/orders/{order_id}/assets?eq(externalIds.vendor,{asset_external_id})&limit=1",
+        f"/commerce/orders/{order_id}/assets?eq(externalIds.vendor,'{asset_external_id}')&limit=1",
     )
     response.raise_for_status()
     assets = response.json()
@@ -201,7 +201,7 @@ def update_subscription(mpt_client, order_id, subscription_id, **kwargs):
 def get_order_subscription_by_external_id(mpt_client, order_id, subscription_external_id):
     """Retrieve an order subscription by its external ID."""
     response = mpt_client.get(
-        f"/commerce/orders/{order_id}/subscriptions?eq(externalIds.vendor,{subscription_external_id})&limit=1",
+        f"/commerce/orders/{order_id}/subscriptions?eq(externalIds.vendor,'{subscription_external_id}')&limit=1",
     )
     response.raise_for_status()
     subscriptions = response.json()
@@ -214,7 +214,7 @@ def get_order_subscription_by_external_id(mpt_client, order_id, subscription_ext
 def get_product_items_by_skus(mpt_client, product_id, skus):
     """Retrieve product items by their SKUs."""
     skus_str = ",".join(skus)
-    rql_query = f"and(eq(product.id,{product_id}),in(externalIds.vendor,({skus_str})))"
+    rql_query = f"and(eq(product.id,'{product_id}'),in(externalIds.vendor,({skus_str})))"
     url = f"/catalog/items?{rql_query}"
     return _paginated(mpt_client, url)
 
@@ -232,10 +232,10 @@ def get_webhook(mpt_client, webhook_id):
 @wrap_mpt_http_error
 def get_product_template_or_default(mpt_client, product_id, status, name=None):
     """Retrieve a product template by ID or return the default template."""
-    name_or_default_filter = "eq(default,true)"
+    name_or_default_filter = "eq(default,'true')"
     if name:
-        name_or_default_filter = f"or({name_or_default_filter},eq(name,{name}))"
-    rql_filter = f"and(eq(type,Order{status}),{name_or_default_filter})"
+        name_or_default_filter = f"or({name_or_default_filter},eq(name,'{name}'))"
+    rql_filter = f"and(eq(type,'Order{status}'),{name_or_default_filter})"
     url = f"/catalog/products/{product_id}/templates?{rql_filter}&order=default&limit=1"
     response = mpt_client.get(url)
     response.raise_for_status()
@@ -246,7 +246,7 @@ def get_product_template_or_default(mpt_client, product_id, status, name=None):
 @wrap_mpt_http_error
 def get_template_by_name(mpt_client, product_id, template_name):
     """Retrieve a product template by name."""
-    url = f"/catalog/products/{product_id}/templates?eq(name,{template_name})"
+    url = f"/catalog/products/{product_id}/templates?eq(name,'{template_name}')"
     response = mpt_client.get(url)
     response.raise_for_status()
     templates = response.json()
@@ -256,7 +256,7 @@ def get_template_by_name(mpt_client, product_id, template_name):
 @wrap_mpt_http_error
 def get_asset_template_by_name(mpt_client, product_id, template_name):
     """Retrieve an asset template by name."""
-    rql_filter = f"and(eq(type,Asset),eq(name,{template_name}))"
+    rql_filter = f"and(eq(type,'Asset'),eq(name,'{template_name}'))"
     url = f"/catalog/products/{product_id}/templates?{rql_filter}&limit=1"
     response = mpt_client.get(url)
     response.raise_for_status()
@@ -329,9 +329,9 @@ def get_rendered_template(mpt_client, order_id):
 def get_product_onetime_items_by_ids(mpt_client, product_id, item_ids):
     """Retrieve one-time product items by their IDs."""
     item_ids_str = ",".join(item_ids)
-    product_cond = f"eq(product.id,{product_id})"
+    product_cond = f"eq(product.id,'{product_id}')"
     items_cond = f"in(id,({item_ids_str}))"
-    rql_query = f"and({product_cond},{items_cond},eq(terms.period,one-time))"
+    rql_query = f"and({product_cond},{items_cond},eq(terms.period,'one-time'))"
     url = f"/catalog/items?{rql_query}"
 
     return _paginated(mpt_client, url)
@@ -360,12 +360,12 @@ def get_product_items_by_period(
             A paginated list of product items matching the specified criteria.
 
     """
-    product_cond = f"eq(product.id,{product_id})"
+    product_cond = f"eq(product.id,'{product_id}')"
     vendors_cond = ""
     if vendor_external_ids:
         vendor_ids = ",".join(vendor_external_ids)
         vendors_cond = f",in(externalIds.vendor,({vendor_ids})))"
-    rql_query = f"and({product_cond},eq(terms.period,{period}){vendors_cond})"
+    rql_query = f"and({product_cond},eq(terms.period,'{period}'){vendors_cond})"
     url = f"/catalog/items?{rql_query}"
 
     return _paginated(mpt_client, url)
@@ -375,7 +375,7 @@ def get_agreements_by_ids(mpt_client, ids):
     """Retrieve agreements by their IDs."""
     ids_str = ",".join(ids)
     rql_query = (
-        f"and(in(id,({ids_str})),eq(status,Active))"
+        f"and(in(id,({ids_str})),eq(status,'Active'))"
         "&select=assets,lines,parameters,subscriptions,product,listing"
     )
     return get_agreements_by_query(mpt_client, rql_query)
@@ -388,7 +388,7 @@ def get_all_agreements(mpt_client):
 
     return get_agreements_by_query(
         mpt_client,
-        f"and(eq(status,Active),{product_condition})&select=assets,lines,parameters,subscriptions,product,listing",
+        f"and(eq(status,'Active'),{product_condition})&select=assets,lines,parameters,subscriptions,product,listing",
     )
 
 
@@ -396,7 +396,7 @@ def get_all_agreements(mpt_client):
 def get_authorizations_by_currency_and_seller_id(mpt_client, product_id, currency, owner_id):
     """Retrieve authorizations by product ID, currency, and owner ID."""
     authorization_filter = (
-        f"eq(product.id,{product_id})&eq(currency,{currency})&eq(owner.id,{owner_id})"
+        f"eq(product.id,'{product_id}')&eq(currency,'{currency}')&eq(owner.id,'{owner_id}')"
     )
     response = mpt_client.get(f"/catalog/authorizations?{authorization_filter}")
     response.raise_for_status()
@@ -407,7 +407,7 @@ def get_authorizations_by_currency_and_seller_id(mpt_client, product_id, currenc
 def get_gc_price_list_by_currency(mpt_client, product_id, currency):
     """Retrieve a GC price list by product ID and currency."""
     response = mpt_client.get(
-        f"/catalog/price-lists?eq(product.id,{product_id})&eq(currency,{currency})"
+        f"/catalog/price-lists?eq(product.id,'{product_id}')&eq(currency,'{currency}')"
     )
     response.raise_for_status()
     return response.json()["data"]
@@ -419,9 +419,9 @@ def get_listings_by_price_list_and_seller_and_authorization(
 ):
     """Retrieve listings by price list, seller, and authorization."""
     response = mpt_client.get(
-        f"/catalog/listings?eq(product.id,{product_id})&eq(priceList.id,{price_list_id})"
-        f"&eq(seller.id,{seller_id})"
-        f"&eq(authorization.id,{authorization_id})"
+        f"/catalog/listings?eq(product.id,'{product_id}')&eq(priceList.id,'{price_list_id}')"
+        f"&eq(seller.id,'{seller_id}')"
+        f"&eq(authorization.id,'{authorization_id}')"
     )
     response.raise_for_status()
     return response.json()["data"]
@@ -493,8 +493,8 @@ def get_listing_by_id(mpt_client, listing_id):
 def get_agreement_subscription_by_external_id(mpt_client, agreement_id, subscription_external_id):
     """Retrieve an agreement subscription by external ID."""
     response = mpt_client.get(
-        f"/commerce/subscriptions?eq(externalIds.vendor,{subscription_external_id})"
-        f"&eq(agreement.id,{agreement_id})"
+        f"/commerce/subscriptions?eq(externalIds.vendor,'{subscription_external_id}')"
+        f"&eq(agreement.id,'{agreement_id}')"
         f"&in(status,(Active,Updating))"
         f"&select=agreement.id&limit=1"
     )
@@ -510,7 +510,7 @@ def get_agreements_by_external_id_values(mpt_client, external_id, display_values
     display_values_list = ",".join(display_values)
     rql_query = (
         f"any(parameters.fulfillment,and("
-        f"eq(externalId,{external_id}),"
+        f"eq(externalId,'{external_id}'),"
         f"in(displayValue,({display_values_list}))))"
         f"&select=lines,parameters,subscriptions,product,listing"
     )
@@ -526,7 +526,7 @@ def get_agreements_by_customer_deployments(mpt_client, deployment_id_parameter, 
     deployments_list = ",".join(deployment_ids)
     rql_query = (
         f"any(parameters.fulfillment,and("
-        f"eq(externalId,{deployment_id_parameter}),"
+        f"eq(externalId,'{deployment_id_parameter}'),"
         f"in(displayValue,({deployments_list}))))"
         f"&select=lines,parameters,subscriptions,subscriptions.parameters,assets,product,listing"
     )
