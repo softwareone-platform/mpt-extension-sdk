@@ -1,3 +1,6 @@
+import datetime as dt
+from decimal import Decimal
+
 from mpt_extension_sdk.swo_rql import constants
 
 
@@ -34,22 +37,34 @@ def parse_kwargs(query_dict):
     return query
 
 
-def rql_encode(op, value):  # noqa: C901, D103
-    from datetime import date, datetime  # noqa: ICN003, PLC0415
-    from decimal import Decimal  # noqa: PLC0415
+def _encode_scalar(value):
+    if isinstance(value, str):
+        return value
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, int | float | Decimal):
+        return str(value)
+    if isinstance(value, dt.date | dt.datetime):
+        return value.isoformat()
+    return None
 
-    if op not in constants.LIST:
-        if isinstance(value, str):
-            return value
-        if isinstance(value, bool):
-            return "true" if value else "false"
-        if isinstance(value, int | float | Decimal):
-            return str(value)
-        if isinstance(value, date | datetime):
-            return value.isoformat()
-    if op in constants.LIST and isinstance(value, list | tuple):
-        return ",".join(value)
-    raise TypeError(f"the `{op}` operator doesn't support the {type(value)} type.")
+
+def _quote_comparison_value(op, value):
+    if op in constants.COMP:
+        return f"'{value}'"
+    return value
+
+
+def rql_encode(op, value):  # noqa: D103
+    if op in constants.LIST:
+        if isinstance(value, list | tuple):
+            return ",".join(value)
+        raise TypeError(f"the `{op}` operator doesn't support the {type(value)} type.")
+
+    encoded = _encode_scalar(value)
+    if encoded is None:
+        raise TypeError(f"the `{op}` operator doesn't support the {type(value)} type.")
+    return _quote_comparison_value(op, encoded)
 
 
 class RQLQuery:

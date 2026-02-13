@@ -23,7 +23,9 @@ def test_event_producer_get_processing_orders_invalid_response(
 ):
     limit = 10
     offset = 0
-    rql_query = f"and(in(agreement.product.id,({mock_settings_product_ids})),eq(status,processing))"
+    rql_query = (
+        f"and(in(agreement.product.id,({mock_settings_product_ids})),eq(status,'processing'))"
+    )
     url = (
         f"commerce/orders?{rql_query}"
         "&select=audit,parameters,lines,subscriptions,subscriptions.lines,agreement,buyer,seller,"
