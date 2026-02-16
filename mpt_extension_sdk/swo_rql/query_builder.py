@@ -1,4 +1,17 @@
+import datetime as dt
+from decimal import Decimal
+from typing import Any
+
 from mpt_extension_sdk.swo_rql import constants
+
+
+class UnsupportedOperatorTypeError(TypeError):
+    """Raised when an operator is used with an unsupported Python value type."""
+
+    def __init__(self, op: str, value_type: type[Any]) -> None:
+        self.op = op
+        self.value_type = value_type
+        super().__init__(f"the `{op}` operator doesn't support the {value_type} type.")
 
 
 def parse_kwargs(query_dict):
@@ -34,22 +47,48 @@ def parse_kwargs(query_dict):
     return query
 
 
-def rql_encode(op, value):  # noqa: C901, D103
-    from datetime import date, datetime  # noqa: ICN003, PLC0415
-    from decimal import Decimal  # noqa: PLC0415
+def _encode_scalar(value):
+    if isinstance(value, str):
+        return value
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, int | float | Decimal):
+        return str(value)
+    if isinstance(value, dt.date | dt.datetime):
+        return value.isoformat()
+    return None
 
-    if op not in constants.LIST:
-        if isinstance(value, str):
-            return value
-        if isinstance(value, bool):
-            return "true" if value else "false"
-        if isinstance(value, int | float | Decimal):
-            return str(value)
-        if isinstance(value, date | datetime):
-            return value.isoformat()
-    if op in constants.LIST and isinstance(value, list | tuple):
-        return ",".join(value)
-    raise TypeError(f"the `{op}` operator doesn't support the {type(value)} type.")
+
+def _escape_rql_value(value, *, escape_commas=False):
+    escaped = value.replace("'", r"\'")
+    if escape_commas:
+        escaped = escaped.replace(",", r"\,")
+    return escaped
+
+
+def _quote_comparison_value(op, value):
+    if op in constants.COMP:
+        return f"'{_escape_rql_value(value)}'"
+    return value
+
+
+def rql_encode(op: str, value):
+    """Encode a Python value to its RQL string representation for a given operator."""
+    if op in constants.LIST:
+        if isinstance(value, list | tuple):
+            encoded_items = []
+            for item in value:
+                encoded = _encode_scalar(item)
+                if encoded is None:
+                    raise UnsupportedOperatorTypeError(op, type(item))
+                encoded_items.append(_escape_rql_value(encoded, escape_commas=True))
+            return ",".join(encoded_items)
+        raise UnsupportedOperatorTypeError(op, type(value))
+
+    encoded = _encode_scalar(value)
+    if encoded is None:
+        raise UnsupportedOperatorTypeError(op, type(value))
+    return _quote_comparison_value(op, encoded)
 
 
 class RQLQuery:
