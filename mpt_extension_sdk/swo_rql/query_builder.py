@@ -1,7 +1,17 @@
 import datetime as dt
 from decimal import Decimal
+from typing import Any
 
 from mpt_extension_sdk.swo_rql import constants
+
+
+class UnsupportedOperatorTypeError(TypeError):
+    """Raised when an operator is used with an unsupported Python value type."""
+
+    def __init__(self, op: str, value_type: type[Any]) -> None:
+        self.op = op
+        self.value_type = value_type
+        super().__init__(f"the `{op}` operator doesn't support the {value_type} type.")
 
 
 def parse_kwargs(query_dict):
@@ -70,14 +80,14 @@ def rql_encode(op: str, value):
             for item in value:
                 encoded = _encode_scalar(item)
                 if encoded is None:
-                    raise TypeError(f"the `{op}` operator doesn't support the {type(item)} type.")
+                    raise UnsupportedOperatorTypeError(op, type(item))
                 encoded_items.append(_escape_rql_value(encoded, escape_commas=True))
             return ",".join(encoded_items)
-        raise TypeError(f"the `{op}` operator doesn't support the {type(value)} type.")
+        raise UnsupportedOperatorTypeError(op, type(value))
 
     encoded = _encode_scalar(value)
     if encoded is None:
-        raise TypeError(f"the `{op}` operator doesn't support the {type(value)} type.")
+        raise UnsupportedOperatorTypeError(op, type(value))
     return _quote_comparison_value(op, encoded)
 
 
