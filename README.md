@@ -13,43 +13,60 @@ SDK for SoftwareONE python extensions
 
 - Docker and Docker Compose plugin (`docker compose` CLI)
 - `make`
-- Valid `.env` file
-- Adobe credentials and authorizations JSON files in the project root
 - [CodeRabbit CLI](https://www.coderabbit.ai/cli) (optional. Used for running review check locally)
 
 
 ### Make targets overview
 
-Common development workflows are wrapped in the `makefile`:
+Common development workflows are wrapped in the `Makefile`. Run `make help` to see the list of available commands.
 
-- `make help` – list available commands
-- `make bash` – start the app container and open a bash shell
-- `make build` – build the application image for development
-- `make build-package` – build the package locally
-- `make check` – run code quality checks (ruff, flake8, lockfile check)
-- `make check-all` – run checks, formatting, and tests
-- `make down` – stop and remove containers
-- `make format` – apply formatting and import fixes
-- `make review` –  check the code in the cli by running CodeRabbit
-- `make shell` – open a Django shell inside the running app container
-- `make test` – run the test suite with pytest
+### How the Makefile works
 
-## Running tests
+The project uses a modular Makefile structure that organizes commands into logical groups:
 
-Tests run inside Docker using the dev configuration.
+- **Main Makefile** (`Makefile`): Entry point that automatically includes all `.mk` files from the `make/` directory
+- **Modular includes** (`make/*.mk`): Commands are organized by category:
+  - `common.mk` - Core development commands (build, test, format, etc.)
+  - `repo.mk` - Repository management and dependency commands
+  - `migrations.mk` - Database migration commands (Only available in extension repositories)
+  - `external_tools.mk` - Integration with external tools
 
-Run the full test suite:
+
+You can extend the Makefile with your own custom commands creating a `local.mk` file inside make folder. This file is
+automatically ignored by git, so your personal commands won't affect other developers or appear in version control.
+
+
+### Setup
+
+Follow these steps to set up the development environment:
+
+#### 1. Clone the repository
+
+```bash
+git clone <repository-url>
+```
+```bash
+cd mpt-extension-sdk
+```
+
+#### 2. Build the Docker images
+
+Build the development environment:
+
+```bash
+make build
+```
+
+This will create the Docker images with all required dependencies and the virtualenv.
+
+#### 3. Verify the setup
+
+Run the test suite to ensure everything is configured correctly:
 
 ```bash
 make test
 ```
 
-Pass additional arguments to pytest using the `args` variable:
-
-```bash
-make test args="-k test_bla -vv"
-make test args="tests/test_bla.py"
-```
 
 ## Developer utilities
 
@@ -57,7 +74,6 @@ Useful helper targets during development:
 
 ```bash
 make bash          # open a bash shell in the app container
-make build-package # build the package locally
 make check         # run ruff, flake8, and lockfile checks
 make check-all     # run checks and tests
 make format        # auto-format code and imports

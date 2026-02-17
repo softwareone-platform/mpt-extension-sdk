@@ -4,7 +4,7 @@ version = "4.1.1"
 description = "Extensions SDK for SoftwareONE Marketplace Platform"
 authors = [{ name = "SoftwareOne AG" }]
 requires-python = ">=3.12,<4"
-readme = "README.md"
+readme = "docs/PROJECT_DESCRIPTION.md"
 license = {text = "Apache-2.0 license"}
 dependencies = [
     "azure-identity==1.25.*",
@@ -63,9 +63,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build]
-include = [
-  "mpt_extension_sdk/**"
-]
+include = ["mpt_extension_sdk/**", "docs/PROJECT_DESCRIPTION.md"]
 
 [tool.pytest.ini_options]
 testpaths = "tests"
@@ -140,6 +138,7 @@ per-file-ignores = [
 ]
 
 [tool.ruff]
+# Ruff config: https://docs.astral.sh/ruff/settings
 preview = true
 target-version = "py312"
 extend-exclude=[".vscode", ".devcontainer"]
@@ -148,7 +147,6 @@ line-length = 100
 
 [tool.ruff.format]
 quote-style = "double"
-docstring-code-format = false
 
 [tool.ruff.lint]
 select = [
