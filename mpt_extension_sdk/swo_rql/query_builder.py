@@ -67,7 +67,7 @@ def _escape_rql_value(value, *, escape_commas=False):
 
 
 def _quote_comparison_value(op, value):
-    if op in constants.COMP:
+    if op in constants.COMP and value not in constants.RQL_FUNCTIONS:
         return f"'{_escape_rql_value(value)}'"
     return value
 

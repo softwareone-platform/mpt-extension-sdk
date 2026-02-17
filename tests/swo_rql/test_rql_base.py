@@ -53,6 +53,7 @@ def test_create_multiple_kwargs():
     ("op", "value", "expected_result"),
     [
         ("eq", "value", "'value'"),
+        ("eq", "null()", "null()"),
         ("eq", "O'Reilly", "'O\\'Reilly'"),
         ("ne", True, "'true'"),
         ("lt", False, "'false'"),
