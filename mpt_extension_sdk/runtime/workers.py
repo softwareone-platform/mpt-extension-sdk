@@ -92,5 +92,6 @@ def start_gunicorn(
     guni_options = {
         "bind": options.get("bind", "0.0.0.0:8080"),
         "logconfig_dict": logging_config,
+        "control_socket_disable": True,
     }
     ExtensionWebApplication(get_wsgi_application(), options=guni_options).run()
