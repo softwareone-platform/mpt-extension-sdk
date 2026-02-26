@@ -9,7 +9,7 @@ from watchfiles import watch
 from watchfiles.filters import PythonFilter
 from watchfiles.run import start_process
 
-from mpt_extension_sdk.runtime.workers import start_event_consumer, start_gunicorn
+from mpt_extension_sdk.runtime.workers import start_event_consumer, start_uvicorn
 
 logger = logging.getLogger(__name__)
 
@@ -48,18 +48,18 @@ class Master:
             case "all":
                 self.proc_targets = {
                     "event-consumer": start_event_consumer,
-                    "gunicorn": start_gunicorn,
+                    "uvicorn": start_uvicorn,
                 }
             case "api":
                 self.proc_targets = {
-                    "gunicorn": start_gunicorn,
+                    "uvicorn": start_uvicorn,
                 }
             case "consumer":
                 self.proc_targets = {"event-consumer": start_event_consumer}
             case _:
                 self.proc_targets = {
                     "event-consumer": start_event_consumer,
-                    "gunicorn": start_gunicorn,
+                    "uvicorn": start_uvicorn,
                 }
 
     def setup_signals_handler(self):

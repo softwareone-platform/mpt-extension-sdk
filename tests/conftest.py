@@ -76,7 +76,7 @@ def mock_invalid_env_values(
 
 
 @pytest.fixture
-def mock_gunicorn_logging_config():
+def mock_uvicorn_logging_config():
     return {
         "version": 1,
         "disable_existing_loggers": False,
@@ -107,12 +107,17 @@ def mock_gunicorn_logging_config():
             "level": "INFO",
         },
         "loggers": {
-            "gunicorn.access": {
+            "uvicorn": {
                 "handlers": ["rich"],
                 "level": "INFO",
                 "propagate": False,
             },
-            "gunicorn.error": {
+            "uvicorn.access": {
+                "handlers": ["rich"],
+                "level": "INFO",
+                "propagate": False,
+            },
+            "uvicorn.error": {
                 "handlers": ["rich"],
                 "level": "INFO",
                 "propagate": False,
@@ -874,7 +879,7 @@ def mock_product_id_for_expression():
 
 
 @pytest.fixture
-def mock_gunicorn_options():
+def mock_uvicorn_options():
     return {"component": "api", "debug": False}
 
 

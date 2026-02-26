@@ -1,6 +1,6 @@
+import uvicorn
+from django.core.asgi import get_asgi_application
 from django.core.management import call_command
-from django.core.wsgi import get_wsgi_application
-from gunicorn.app.base import BaseApplication
 
 from mpt_extension_sdk.constants import (
     DEFAULT_APP_CONFIG_GROUP,
@@ -8,28 +8,7 @@ from mpt_extension_sdk.constants import (
 )
 from mpt_extension_sdk.runtime.utils import initialize_extension
 
-
-class ExtensionWebApplication(BaseApplication):
-    """Gunicorn application for the extension."""
-
-    def __init__(self, app, options=None):
-        self.options = options or {}
-        self.application = app
-        super().__init__()
-
-    def load_config(self):
-        """Load configuration settings."""
-        config = {
-            opt_key: opt_value
-            for opt_key, opt_value in self.options.items()
-            if opt_key in self.cfg.settings and opt_value is not None
-        }
-        for opt_key, opt_value in config.items():
-            self.cfg.set(opt_key.lower(), opt_value)
-
-    def load(self):
-        """Load the application."""
-        return self.application
+DEFAULT_BIND = "0.0.0.0:8080"
 
 
 def start_event_consumer(options):
@@ -38,13 +17,15 @@ def start_event_consumer(options):
     call_command("consume_events")
 
 
-def start_gunicorn(
+def start_uvicorn(
     options,
     group=DEFAULT_APP_CONFIG_GROUP,
     name=DEFAULT_APP_CONFIG_NAME,
 ):
-    """Start the Gunicorn server."""
+    """Start the Uvicorn server for the extension."""
     initialize_extension(options, group=group, name=name)
+
+    handler_name = "rich" if options.get("color") else "console"
 
     logging_config = {
         "version": 1,
@@ -72,26 +53,34 @@ def start_gunicorn(
             },
         },
         "root": {
-            "handlers": ["rich" if options.get("color") else "console"],
+            "handlers": [handler_name],
             "level": "INFO",
         },
         "loggers": {
-            "gunicorn.access": {
-                "handlers": ["rich" if options.get("color") else "console"],
+            "uvicorn": {
+                "handlers": [handler_name],
                 "level": "INFO",
                 "propagate": False,
             },
-            "gunicorn.error": {
-                "handlers": ["rich" if options.get("color") else "console"],
+            "uvicorn.access": {
+                "handlers": [handler_name],
+                "level": "INFO",
+                "propagate": False,
+            },
+            "uvicorn.error": {
+                "handlers": [handler_name],
                 "level": "INFO",
                 "propagate": False,
             },
         },
     }
 
-    guni_options = {
-        "bind": options.get("bind", "0.0.0.0:8080"),
-        "logconfig_dict": logging_config,
-        "control_socket_disable": True,
-    }
-    ExtensionWebApplication(get_wsgi_application(), options=guni_options).run()
+    bind = options.get("bind", DEFAULT_BIND)
+    host, port = bind.rsplit(":", 1)
+
+    uvicorn.run(
+        get_asgi_application(),
+        host=host,
+        port=int(port),
+        log_config=logging_config,
+    )
