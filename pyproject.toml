@@ -25,6 +25,7 @@ dependencies = [
     "requests==2.32.*",
     "rich==14.3.*",
     "typing-extensions==4.15.*",
+    "uvicorn-worker==0.4.*",
     "watchfiles==1.1.*",
 ]
 
