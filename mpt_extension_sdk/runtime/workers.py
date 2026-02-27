@@ -1,5 +1,5 @@
+from django.core.asgi import get_asgi_application
 from django.core.management import call_command
-from django.core.wsgi import get_wsgi_application
 from gunicorn.app.base import BaseApplication
 
 from mpt_extension_sdk.constants import (
@@ -93,5 +93,6 @@ def start_gunicorn(
         "bind": options.get("bind", "0.0.0.0:8080"),
         "logconfig_dict": logging_config,
         "control_socket_disable": True,
+        "worker_class": "uvicorn_worker.UvicornWorker",
     }
-    ExtensionWebApplication(get_wsgi_application(), options=guni_options).run()
+    ExtensionWebApplication(get_asgi_application(), options=guni_options).run()
