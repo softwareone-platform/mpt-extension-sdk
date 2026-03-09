@@ -15,6 +15,7 @@ The **MPT Extension SDK** is an SDK for building extensions on the SoftwareONE M
 
     ext = Extension()
 
+
     @ext.events.listener("orders")
     def process_order(client, event):
         """Process order"""
@@ -92,21 +93,24 @@ logger = logging.getLogger(__name__)
 
 ext = Extension()
 
+
 @ext.events.listener("orders")
 def process_order(client, event) -> None:
     """Process order events from MPT."""
     logger.info(f"Processing {event.type}")
     # Your logic here
 
+
 def jwt_secret_callback(client, claims):
     """Retrieve webhook secret for JWT validation."""
     return "your-webhook-secret"
 
+
 @ext.api.post(
-  "/v1/orders/validate",
-  auth=JWTAuth(jwt_secret_callback),
+    "/v1/orders/validate",
+    auth=JWTAuth(jwt_secret_callback),
 )
-def process_order_validation(request , order):
+def process_order_validation(request, order):
     """Start order process validation."""
     # Your logic here
 ```
@@ -120,10 +124,12 @@ The SDK includes a pipeline system for building complex processing workflows:
 from mpt_extension_sdk.flows.context import Context
 from mpt_extension_sdk.flows.pipeline import Pipeline
 
+
 class ValidateOrderStep:
     def process(self, client, context) -> None:
         """Validation Order Step"""
         # Your logic here
+
 
 class ProcessOrderStep:
     def process(self, client, context) -> None:
@@ -136,7 +142,6 @@ pipeline = Pipeline(
     ValidateOrderStep(),
     ProcessOrderStep(),
 )
-
 ```
 
 ## CLI Commands
