@@ -23,7 +23,7 @@ dependencies = [
     "pyfiglet==1.0.*",
     "pyjwt==2.12.*",
     "requests==2.33.*",
-    "rich==14.3.*",
+    "rich==15.0.*",
     "typing-extensions==4.15.*",
     "uvicorn-worker==0.4.*",
     "watchfiles==1.1.*",
