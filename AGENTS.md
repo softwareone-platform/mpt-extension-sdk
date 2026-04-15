@@ -11,7 +11,7 @@ Working protocol for any task in this repository:
 When applicable, read the repository in this order:
 
 1. [README.md](README.md) for the repository purpose, quick start, and documentation map.
-2. [docs/architecture.md](docs/architecture.md) for the package layout and responsibilities.
+2. [docs/architecture.md](docs/architecture.md) for the package layout, runtime model, and responsibilities.
 3. [docs/configuration.md](docs/configuration.md) for environment variables and integration-facing settings.
 4. [docs/usage.md](docs/usage.md) when a task is about how to build on top of the SDK.
 5. [docs/local-development.md](docs/local-development.md) for Docker-based setup, local commands, and packaging workflows.
@@ -22,18 +22,17 @@ When applicable, read the repository in this order:
 
 Then inspect the code paths relevant to the task:
 
-- [`mpt_extension_sdk/core/extension.py`](mpt_extension_sdk/core/extension.py): public extension primitive that exposes the event registry and Ninja API
-- [`mpt_extension_sdk/core/events/`](mpt_extension_sdk/core/events): event listener registration and event dataclasses
-- [`mpt_extension_sdk/runtime/swoext.py`](mpt_extension_sdk/runtime/swoext.py): `swoext` CLI entry point and command registration
-- [`mpt_extension_sdk/runtime/commands/`](mpt_extension_sdk/runtime/commands): runtime CLI subcommands
-- [`mpt_extension_sdk/runtime/initializer.py`](mpt_extension_sdk/runtime/initializer.py): Django bootstrap, logging setup, and environment extraction
-- [`mpt_extension_sdk/runtime/djapp/`](mpt_extension_sdk/runtime/djapp): Django application config, default settings, middleware, and management commands
-- [`mpt_extension_sdk/runtime/events/`](mpt_extension_sdk/runtime/events): event dispatching, producing, and instrumentation helpers
-- [`mpt_extension_sdk/mpt_http/`](mpt_extension_sdk/mpt_http): Marketplace HTTP client and request helpers
-- [`mpt_extension_sdk/key_vault/`](mpt_extension_sdk/key_vault): Azure Key Vault helpers
-- [`mpt_extension_sdk/airtable/`](mpt_extension_sdk/airtable): Airtable-specific HTTP error handling
-- [`mpt_extension_sdk/flows/`](mpt_extension_sdk/flows): pipeline and context primitives used by extensions
-- [`mpt_extension_sdk/swo_rql/`](mpt_extension_sdk/swo_rql): RQL constants and query builder utilities
+- [`mpt_extension_sdk/extension_app.py`](mpt_extension_sdk/extension_app.py): public SDK entrypoint that defines `ExtensionApp`, `ExtensionRouter`, route registration, and context adaptation
+- [`mpt_extension_sdk/api/router.py`](mpt_extension_sdk/api/router.py): FastAPI route builders for task and non-task handlers, event execution, and task lifecycle wiring
+- [`mpt_extension_sdk/pipeline/`](mpt_extension_sdk/pipeline): execution contexts, pipeline primitives, step decorators, and context factory helpers
+- [`mpt_extension_sdk/runtime/app.py`](mpt_extension_sdk/runtime/app.py): FastAPI app assembly, middleware registration, observability bootstrap, and extension route mounting
+- [`mpt_extension_sdk/runtime/main.py`](mpt_extension_sdk/runtime/main.py): exported ASGI application used by local and platform runtimes
+- [`mpt_extension_sdk/runtime/runner.py`](mpt_extension_sdk/runtime/runner.py): local `uvicorn` startup, platform `ziticorn` startup, and metadata generation before launch
+- [`mpt_extension_sdk/runtime/bootstrap/`](mpt_extension_sdk/runtime/bootstrap): extension instance registration, platform identity persistence, and bootstrap HTTP calls
+- [`mpt_extension_sdk/services/mpt_api_service/`](mpt_extension_sdk/services/mpt_api_service): Marketplace service layer used by handlers, pipelines, and runtime task operations
+- [`mpt_extension_sdk/settings/`](mpt_extension_sdk/settings): runtime and extension settings discovery from environment variables and extension modules
+- [`mpt_extension_sdk/observability/`](mpt_extension_sdk/observability): tracing, logging, and FastAPI instrumentation hooks
+- [`mpt_extension_sdk/models/`](mpt_extension_sdk/models): shared typed Marketplace domain models used by contexts and services
 - [`tests/`](tests): pytest coverage grouped by SDK domain
 - [`make/`](make): canonical local commands
 - [`compose.yaml`](compose.yaml): Docker-based local runtime definition
@@ -45,4 +44,5 @@ Operational guidance:
 - Keep `README.md` concise and navigational. Put topic-specific details in the matching file under `docs/`.
 - Keep `.github/copilot-instructions.md` thin and pointed back to this file.
 - When a behavior changes, update the corresponding document in `docs/` in the same change.
-- Do not invent runtime or migration guarantees that are not visible in code or tests.
+- Describe the runtime as `FastAPI + uvicorn` for local development and `mrok`/`ziticorn` for platform execution unless the code changes.
+- Do not invent runtime, migration, or testing guarantees that are not visible in code or tests.

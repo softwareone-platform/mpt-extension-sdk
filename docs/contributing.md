@@ -29,11 +29,13 @@ The default development model for this repository is Docker-based.
 
 Repository-specific expectations:
 
-- keep public extension primitives close to [`mpt_extension_sdk/core/`](../mpt_extension_sdk/core)
-- keep runtime bootstrapping, Django app wiring, CLI commands, and event runtime helpers under [`mpt_extension_sdk/runtime/`](../mpt_extension_sdk/runtime)
-- keep external service wrappers under the matching integration package such as [`mpt_extension_sdk/mpt_http/`](../mpt_extension_sdk/mpt_http), [`mpt_extension_sdk/key_vault/`](../mpt_extension_sdk/key_vault), and [`mpt_extension_sdk/airtable/`](../mpt_extension_sdk/airtable)
-- keep reusable pipeline utilities under [`mpt_extension_sdk/flows/`](../mpt_extension_sdk/flows)
-- keep query-builder helpers under [`mpt_extension_sdk/swo_rql/`](../mpt_extension_sdk/swo_rql)
+- keep extension registration and route metadata in [`mpt_extension_sdk/extension_app.py`](../mpt_extension_sdk/extension_app.py)
+- keep FastAPI route assembly under [`mpt_extension_sdk/api/`](../mpt_extension_sdk/api)
+- keep reusable execution contexts, decorators, and pipelines under [`mpt_extension_sdk/pipeline/`](../mpt_extension_sdk/pipeline)
+- keep runtime startup, bootstrap, logging, and app assembly under [`mpt_extension_sdk/runtime/`](../mpt_extension_sdk/runtime)
+- keep Marketplace service wrappers under [`mpt_extension_sdk/services/mpt_api_service/`](../mpt_extension_sdk/services/mpt_api_service)
+- keep runtime and extension configuration loading under [`mpt_extension_sdk/settings/`](../mpt_extension_sdk/settings)
+- keep observability concerns under [`mpt_extension_sdk/observability/`](../mpt_extension_sdk/observability)
 - keep tests under [`tests/`](../tests), mirroring production structure where practical
 - update documentation in the matching file under [`docs/`](.) when there are setup, testing, migration note, or architecture changes
 

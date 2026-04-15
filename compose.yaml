@@ -3,5 +3,11 @@ services:
     build:
       context: .
       target: dev
+    command: "uv run mpt-ext run"
+    env_file:
+      - path: .env
+        required: false
     volumes:
-      - .:/extension_sdk
+      - .:/extension
+    ports:
+      - "8080:8080"

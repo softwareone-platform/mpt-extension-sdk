@@ -1,6 +1,13 @@
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS base
 
-WORKDIR /extension_sdk
+WORKDIR /extension
+
+# Install build dependencies for packages that need compilation
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    g++ \
+    python3-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN uv venv /opt/venv
 
@@ -17,7 +24,7 @@ FROM build AS dev
 
 RUN uv sync --frozen --no-cache --dev
 
-CMD ["swoext", "run"]
+CMD ["mpt-ext", "run"]
 
 FROM build AS prod
 
@@ -25,10 +32,10 @@ RUN rm -rf tests/
 
 RUN groupadd -r appuser && useradd -r -g appuser -m -d /home/appuser appuser && \
     mkdir -p /home/appuser/.cache/uv && \
-    chown -R appuser:appuser /extension_sdk /opt/venv /home/appuser
+    chown -R appuser:appuser /extension /opt/venv /home/appuser
 
 ENV UV_CACHE_DIR=/home/appuser/.cache/uv
 
 USER appuser
 
-CMD ["swoext", "run"]
+CMD ["mpt-ext", "run"]

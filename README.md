@@ -4,17 +4,17 @@
 
 The repository contains:
 
-- core extension primitives for API and event listener registration
-- runtime wiring for the `swoext` CLI, Django bootstrap, and event consumers
-- shared clients and helpers for Marketplace HTTP, Key Vault, Airtable, telemetry, and RQL
-- pytest coverage for the SDK modules
+- public SDK primitives centered on `ExtensionApp`, `ExtensionRouter`, and typed execution contexts
+- FastAPI runtime wiring for event handlers, task-backed routes, local development (`FastAPI + uvicorn`), and platform execution (`mrok`/`ziticorn`)
+- shared Marketplace service clients, settings discovery, observability hooks, and pipeline helpers
+- repository tooling and documentation for building and validating the SDK itself
 
 ## Documentation
 
 Start here:
 
 - [AGENTS.md](AGENTS.md): entry point for AI agents
-- [docs/architecture.md](docs/architecture.md): package structure and responsibilities
+- [docs/architecture.md](docs/architecture.md): package structure, runtime model, and boundaries
 - [docs/configuration.md](docs/configuration.md): runtime environment variables and integration settings
 - [docs/usage.md](docs/usage.md): SDK usage guide with examples
 - [docs/local-development.md](docs/local-development.md): local setup and Docker-based workflows

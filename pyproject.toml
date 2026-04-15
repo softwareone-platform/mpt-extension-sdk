@@ -1,42 +1,28 @@
 [project]
 name = "mpt-extension-sdk"
-version = "4.1.1"
+version = "6.0.0"
 description = "Extensions SDK for SoftwareONE Marketplace Platform"
 authors = [{ name = "SoftwareOne AG" }]
 requires-python = ">=3.12,<4"
 readme = "docs/usage.md"
 license = {text = "Apache-2.0 license"}
 dependencies = [
-    "azure-identity==1.25.*",
-    "azure-keyvault-secrets==4.10.*",
-    "azure-monitor-opentelemetry-exporter==1.0.0b46",
-    "click==8.3.*",
-    "debugpy==1.8.*",
-    "django==4.2.*",
-    "django-ninja==1.1.*",
-    "gunicorn==25.3.*",
-    "opentelemetry-api==1.39.0",
-    "opentelemetry-instrumentation-django==0.60.*",
-    "opentelemetry-instrumentation-logging==0.60.*",
-    "opentelemetry-instrumentation-requests==0.60.*",
-    "opentelemetry-sdk==1.39.0",
-    "pyfiglet==1.0.*",
-    "pyjwt==2.12.*",
-    "requests==2.33.*",
-    "rich==15.0.*",
-    "typing-extensions==4.15.*",
-    "uvicorn-worker==0.4.*",
-    "watchfiles==1.1.*",
+    "fastapi[standard]==0.131.*",
+    "mpt-api-client==5.4.*",
+    "mrok==0.9.6",
+    "opentelemetry-api==1.40.0",
+    "opentelemetry-exporter-otlp-proto-http==1.40.0",
+    "opentelemetry-instrumentation-fastapi==0.61b0",
+    "opentelemetry-instrumentation-httpx==0.61b0",
+    "opentelemetry-instrumentation-logging==0.61b0",
+    "opentelemetry-sdk==1.40.0",
+    "pydantic==2.12.*",
+    "typer==0.24.*",
 ]
-
-[project.scripts]
-swoext = "mpt_extension_sdk.runtime.swoext:main"
-
-[project.entry-points."swo.mpt.sdk"]
-app_config = "mpt_extension_sdk.runtime.djapp.apps:ExtensionConfig"
 
 [dependency-groups]
 dev = [
+    "types-pyyaml>=6.0.12.20260408",
     "flake8==7.3.*", # force flake8 version to have same formatting everywhere, also update in pre-commit config
     "flake8-aaa==0.17.*", # also update pre-commit config
     "flake8-pyproject==1.2.*", # also update pre-commit config
@@ -48,16 +34,20 @@ dev = [
     "pytest==9.0.*",
     "pytest-cov==7.1.*",
     "pytest-deadfixtures==3.1.*",
-    "pytest-django==4.12.*",
     "pytest-mock==3.15.*",
     "pytest-randomly==4.0.*",
     "pytest-xdist==3.8.*",
-    "responses==0.26.*",
-    "ruff==0.15.*", # force ruff version to have same formatting everywhere, also update in pre-commit config
-    "types-openpyxl==3.1.*",
-    "types-requests==2.33.*",
+    "ruff==0.15.10", # force ruff version to have same formatting everywhere, also update in pre-commit config
     "wemake-python-styleguide==1.6.*", # also update pre-commit config
 ]
+
+[project.optional-dependencies]
+azure-monitor = [
+  "azure-monitor-opentelemetry-exporter==1.0.0b51",
+]
+
+[project.scripts]
+mpt-ext = "mpt_extension_sdk.cli.main:main"
 
 [build-system]
 requires = ["hatchling"]
@@ -70,7 +60,6 @@ include = ["mpt_extension_sdk/**", "docs/usage.md"]
 testpaths = "tests"
 pythonpath = "."
 addopts = "--cov=mpt_extension_sdk --cov-report=term-missing --cov-report=xml --import-mode=importlib"
-DJANGO_SETTINGS_MODULE = "tests.django.settings"
 log_cli = false
 filterwarnings = [
     "ignore:Support for class-based `config` is deprecated:DeprecationWarning",
@@ -80,8 +69,13 @@ filterwarnings = [
 [tool.coverage.run]
 branch = true
 relative_files = true
+
+[tool.coverage.report]
+exclude_also = [
+    "if __name__ == \"__main__\":",
+    "raise NotImplementedError",
+]
 omit = [
-  "django.py",
   "__init__.py",
 ]
 
@@ -107,35 +101,9 @@ max-line-length = 100
 select = ["AAA", "E999", "WPS"]
 show-source = true
 statistics = false
-# To be fixed and removed
 per-file-ignores = [
-  "tests/**/*.py: WPS",
-  "tests/*.py: WPS",
-  "mpt_extension_sdk/core/utils.py: WPS100 WPS453",
-  "mpt_extension_sdk/mpt_http/mpt.py: WPS202 WPS118 WPS211",
-  "mpt_extension_sdk/mpt_http/utils.py: WPS100",
-  "mpt_extension_sdk/mpt_http/wrap_http_error.py: WPS110 WPS430 WPS505",
-  "mpt_extension_sdk/runtime/__init__.py: WPS412",
-  "mpt_extension_sdk/runtime/djapp/conf/__init__.py: WPS412",
-  "mpt_extension_sdk/airtable/wrap_http_error.py: WPS110 WPS430 WPS231 WPS505 WPS328",
-  "mpt_extension_sdk/core/events/dataclasses.py: WPS110",
-  "mpt_extension_sdk/flows/context.py: WPS214",
-  "mpt_extension_sdk/key_vault/base.py: WPS615",
-  "mpt_extension_sdk/runtime/commands/run.py: WPS400 WPS216",
-  "mpt_extension_sdk/runtime/djapp/conf/default.py: WPS407",
-  "mpt_extension_sdk/runtime/djapp/management/commands/consume_events.py: WPS403 WPS213 WPS110",
-  "mpt_extension_sdk/runtime/djapp/middleware.py: WPS420 WPS122 WPS211 WPS121",
-  "mpt_extension_sdk/runtime/errors.py: WPS453",
-  "mpt_extension_sdk/runtime/events/dispatcher.py: WPS420 WPS230 WPS529",
-  "mpt_extension_sdk/runtime/events/producers.py: WPS210",
-  "mpt_extension_sdk/runtime/events/utils.py: WPS100 WPS430",
-  "mpt_extension_sdk/runtime/initializer.py: WPS407 WPS210",
-  "mpt_extension_sdk/runtime/logging.py: WPS115",
-  "mpt_extension_sdk/runtime/master.py: WPS220 WPS214 WPS230",
-  "mpt_extension_sdk/runtime/swoext.py: WPS110 WPS430",
-  "mpt_extension_sdk/runtime/utils.py: WPS100 WPS202 WPS460 WPS210 WPS221 WPS349 WPS110 WPS430 WPS237 WPS202 WPS460",
-  "mpt_extension_sdk/swo_rql/__init__.py: WPS111 WPS410 WPS412",
-  "mpt_extension_sdk/swo_rql/query_builder.py: WPS210 WPS231 WPS110 WPS214 WPS115 WPS111 WPS478 WPS221 WPS211 WPS237",
+  "/*.py: WPS412",
+  "tests/**: WPS202, WPS211, WPS432"
 ]
 
 [tool.ruff]
@@ -230,16 +198,21 @@ max-complexity = 6
 convention = "google"
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*.py" = [
+"tests/**.py" = [
+  "E306", # flake8-aaa and nested test helpers conflict on blank-line expectations
+  "D101", # missing docstring in public class
+  "D102", # missing docstring in public method
   "D103", # missing docstring in public function
   "S101", # asserts
+  "S104", # local test runtime host values
   "S105", # hardcoded passwords
+  "S106", # test tokens and API keys
+  "S108", # tmp paths in tests
   "S404", # subprocess calls are for tests
   "S603", # do not require `shell=True`
   "S607", # partial executable paths
-]
-"mpt_extension_sdk/swo_rql/query_builder.py" = [
-  "PLW2901", # loop variable overwritten by assignment target
+  "PLC2701", # tests may reach private helpers explicitly
+  "SLF001", # tests may reach private helpers explicitly
 ]
 
 [tool.ruff.lint.isort]
@@ -266,19 +239,3 @@ ignore_missing_imports = true
 local_partial_types = true
 strict = true
 warn_unreachable = true
-
-[[tool.mypy.overrides]]
-module = "django.*"
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = "pyfiglet.*"
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = "gunicorn.*"
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = "pymsteams.*"
-ignore_missing_imports = true
