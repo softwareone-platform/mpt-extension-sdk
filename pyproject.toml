@@ -30,14 +30,14 @@ dev = [
     "ipdb==0.13.*",
     "ipython==9.*",
     "mypy==1.20.*",
-    "pre-commit==4.5.*",
+    "pre-commit>=4.5,<4.7",
     "pytest==9.0.*",
     "pytest-cov==7.1.*",
     "pytest-deadfixtures==3.1.*",
     "pytest-mock==3.15.*",
-    "pytest-randomly==4.0.*",
+    "pytest-randomly>=4.0,<4.2",
     "pytest-xdist==3.8.*",
-    "ruff==0.15.10", # force ruff version to have same formatting everywhere, also update in pre-commit config
+    "ruff==0.15.11", # force ruff version to have same formatting everywhere, also update in pre-commit config
     "wemake-python-styleguide==1.6.*", # also update pre-commit config
 ]
 
