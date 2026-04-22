@@ -8,36 +8,88 @@ The SDK runtime relies on these settings:
 
 | Variable | Default | Example | Description |
 | --- | --- | --- | --- |
-| `EXT_WEBHOOKS_SECRETS` | - | `{"PRD-1111-1111":"secret"}` | Webhook secret mapping keyed by Marketplace product id |
-| `MPT_API_BASE_URL` | `http://localhost:8000` | `https://api.s1.show` | SoftwareONE Marketplace API base URL |
-| `MPT_API_TOKEN` | - | `eyJhbGciOi...` | SoftwareONE Marketplace API token |
-| `MPT_PRODUCTS_IDS` | `PRD-1111-1111` | `PRD-1111-1111,PRD-2222-2222` | Comma-separated Marketplace product ids |
-| `MPT_PORTAL_BASE_URL` | `https://portal.s1.show` | `https://portal.s1.show` | Marketplace portal base URL |
-| `MPT_ORDERS_API_POLLING_INTERVAL_SECS` | `120` | `60` | Orders polling interval in seconds |
+| `SDK_EXTENSION_URL` | - | `https://extensions.example.com` | Extension registration endpoint used during platform startup |
+| `SDK_EXTENSION_API_KEY` | - | `eyJhbGciOi...` | API key used for extension registration and runtime task operations |
+| `SDK_EXTENSION_ID` | - | `EXT-1234` | Extension identifier used during instance registration |
+| `SDK_EXTENSION_EXTERNAL_ID` | host-derived | `dev-laptop-01` | Stable external id for the running extension instance |
+| `SDK_IDENTITY_FILE_PATH` | `<cwd>/<external_id>_identity.json` | `/tmp/ext_identity.json` | Path where the Ziticorn identity file is stored or loaded |
+| `MPT_API_BASE_URL` | - | `https://api.s1.show` | SoftwareONE Marketplace API base URL |
+| `MPT_API_TOKEN` | - | `eyJhbGciOi...` | Marketplace API token used by business services |
+| `SDK_LOCAL_HOST` | `0.0.0.0` | `127.0.0.1` | Host used by the local Uvicorn runtime |
+| `SDK_LOCAL_PORT` | `8080` | `8081` | Port used by the local Uvicorn runtime |
+| `SDK_LOCAL_RELOAD` | `true` | `false` | Enables Uvicorn reload mode for local development |
+| `SDK_LOCAL_WORKERS` | `1` | `2` | Worker count for local Uvicorn mode |
+| `SDK_ZITI_WORKERS` | `4` | `8` | Worker count for Ziticorn platform runtime |
+| `SDK_ZITI_RELOAD` | `false` | `true` | Enables Ziticorn reload mode |
+| `LOG_LEVEL` | `INFO` | `DEBUG` | Default runtime log level |
+| `SDK_OBSERVABILITY_ENABLED` | `true` | `false` | Enables SDK observability bootstrap |
+| `SDK_APPLICATIONINSIGHTS_CONNECTION_STRING` | - | `InstrumentationKey=...` | Azure Monitor connection string used by the SDK observability bootstrap |
+| `SDK_OTEL_SERVICE_NAME` | - | `my-extension` | Optional OpenTelemetry service name override |
+| `SDK_OTEL_EXPORTERS` | SDK default | `otlp` | Demo/runtime exporter selection for the SDK observability bootstrap |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | exporter default | `http://jaeger:4318` | OTLP collector endpoint used when OTLP export is enabled |
+| `OTEL_EXPORTER_OTLP_PROTOCOL` | exporter default | `http/protobuf` | OTLP protocol for the configured exporter |
+
+The demo environment files may also include integration-specific variables such
+as `MPT_PORTAL_BASE_URL`. Those are example application settings for the
+mock/demo setup rather than core SDK runtime requirements.
+
+## Runtime Discovery
+
+The runtime discovers the extension package automatically from the current
+working directory. It expects exactly one top-level package that exports:
+
+- `app.py` with `ext_app`
+- `settings.py` with `ExtensionSettings`
+
+The runtime then derives:
+
+- `app_module` as `<package>.app`
+- `settings_module` as `<package>.settings`
+- `meta.yaml` from `ext_app.to_meta_config()`
 
 ## Example Environment
 
 ```dotenv
-EXT_WEBHOOKS_SECRETS={"PRD-1111-1111":"<webhook-secret-for-product>","PRD-2222-2222":"<webhook-secret-for-product>"}
+SDK_EXTENSION_URL=https://extensions.example.com
+SDK_EXTENSION_API_KEY=<extension-api-key>
+SDK_EXTENSION_ID=EXT-1234
+SDK_EXTENSION_EXTERNAL_ID=local-dev
 MPT_API_BASE_URL=https://api.s1.show
-MPT_API_TOKEN=<your-api-token>
-MPT_PRODUCTS_IDS=PRD-1111-1111,PRD-2222-2222
-MPT_PORTAL_BASE_URL=https://portal.s1.show
+MPT_API_TOKEN=<marketplace-api-token>
+SDK_LOCAL_HOST=0.0.0.0
+SDK_LOCAL_PORT=8080
+LOG_LEVEL=INFO
 ```
 
 ## Runtime Notes
 
-- [`mpt_extension_sdk/runtime/initializer.py`](../mpt_extension_sdk/runtime/initializer.py) normalizes selected extension variables and initializes Django settings.
-- [`mpt_extension_sdk/runtime/djapp/apps.py`](../mpt_extension_sdk/runtime/djapp/apps.py) fails startup when required webhook secrets are missing for configured product ids.
-- [`docs/migrations.md`](migrations.md) documents the `MPT_API_BASE_URL` compatibility change for `/public/v1/`.
+- [`mpt_extension_sdk/settings/runtime.py`](../mpt_extension_sdk/settings/runtime.py)
+  loads runtime configuration from environment variables and auto-discovers the
+  extension package.
+- [`mpt_extension_sdk/runtime/runner.py`](../mpt_extension_sdk/runtime/runner.py)
+  writes `meta.yaml` before startup and selects Uvicorn or Ziticorn depending
+  on the CLI mode.
+- In local `FastAPI + uvicorn` mode, `SDK_LOCAL_RELOAD=true` takes precedence
+  over multi-worker settings. Use reload for local development, or disable
+  reload before increasing `SDK_LOCAL_WORKERS`.
+- [`mpt_extension_sdk/runtime/bootstrap/registration.py`](../mpt_extension_sdk/runtime/bootstrap/registration.py)
+  registers the running extension instance and persists the returned identity
+  when present.
 
 ## Observability
 
-Application Insights support is controlled through Django settings consumed during runtime initialization. A typical setup includes:
+Observability is configured through the SDK runtime settings instead of Django
+settings. A typical setup includes:
 
 ```bash
-USE_APPLICATIONINSIGHTS=true
-APPLICATIONINSIGHTS_CONNECTION_STRING=InstrumentationKey=...
+SDK_OBSERVABILITY_ENABLED=true
+SDK_APPLICATIONINSIGHTS_CONNECTION_STRING=InstrumentationKey=...
+SDK_OTEL_SERVICE_NAME=my-extension
 ```
 
-Document additional repository-specific configuration here when SDK runtime requirements expand.
+When observability is enabled, the SDK instruments FastAPI requests and HTTPX
+client calls. SDK event spans are attached to the active request trace so
+request, handler, and outbound-call spans stay in the same hierarchy.
+
+Document additional repository-specific configuration here when SDK runtime
+requirements expand.

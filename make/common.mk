@@ -9,7 +9,7 @@ build:  ## Build images
 	$(DC) build
 
 check:  ## Check code quality with ruff
-	$(RUN) bash -c "ruff format --check . && ruff check . && flake8 . && uv lock --check"
+	$(RUN) bash -c "ruff format --check . && ruff check . && flake8 . && mypy . && uv lock --check"
 
 check-all:  check test ## Run checks and tests
 
@@ -21,9 +21,6 @@ format:  ## Format code
 
 run:  ## Run service
 	$(DC) up
-
-shell:  ## Open Django shell
-	$(RUN_IT) bash -c "swoext shell"
 
 test:  ## Run test
 	$(RUN) pytest $(if $(args),$(args),.)
