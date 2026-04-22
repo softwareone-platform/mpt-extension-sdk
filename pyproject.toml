@@ -8,7 +8,7 @@ readme = "docs/usage.md"
 license = {text = "Apache-2.0 license"}
 dependencies = [
     "fastapi[standard]==0.131.*",
-    "mpt-api-client==5.4.*",
+    "mpt-api-client>=5.4,<6.1",
     "mrok==0.9.6",
     "opentelemetry-api==1.40.0",
     "opentelemetry-exporter-otlp-proto-http==1.40.0",
@@ -16,7 +16,7 @@ dependencies = [
     "opentelemetry-instrumentation-httpx==0.61b0",
     "opentelemetry-instrumentation-logging==0.61b0",
     "opentelemetry-sdk==1.40.0",
-    "pydantic==2.12.*",
+    "pydantic>=2.12,<2.14",
     "typer==0.24.*",
 ]
 
