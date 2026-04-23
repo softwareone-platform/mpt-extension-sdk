@@ -57,13 +57,13 @@ Common examples:
 mpt-ext run --local
 mpt-ext run
 mpt-ext meta generate
-mpt-ext validate
+mpt-ext meta validate
 ```
 
 - `mpt-ext run --local` starts the FastAPI + uvicorn runtime for local development.
 - `mpt-ext run` performs extension registration and starts mrok/ziticorn.
 - `mpt-ext meta generate` writes the metadata file generated from `ext_app`.
-- `mpt-ext validate` checks the checked-in metadata artifact against generated output.
+- `mpt-ext meta validate` checks the checked-in metadata artifact against generated output.
 
 ## Packaging
 
