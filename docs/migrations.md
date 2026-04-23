@@ -14,29 +14,11 @@ The `migrations` topic here covers SDK compatibility changes that require consum
 
 ## Current Migration Notes
 
-### API Base URL Change
+There are no repository-specific SDK migration notes at the moment.
 
-The SDK now standardizes Marketplace API requests on `/public/v1/`.
-
-Repository-specific guidance:
-
-- `MPTClient` appends `/public/v1/` to the configured base URL
-- `MPT_API_BASE_URL` should not include `/v1` or `/public/v1`
-- older configurations remain accepted for backward compatibility, but they are legacy input forms
-- legacy inputs still resolve to the standardized final API path
-
-Use:
-
-```bash
-export MPT_API_BASE_URL=https://api.example.com
-```
-
-Do not use:
-
-```bash
-export MPT_API_BASE_URL=https://api.example.com/v1
-```
-
+Add a section here only when this repository introduces a consumer-facing
+compatibility change that requires upgrade guidance.
 ## When To Update This Document
 
-Update this file when the SDK introduces a consumer-facing compatibility change that requires upgrade guidance.
+Update this file when the SDK introduces a consumer-facing compatibility change
+that requires upgrade guidance.

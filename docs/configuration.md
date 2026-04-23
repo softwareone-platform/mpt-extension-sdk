@@ -41,6 +41,9 @@ working directory. It expects exactly one top-level package that exports:
 - `app.py` with `ext_app`
 - `settings.py` with `ExtensionSettings`
 
+`ExtensionSettings` must inherit from
+`mpt_extension_sdk.settings.extension.BaseExtensionSettings`.
+
 The runtime then derives:
 
 - `app_module` as `<package>.app`
@@ -66,6 +69,9 @@ LOG_LEVEL=INFO
 - [`mpt_extension_sdk/settings/runtime.py`](../mpt_extension_sdk/settings/runtime.py)
   loads runtime configuration from environment variables and auto-discovers the
   extension package.
+- `RuntimeSettings` validates `SDK_EXTENSION_URL`, `SDK_EXTENSION_API_KEY`,
+  `SDK_EXTENSION_ID`, `MPT_API_BASE_URL`, and `MPT_API_TOKEN` as required
+  environment variables.
 - [`mpt_extension_sdk/runtime/runner.py`](../mpt_extension_sdk/runtime/runner.py)
   writes `meta.yaml` before startup and selects Uvicorn or Ziticorn depending
   on the CLI mode.
@@ -78,8 +84,8 @@ LOG_LEVEL=INFO
 
 ## Observability
 
-Observability is configured through the SDK runtime settings instead of Django
-settings. A typical setup includes:
+Observability is configured through the SDK runtime settings. A typical setup
+includes:
 
 ```bash
 SDK_OBSERVABILITY_ENABLED=true
@@ -87,9 +93,17 @@ SDK_APPLICATIONINSIGHTS_CONNECTION_STRING=InstrumentationKey=...
 SDK_OTEL_SERVICE_NAME=my-extension
 ```
 
-When observability is enabled, the SDK instruments FastAPI requests and HTTPX
-client calls. SDK event spans are attached to the active request trace so
-request, handler, and outbound-call spans stay in the same hierarchy.
+When observability is enabled, the SDK bootstraps:
+
+- FastAPI instrumentation
+- HTTPX client instrumentation
+- logging correlation through OpenTelemetry logging instrumentation
+- OTLP exporting by default
+- Azure Monitor exporting when `SDK_APPLICATIONINSIGHTS_CONNECTION_STRING` is set
+
+OpenTelemetry exporter-specific variables such as
+`OTEL_EXPORTER_OTLP_ENDPOINT` are read by the underlying OpenTelemetry
+exporter, not by `RuntimeSettings` directly.
 
 Document additional repository-specific configuration here when SDK runtime
 requirements expand.

@@ -12,25 +12,17 @@ needed.
 
 ## Test Scope
 
-The repository currently has pytest configured in [`pyproject.toml`](../pyproject.toml),
-but the `tests/` tree is not yet populated with stable domain coverage.
+The repository has pytest configured in [`pyproject.toml`](../pyproject.toml)
+and the `tests/` tree already covers the main SDK domains, including:
 
-When adding coverage, organize tests by SDK domain, for example:
-
-- extension app and route registration under `tests/extension_app/` or equivalent
+- extension app and route registration under `tests/test_extension_app.py`
 - pipeline contexts, decorators, and factories under `tests/pipeline/`
 - runtime app, runner, and bootstrap behavior under `tests/runtime/`
 - Marketplace service helpers under `tests/services/`
 - CLI behavior under `tests/cli/`
+- settings loading under `tests/settings/`
+- observability bootstrap and tracing under `tests/observability/`
 
-Shared unit-test scope also applies:
-
-- use `pytest` for unit tests
-- write tests as functions, not classes
-- do not add type annotations to test functions
-- keep test files and test functions under the `test_` naming convention
-- do not add test docstrings
-- keep the `tests/` layout aligned with the source layout
 
 ## Commands
 
@@ -72,17 +64,11 @@ Repository-specific test settings come from [`pyproject.toml`](../pyproject.toml
 Repository-specific guidance:
 
 - add or update tests next to the affected SDK domain instead of creating catch-all files
+- prefer existing fixtures from [`tests/conftest.py`](../tests/conftest.py) and domain-specific `conftest.py` files
 - keep external service calls mocked; do not make live Marketplace or external platform calls in tests
-- cover public SDK behavior when changing `ExtensionApp`, `ExtensionRouter`, pipeline APIs, or runtime wiring
 - cover CLI and runtime changes under `tests/cli/` or `tests/runtime/`
-- prefer smoke and regression tests for imports, route registration, context building, and startup flows before broadening coverage
+- cover public SDK behavior when changing `ExtensionApp`, `ExtensionRouter`, pipeline APIs, or runtime wiring
 
-Shared unit-test rules that must be followed in this repository:
-
-- follow AAA (Arrange, Act, Assert); keep the act step explicit and easy to spot
-- do not put branching logic inside tests; use `@pytest.mark.parametrize` for permutations
-- prefer a single logical assertion per test; if several assertions validate one result object, keep them tightly related
-- test branches as close as possible to the function where the branch exists
 
 ## When Tests Are Required
 
@@ -95,19 +81,3 @@ Add or update tests when a change modifies:
 - observability, middleware, or settings-loading behavior
 
 If a change only affects documentation, tests are not required.
-
-## Validation Flow
-
-The shared build-and-checks workflow applies here with repository-specific
-targets:
-
-1. Run `make build` if `uv.lock` changed.
-2. Then run `make check-all`.
-
-These commands are expected to run sequentially in that order.
-
-Before committing:
-
-- make sure `pre-commit` is installed or updated locally
-- review the automatic `pre-commit` output during `git commit`
-- treat the commit as incomplete until the hooks pass cleanly

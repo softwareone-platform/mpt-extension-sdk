@@ -1,6 +1,6 @@
 # SDK Usage
 
-This guide shows how to build on top of `mpt-extension-sdk`.
+This guide shows how to build an extension package on top of `mpt-extension-sdk`.
 
 ## Install The SDK
 
@@ -14,79 +14,91 @@ pip install mpt-extension-sdk
 uv add mpt-extension-sdk
 ```
 
+## Extension Package Shape
+
+The runtime auto-discovers exactly one top-level package in the working directory. That package
+must export:
+
+- `app.py` with `ext_app`
+- `settings.py` with `ExtensionSettings`
+
+`ExtensionSettings` must inherit from
+`mpt_extension_sdk.settings.extension.BaseExtensionSettings`.
+
+Keep imports in `app.py` deterministic. The runtime imports `ext_app` to build
+metadata before startup, so avoid network calls, filesystem I/O, or other heavy
+side effects at module import time.
+
 ## Create An Extension App
 
 Start with `ExtensionApp` and `ExtensionRouter`. The extension app is the root
 SDK object for one extension package. Routers group related event handlers and
-expose metadata consumed by the runtime.
+their route metadata before they are included in the app.
 
 ```python
-# app.py
-from mpt_extension_sdk.extension_app import ExtensionApp
+# mock_app/app.py
+from mpt_extension_sdk import ExtensionApp
 
 from mock_app.api.routes import orders_router
 
-ext_app = ExtensionApp(prefix="/api/v1")
+ext_app = ExtensionApp(prefix="/api/v2")
 ext_app.include_router(orders_router)
 ```
 
 ```python
-# api/routes.py
-from mpt_extension_sdk.extension_app import ExtensionRouter
+# mock_app/api/routes.py
+from mpt_extension_sdk import ExtensionRouter
+
+orders_router = ExtensionRouter(prefix="/events/orders")
+```
+
+## Register Handlers
+
+Use `route(...)` for non-task events:
+
+```python
+from mpt_extension_sdk import ExtensionRouter
 
 orders_router = ExtensionRouter(prefix="/events/orders")
 
 
 @orders_router.route(
-    path="/purchase", name="orders-purchase", event="platform.commerce.order.status_changed"
+    path="/purchase",
+    name="orders-purchase",
+    event="platform.commerce.order.purchased",
 )
-async def process_order(event, context):
-    """Process order events."""
+async def process_purchase(event, context):
+    """Process a non-task order event."""
 ```
 
-Keep `app.py` imports deterministic. The runtime imports the exported
-`ext_app` during metadata generation, so avoid network calls, filesystem I/O,
-or other heavy side effects at module import time.
-
-## Register Handlers
-
-Use `route(...)` when the platform event is non-task-based.
+Use `task_route(...)` for task-backed events. The runtime starts, completes,
+fails, or reschedules the Marketplace task around the handler execution.
 
 ```python
-from mpt_extension_sdk.extension_app import ExtensionRouter
-
-orders_router = ExtensionRouter(prefix="/events/orders")
-
-
-@orders_router.route(path="/change", name="orders-change", event="platform.commerce.order.created")
-async def process_order_change(event, context):
-    """Process a task-backed order event."""
-```
-
-
-Use `task_route(...)` when the platform event is task-backed and the runtime
-must manage task lifecycle operations.
-
-```python
-from mpt_extension_sdk.extension_app import ExtensionRouter
+from mpt_extension_sdk import ExtensionRouter
 
 orders_router = ExtensionRouter(prefix="/events/orders")
 
 
 @orders_router.task_route(
-    path="/change", name="orders-change", event="platform.commerce.order.created"
+    path="/change",
+    name="orders-change",
+    event="platform.commerce.order.created",
 )
 async def process_order_change(event, context):
     """Process a task-backed order event."""
 ```
 
+Within one router or app, each route `name`, `path`, and `event` must be
+unique.
+
 ## Build A Processing Pipeline
 
-Use `BasePipeline`, `BaseStep`, and execution contexts for multi-step
+Use `BasePipeline`, `BaseStep`, and typed execution contexts for multi-step
 processing flows.
 
 ```python
-from typing import Self, override
+from typing import override
 
 from mpt_extension_sdk.pipeline import BasePipeline, BaseStep, OrderContext
 
@@ -108,10 +120,15 @@ class PurchasePipeline(BasePipeline):
         return [ValidateOrderStep(), ProcessOrderStep()]
 ```
 
+The SDK exports both `OrderContext` and `AgreementContext`, and the runtime
+hydrates the right one from `event.object.object_type`.
+
 ## Adapt The Execution Context
 
-Use `ContextAdapter` when an extension needs a custom context type built from
-the SDK-provided base context.
+Use a context factory when an extension needs to enrich the SDK-provided
+context with extension-specific fields or dependencies. The factory must return
+the same context family it receives, for example `OrderContext` or a subclass
+of it.
 
 ```python
 from dataclasses import dataclass, field
@@ -144,13 +161,12 @@ mpt-ext meta generate
 mpt-ext meta validate
 ```
 
-- `mpt-ext run --local` starts the FastAPI + uvicorn runtime for local development.
-- `mpt-ext run` generates `meta.yaml`, registers the extension instance, and starts
-  the platform runtime with mrok/ziticorn.
-- `mpt-ext meta generate` writes the metadata artifact derived from the exported
-  `ext_app`.
-- `mpt-ext meta validate` checks that the checked-in `meta.yaml` matches the generated
-  metadata.
+- `mpt-ext run --local` starts the local `FastAPI + uvicorn` runtime.
+- `mpt-ext run` writes `meta.yaml`, registers the extension instance, and starts
+  the platform runtime with `mrok`/`ziticorn`.
+- `mpt-ext meta generate` writes metadata derived from `ext_app.to_meta_config()`.
+- `mpt-ext meta validate` compares the checked-in `meta.yaml` with generated
+  metadata and writes `meta.generated.yaml` when they differ.
 
 ## Configure The Runtime
 
@@ -212,12 +228,9 @@ class UpdateOrderStep(BaseStep):
         )
 ```
 
-This keeps partial updates flexible for extension-specific fields while still
-making status transitions explicit in the SDK API.
-
 ## What The SDK Provides
 
-- `ExtensionApp` and `ExtensionRouter` for extension registration and route metadata
-- FastAPI + uvicorn runtime wiring for task and non-task Marketplace events
-- typed execution contexts, context adapters, and pipeline primitives
-- Marketplace service helpers, runtime settings discovery, and observability hooks
+- `ExtensionApp` and `ExtensionRouter` for route registration and metadata
+- task and non-task FastAPI runtime wiring
+- typed execution contexts, context factories, and pipeline primitives
+- Marketplace service helpers, settings discovery, and observability hooks

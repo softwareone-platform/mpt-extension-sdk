@@ -7,6 +7,7 @@ The repository contains:
 - public SDK primitives centered on `ExtensionApp`, `ExtensionRouter`, and typed execution contexts
 - FastAPI runtime wiring for event handlers, task-backed routes, local development (`FastAPI + uvicorn`), and platform execution (`mrok`/`ziticorn`)
 - shared Marketplace service clients, settings discovery, observability hooks, and pipeline helpers
+- a Typer-based `mpt-ext` CLI for runtime startup and metadata generation/validation
 - repository tooling and documentation for building and validating the SDK itself
 
 ## Documentation
