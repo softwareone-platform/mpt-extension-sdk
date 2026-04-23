@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Annotated, Any, Self
+from typing import Any, Self
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
@@ -11,9 +11,9 @@ class MetaEvent(BaseModel):
     """MetaEvent model for loading metadata."""
 
     # Keep the order of fields in the model consistent with the order in the metadata file
-    event: Annotated[str, Field(min_length=1)]
-    condition: Annotated[str | None, Field(min_length=1)] = None
-    path: Annotated[str, Field(min_length=1)]
+    event: str = Field(min_length=1)
+    condition: str | None = Field(default=None, min_length=1)
+    path: str = Field(min_length=1)
     task: bool
 
     model_config = ConfigDict(extra="forbid")
@@ -23,8 +23,8 @@ class MetaConfig(BaseModel):
     """MetaConfig model for loading metadata."""
 
     # Keep the order of fields in the model consistent with the order in the metadata file
-    version: Annotated[str, Field(min_length=1)]
-    openapi: Annotated[str, Field(min_length=1)]
+    openapi: str = Field(min_length=1)
+    version: str = Field(default="1.0.0", min_length=1)
 
     events: list[MetaEvent]
 

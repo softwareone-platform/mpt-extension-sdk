@@ -31,13 +31,22 @@ class BaseSettings(ABC):
         return raw_value in frozenset(("true", "1", "yes"))
 
     @classmethod
-    def int_env(cls, env_key: str, default: int) -> int:
+    def int_env(cls, env_key: str, *, default: int) -> int:
         """Parse an integer environment variable and raise ConfigError on failure."""
         raw_value = os.getenv(env_key, str(default))
         try:
             return int(raw_value)
         except ValueError as error:
             raise ConfigError(f"Invalid integer in {env_key}: {raw_value}") from error
+
+    @classmethod
+    def list_env(cls, env_key: str, *, default: str = "") -> list[str]:
+        """Parse a str environment variable into a list."""
+        raw_values = os.getenv(env_key, default)
+        if not raw_values:
+            return []
+
+        return [raw_value.strip() for raw_value in raw_values.split(",") if raw_value.strip()]
 
     def validate(self) -> None:
         """Check required environment variables are not missing.
