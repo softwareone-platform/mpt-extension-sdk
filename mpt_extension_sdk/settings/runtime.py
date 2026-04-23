@@ -80,10 +80,10 @@ class RuntimeSettings(BaseSettings):
             ),
             otel_service_name=os.getenv("SDK_OTEL_SERVICE_NAME", ""),
             local_host=os.getenv("SDK_LOCAL_HOST", "0.0.0.0"),  # noqa: S104
-            local_port=cls.int_env("SDK_LOCAL_PORT", DEFAULT_LOCAL_PORT),
+            local_port=cls.int_env("SDK_LOCAL_PORT", default=DEFAULT_LOCAL_PORT),
             local_reload=cls.bool_env("SDK_LOCAL_RELOAD", default=True),
-            local_workers=cls.int_env("SDK_LOCAL_WORKERS", 1),
-            ziti_workers=cls.int_env("SDK_ZITI_WORKERS", 4),
+            local_workers=cls.int_env("SDK_LOCAL_WORKERS", default=1),
+            ziti_workers=cls.int_env("SDK_ZITI_WORKERS", default=4),
             ziti_reload=cls.bool_env("SDK_ZITI_RELOAD", default=False),
         )
 

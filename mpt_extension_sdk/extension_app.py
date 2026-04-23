@@ -203,16 +203,16 @@ class ExtensionApp:
 
     Attributes:
         prefix: Prefix applied to every route included in the extension app.
-        version: Extension metadata version.
+        version: Extension version.
         openapi: OpenAPI endpoint published by the runtime.
     """
 
     prefix: str = ""
     version: str = "6.0.0"
     openapi: str = "/bypass/openapi.json"
-    mpt_api_service_type: type[MPTAPIService] = MPTAPIService
-    order_context_type: type[ContextAdapter] | None = None
     agreement_context_type: type[ContextAdapter] | None = None
+    order_context_type: type[ContextAdapter] | None = None
+    mpt_api_service_type: type[MPTAPIService] = field(default=MPTAPIService)
     _routes: list[RouteDefinition] = field(default_factory=list, init=False, repr=False)
 
     def __post_init__(self) -> None:
@@ -267,7 +267,6 @@ class ExtensionApp:
     def to_meta_config(self) -> MetaConfig:
         """Build extension metadata from the registered application routes."""
         return MetaConfig(
-            version=self.version,
             openapi=self.openapi,
             events=[
                 MetaEvent(

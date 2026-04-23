@@ -5,8 +5,6 @@ services:
       jaeger:
         condition: service_started
     env_file:
-#      - path: .env
-#        required: false
       - path: .env.demo
         required: true
     ports:

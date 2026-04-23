@@ -14,7 +14,7 @@ def cli_runner():
 
 
 @pytest.fixture
-def matching_meta():
+def meta():
     return MetaConfig(
         version="1.0.0",
         openapi="/bypass/openapi.json",
@@ -69,16 +69,14 @@ def test_meta_generate_writes_meta_file(runtime_settings_factory, cli_runner, mo
 
 
 def test_validate_succeeds_when_meta_matches(
-    runtime_settings_factory, cli_runner, matching_meta, mocker, tmp_path
+    runtime_settings_factory, cli_runner, meta, mocker, tmp_path
 ):
-    settings = runtime_settings_factory(
-        meta_config=matching_meta, meta_file_path=tmp_path / "meta.yaml"
-    )
+    settings = runtime_settings_factory(meta_config=meta, meta_file_path=tmp_path / "meta.yaml")
     mocker.patch(
         "mpt_extension_sdk.cli.main.RuntimeSettings.load", autospec=True, return_value=settings
     )
     mocker.patch(
-        "mpt_extension_sdk.cli.main.MetaConfig.from_file", autospec=True, return_value=matching_meta
+        "mpt_extension_sdk.cli.main.MetaConfig.from_file", autospec=True, return_value=meta
     )
 
     result = cli_runner.invoke(app, ["meta", "validate"])
