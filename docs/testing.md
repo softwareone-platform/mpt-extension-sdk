@@ -67,7 +67,7 @@ Repository-specific guidance:
 - prefer existing fixtures from [`tests/conftest.py`](../tests/conftest.py) and domain-specific `conftest.py` files
 - keep external service calls mocked; do not make live Marketplace or external platform calls in tests
 - cover CLI and runtime changes under `tests/cli/` or `tests/runtime/`
-- cover public SDK behavior when changing `ExtensionApp`, `ExtensionRouter`, pipeline APIs, or runtime wiring
+- cover public SDK behavior when changing `ExtensionApp`, router-family APIs, pipeline APIs, or runtime wiring
 
 
 ## When Tests Are Required

@@ -9,22 +9,22 @@ from mpt_extension_sdk.observability.tracing import (
 )
 
 if TYPE_CHECKING:
-    from mpt_extension_sdk.pipeline import BasePipeline, BaseStep, ExecutionContext
+    from mpt_extension_sdk.pipeline import BasePipeline, BaseStep, EventBaseContext
 
-type PipelineCallable[PipelineT: "BasePipeline", CtxT: "ExecutionContext", ReturnT, **ParamT] = (
+type PipelineCallable[PipelineT: "BasePipeline", CtxT: "EventBaseContext", ReturnT, **ParamT] = (
     Callable[Concatenate[PipelineT, CtxT, ParamT], Awaitable[ReturnT]]
 )
 
 type StepCallable[
     PipelineT: "BasePipeline",
     StepT: "BaseStep",
-    CtxT: "ExecutionContext",
+    CtxT: "EventBaseContext",
     ReturnT,
     **ParamT,
 ] = Callable[Concatenate[PipelineT, StepT, CtxT, ParamT], Awaitable[ReturnT]]
 
 
-def start_pipeline_span[PipelineT: "BasePipeline", CtxT: "ExecutionContext", ReturnT, **ParamT](
+def start_pipeline_span[PipelineT: "BasePipeline", CtxT: "EventBaseContext", ReturnT, **ParamT](
     func: PipelineCallable[PipelineT, CtxT, ReturnT, ParamT],
 ) -> PipelineCallable[PipelineT, CtxT, ReturnT, ParamT]:
     """Start a child span for a pipeline execution."""
@@ -51,7 +51,7 @@ def start_pipeline_span[PipelineT: "BasePipeline", CtxT: "ExecutionContext", Ret
 def start_step_span[
     PipelineT: "BasePipeline",
     StepT: "BaseStep",
-    CtxT: "ExecutionContext",
+    CtxT: "EventBaseContext",
     ReturnT,
     **ParamT,
 ](

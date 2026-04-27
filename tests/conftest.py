@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from mpt_extension_sdk import ExtensionRouter
+from mpt_extension_sdk import EventRouter
 from mpt_extension_sdk.api.models.events import Event, TaskEvent
 from mpt_extension_sdk.models.agreement import Agreement
 from mpt_extension_sdk.models.order import Order
@@ -119,7 +119,7 @@ def dummy_handler():
 
 @pytest.fixture
 def extension_router():
-    return ExtensionRouter(prefix="/events/orders")
+    return EventRouter(prefix="/events/orders")
 
 
 @pytest.fixture

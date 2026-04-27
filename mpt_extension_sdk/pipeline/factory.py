@@ -3,7 +3,7 @@ from typing import Any
 
 from mpt_extension_sdk.api.models.events import Event
 from mpt_extension_sdk.pipeline.context.agreement import AgreementContext
-from mpt_extension_sdk.pipeline.context.base import ExecutionContext, ExecutionMetadata
+from mpt_extension_sdk.pipeline.context.event import EventBaseContext, EventMetadata
 from mpt_extension_sdk.pipeline.context.order import OrderContext
 from mpt_extension_sdk.runtime.logging import correlation_id_ctx, task_id_ctx
 from mpt_extension_sdk.services.mpt_api_service import MPTAPIService
@@ -15,7 +15,7 @@ async def build_context(
     event: Event,
     handler_logger: logging.Logger,
     mpt_api_service_type: type[MPTAPIService] = MPTAPIService,
-) -> ExecutionContext:
+) -> EventBaseContext:
     """Build the fully hydrated execution context for an incoming event."""
     runtime_settings = get_runtime_settings()
     api_service = mpt_api_service_type.from_config(
@@ -25,9 +25,9 @@ async def build_context(
     return await _build_context_with_model(event, handler_logger, api_service)
 
 
-def _build_execution_metadata(event: Event) -> ExecutionMetadata:
+def _build_execution_metadata(event: Event) -> EventMetadata:
     """Build immutable execution metadata from the incoming event."""
-    return ExecutionMetadata(
+    return EventMetadata(
         event_id=event.id,
         object_id=event.object.id,
         object_type=event.object.object_type,
@@ -38,7 +38,7 @@ def _build_execution_metadata(event: Event) -> ExecutionMetadata:
 
 async def _build_context_with_model(
     event: Event, handler_logger: logging.Logger, api_service: MPTAPIService
-) -> ExecutionContext:
+) -> EventBaseContext:
     """Build a fully hydrated execution context for the current event object."""
     common_kwargs: dict[str, Any] = {
         "logger": handler_logger,

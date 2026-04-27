@@ -2,7 +2,7 @@ import asyncio
 
 import pytest
 
-from mpt_extension_sdk.pipeline import ExecutionContext
+from mpt_extension_sdk.context import BaseContext
 from mpt_extension_sdk.pipeline.step import BaseStep
 
 
@@ -36,7 +36,7 @@ class FakeMinimalStep(BaseStep):
 
 @pytest.fixture
 def context_mock(mocker):
-    return mocker.Mock(spec=ExecutionContext)
+    return mocker.Mock(spec=BaseContext)
 
 
 def test_step_name():

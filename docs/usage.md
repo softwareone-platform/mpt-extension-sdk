@@ -31,9 +31,8 @@ side effects at module import time.
 
 ## Create An Extension App
 
-Start with `ExtensionApp` and `ExtensionRouter`. The extension app is the root
-SDK object for one extension package. Routers group related event handlers and
-their route metadata before they are included in the app.
+Start with `ExtensionApp` and the router family that matches your use case. The
+extension app is the root SDK object for one extension package.
 
 ```python
 # mock_app/app.py
@@ -47,50 +46,106 @@ ext_app.include_router(orders_router)
 
 ```python
 # mock_app/api/routes.py
-from mpt_extension_sdk import ExtensionRouter
+from mpt_extension_sdk import EventRouter
 
-orders_router = ExtensionRouter(prefix="/events/orders")
+orders_router = EventRouter(prefix="/events/orders")
 ```
 
-## Register Handlers
+The SDK also exposes `ApiRouter`, `ScheduleRouter`, and `PlugRouter`. In the
+current SDK version, only `EventRouter` is implemented end-to-end in runtime
+and metadata generation.
 
-Use `route(...)` for non-task events:
+## Register Event Handlers
+
+Use `event(...)` for non-task events:
 
 ```python
-from mpt_extension_sdk import ExtensionRouter
+from mpt_extension_sdk import EventRouter
 
-orders_router = ExtensionRouter(prefix="/events/orders")
+orders_router = EventRouter(prefix="/events/orders")
 
 
-@orders_router.route(
+@orders_router.event(
     path="/purchase",
     name="orders-purchase",
     event="platform.commerce.order.purchased",
 )
 async def process_purchase(event, context):
-    """Process a non-task order event."""
+    """Process a non-task order or agreement event."""
 ```
 
-Use `task_route(...)` for task-backed events. The runtime starts, completes,
+Use `task(...)` for task-backed events. The runtime starts, completes,
 fails, or reschedules the Marketplace task around the handler execution.
 
 ```python
-from mpt_extension_sdk import ExtensionRouter
+from mpt_extension_sdk import EventRouter
 
-orders_router = ExtensionRouter(prefix="/events/orders")
+orders_router = EventRouter(prefix="/events/orders")
 
 
-@orders_router.task_route(
+@orders_router.task(
     path="/change",
     name="orders-change",
     event="platform.commerce.order.created",
 )
 async def process_order_change(event, context):
-    """Process a task-backed order event."""
+    """Process a task-backed event."""
 ```
 
-Within one router or app, each route `name`, `path`, and `event` must be
-unique.
+Within one router or app, each route `name` and `path` must be unique. Event
+subscriptions must also be unique among event routes.
+
+## Event Context Resolution
+
+The runtime builds the handler context from `event.object.object_type` in the
+received payload:
+
+- `Order` -> `OrderContext`
+- `Agreement` -> `AgreementContext`
+
+This means a single extension app can register routes that receive either
+orders or agreements, and the SDK resolves the correct context family for each
+request at runtime.
+
+## Adapt The Execution Context
+
+Use a context adapter when an extension needs to enrich the SDK-provided
+context with extension-specific fields or dependencies. The adapter must return
+the same context family it receives at runtime.
+
+```python
+from dataclasses import dataclass, field
+from typing import Self
+
+from mpt_extension_sdk import EventRouter
+from mpt_extension_sdk.pipeline import OrderContext
+from mpt_extension_sdk.context import ContextAdapter
+
+
+@dataclass(kw_only=True)
+class CustomOrderContext(OrderContext, ContextAdapter):
+    notes: list[str] = field(default_factory=list)
+
+    @classmethod
+    def from_context(cls, ctx: OrderContext) -> Self:
+        return cls(**ctx.__dict__)
+
+
+orders_router = EventRouter(prefix="/events/orders")
+
+
+@orders_router.task(
+    path="/change",
+    name="orders-change",
+    event="platform.commerce.order.changed",
+    context_adapter_type=CustomOrderContext,
+)
+async def process_order_change(event, context):
+    assert isinstance(context, CustomOrderContext)
+```
+
+You can also configure `context_adapter_type` once on the router and override
+it per route when needed.
 
 ## Build A Processing Pipeline
 
@@ -122,33 +177,6 @@ class PurchasePipeline(BasePipeline):
 
 The SDK exports both `OrderContext` and `AgreementContext`, and the runtime
 hydrates the right one from `event.object.object_type`.
-
-## Adapt The Execution Context
-
-Use a context factory when an extension needs to enrich the SDK-provided
-context with extension-specific fields or dependencies. The factory must return
-the same context family it receives, for example `OrderContext` or a subclass
-of it.
-
-```python
-from dataclasses import dataclass, field
-from typing import Self
-
-from mpt_extension_sdk.extension_app import ExtensionApp
-from mpt_extension_sdk.pipeline import ContextAdapter, OrderContext
-
-
-@dataclass(kw_only=True)
-class CustomOrderContext(OrderContext, ContextAdapter):
-    notes: list[str] = field(default_factory=list)
-
-    @classmethod
-    def from_context(cls, ctx: OrderContext) -> Self:
-        return cls(**ctx.__dict__)
-
-
-ext_app = ExtensionApp(order_context_type=CustomOrderContext)
-```
 
 ## Run An Extension
 
@@ -230,7 +258,7 @@ class UpdateOrderStep(BaseStep):
 
 ## What The SDK Provides
 
-- `ExtensionApp` and `ExtensionRouter` for route registration and metadata
-- task and non-task FastAPI runtime wiring
-- typed execution contexts, context factories, and pipeline primitives
+- `ExtensionApp` and router-family classes for route registration and metadata
+- task and non-task event runtime wiring
+- typed execution contexts, context adapters, and pipeline primitives
 - Marketplace service helpers, settings discovery, and observability hooks

@@ -14,10 +14,10 @@ The `migrations` topic here covers SDK compatibility changes that require consum
 
 ## Current Migration Notes
 
-There are no repository-specific SDK migration notes at the moment.
 
 Add a section here only when this repository introduces a consumer-facing
 compatibility change that requires upgrade guidance.
+
 ## When To Update This Document
 
 Update this file when the SDK introduces a consumer-facing compatibility change

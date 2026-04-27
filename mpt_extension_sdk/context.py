@@ -9,32 +9,16 @@ from mpt_extension_sdk.settings.extension import BaseExtensionSettings
 from mpt_extension_sdk.settings.runtime import RuntimeSettings
 
 
-@dataclass(frozen=True)
-class ExecutionMetadata:
-    """Immutable event execution metadata."""
-
-    event_id: str
-    object_id: str
-    object_type: str
-    task_id: str
-
-    correlation_id: str | None = None
-    installation_id: str | None = None
-
-
 @dataclass(kw_only=True)
-class ExecutionContext:
-    """Mutable context passed through pipeline steps."""
+class BaseContext:
+    """Base context."""
 
     logger: Logger
-    meta: ExecutionMetadata
     mpt_api_service: MPTAPIService
 
     account_settings: AccountSettings = field(default_factory=AccountSettings)
     ext_settings: BaseExtensionSettings
     runtime_settings: RuntimeSettings
-
-    state: dict[str, Any] = field(default_factory=dict)
 
 
 class ContextAdapter(ABC):
@@ -42,5 +26,5 @@ class ContextAdapter(ABC):
 
     @classmethod
     @abstractmethod
-    def from_context(cls, ctx: ExecutionContext) -> Self:
+    def from_context(cls, ctx: Any) -> Self:
         """Build the custom context from the SDK base context."""

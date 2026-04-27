@@ -18,18 +18,19 @@ The repository combines:
 The main extension authoring concepts are:
 
 - `ExtensionApp`: the root SDK object for one extension package; it owns route registration, metadata generation, and optional context adaptation
-- `ExtensionRouter`: groups related event handlers under a shared prefix before they are included in the extension app
-- event handlers: task and non-task callbacks registered on routers and exposed as FastAPI routes by the runtime
+- route-family routers: `EventRouter`, `ApiRouter`, `ScheduleRouter`, and `PlugRouter` group related handlers under a shared prefix before they are included in the extension app
+- event handlers: task and non-task callbacks registered on `EventRouter` and exposed as FastAPI routes by the runtime
 - pipeline primitives: `ExecutionContext`, specialized order/agreement contexts, `BasePipeline`, and `BaseStep` provide reusable multi-step processing patterns
 
-Typical extension usage starts with creating an `ExtensionApp`, registering one or more `ExtensionRouter` instances, and executing business logic from handlers through pipelines.
+Typical extension usage starts with creating an `ExtensionApp`, registering one or more routers, and executing business logic from handlers through pipelines.
 
 ## Package Layout
 
 The main package lives under [`mpt_extension_sdk/`](../mpt_extension_sdk).
 
-- [`extension_app.py`](../mpt_extension_sdk/extension_app.py): public SDK entrypoint that defines `ExtensionApp`, `ExtensionRouter`, and route metadata
-- [`api/`](../mpt_extension_sdk/api): FastAPI route assembly and event payload models
+- [`extension_app.py`](../mpt_extension_sdk/extension_app.py): public SDK entrypoint that defines `ExtensionApp`
+- [`routing/`](../mpt_extension_sdk/routing): route-family routers and route definition models used by the SDK contract
+- [`api/`](../mpt_extension_sdk/api): FastAPI payload models and builder helpers that adapt SDK routes to HTTP
 - [`pipeline/`](../mpt_extension_sdk/pipeline): execution contexts, context factory helpers, decorators, pipeline base classes, and steps
 - [`runtime/`](../mpt_extension_sdk/runtime): FastAPI app assembly, runtime startup, logging context, and platform bootstrap helpers
 - [`services/mpt_api_service/`](../mpt_extension_sdk/services/mpt_api_service): Marketplace service layer used by handlers, pipelines, and runtime operations
@@ -40,8 +41,9 @@ The main package lives under [`mpt_extension_sdk/`](../mpt_extension_sdk).
 
 ## Main Entry Points
 
-- [`mpt_extension_sdk/extension_app.py`](../mpt_extension_sdk/extension_app.py): exposes `ExtensionApp` and `ExtensionRouter`
-- [`mpt_extension_sdk/api/router.py`](../mpt_extension_sdk/api/router.py): builds task and non-task FastAPI routes around SDK handlers
+- [`mpt_extension_sdk/extension_app.py`](../mpt_extension_sdk/extension_app.py): exposes `ExtensionApp`
+- [`mpt_extension_sdk/routing/`](../mpt_extension_sdk/routing): defines route-family routers and route metadata types
+- [`mpt_extension_sdk/api/router.py`](../mpt_extension_sdk/api/router.py): façade for FastAPI route builders
 - [`mpt_extension_sdk/runtime/app.py`](../mpt_extension_sdk/runtime/app.py): creates the FastAPI app, loads the exported extension app, and mounts routes
 - [`mpt_extension_sdk/runtime/main.py`](../mpt_extension_sdk/runtime/main.py): exports the ASGI application instance
 - [`mpt_extension_sdk/runtime/runner.py`](../mpt_extension_sdk/runtime/runner.py): runs the extension locally with `uvicorn` or on the platform with `ziticorn`
@@ -57,9 +59,12 @@ The SDK runtime has two main execution surfaces:
 
 `runtime/runner.py` generates `meta.yaml` before startup. In platform mode it registers the extension instance, persists the returned identity when present, and starts the exported ASGI app through Ziticorn. `runtime/app.py` assembles the FastAPI app, configures middleware and observability, loads the extension's exported `ext_app`, and mounts every registered route.
 
+At the moment, only the `event` route family is implemented end-to-end in runtime and metadata generation. `api`, `schedule`, and `plug` route families are modeled in the SDK contract but are not yet mounted by the runtime or emitted into `meta.yaml`.
+
 ## Boundaries
 
-- Keep extension authoring primitives in `extension_app.py`, `api/`, and `pipeline/`.
+- Keep extension authoring primitives in `extension_app.py`, `routing/`, and `pipeline/`.
+- Keep FastAPI adapter/builders under `api/`.
 - Keep runtime startup, bootstrap, and application assembly under `runtime/`.
 - Keep Marketplace access logic under `services/mpt_api_service/` instead of duplicating raw client usage in handlers or runtime modules.
 - Keep configuration loading under `settings/`.
