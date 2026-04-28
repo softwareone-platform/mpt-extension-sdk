@@ -15,35 +15,34 @@ from mpt_extension_sdk.observability.tracing import (
     set_attributes,
     start_event_span,
 )
-from mpt_extension_sdk.pipeline import ExecutionContext, build_context
+from mpt_extension_sdk.pipeline import EventBaseContext, build_context
+from mpt_extension_sdk.routing.models import EventDeliveryMode, EventRouteDefinition
 from mpt_extension_sdk.runtime.logging import set_event_context
 from mpt_extension_sdk.services.mpt_api_service.api_service import MPTAPIService
 from mpt_extension_sdk.services.mpt_api_service.task import TaskService
 from mpt_extension_sdk.settings.runtime import RuntimeSettings, get_runtime_settings
 
-TaskHandler = Callable[[TaskEvent, ExecutionContext], Awaitable[None] | None]
-EventHandler = Callable[[Event, ExecutionContext], Awaitable[None] | None]
+TaskHandler = Callable[[TaskEvent, EventBaseContext], Awaitable[None] | None]
+EventHandler = Callable[[Event, EventBaseContext], Awaitable[None] | None]
 
 logger = logging.getLogger(__name__)
 
 
-def create_task_route(  # noqa: WPS213, WPS217
-    path: str, task_handler: TaskHandler, extension_app: ExtensionApp
+def create_event_route(route: EventRouteDefinition, extension_app: ExtensionApp) -> APIRouter:
+    """Create a FastAPI router for an event route definition."""
+    if route.delivery_mode == EventDeliveryMode.TASK:
+        return create_task_event_route(route, extension_app)
+    return create_non_task_event_route(route, extension_app)
+
+
+def create_task_event_route(  # noqa: WPS213, WPS217
+    route: EventRouteDefinition, extension_app: ExtensionApp
 ) -> APIRouter:
-    """Create a router for a task-based event handler.
-
-    Args:
-        path: The absolute URL path for this route.
-        task_handler: The task event handler function.
-        extension_app: The extension app.
-
-    Returns:
-        A configured `APIRouter` instance.
-    """
+    """Create a router for a task-based event handler."""
     router = APIRouter()
-    handler_logger = logging.getLogger(task_handler.__module__)
+    handler_logger = logging.getLogger(route.callback.__module__)
 
-    @router.post(path, status_code=status.HTTP_200_OK, response_model=EventResponse)
+    @router.post(route.path, status_code=status.HTTP_200_OK, response_model=EventResponse)
     async def handle_task_event(  # noqa: WPS213, WPS217, WPS430
         event: TaskEvent,
         task_service: Annotated[TaskService, Depends(get_tasks_service)],
@@ -55,8 +54,8 @@ def create_task_route(  # noqa: WPS213, WPS217
             handler_logger,
             mpt_api_service_type=extension_app.mpt_api_service_type,
         )
-        context = extension_app.build_context(context)
-        with start_event_span(path, task_based=True, event=event) as span:
+        context = extension_app.build_context(route, context)
+        with start_event_span(route.path, task_based=True, event=event) as span:
             business_attributes = get_business_attributes(context)
             set_event_context(
                 order_id=str(business_attributes.get("order.id", "")),
@@ -66,7 +65,7 @@ def create_task_route(  # noqa: WPS213, WPS217
             handler_logger.info("Starting task %s", event.task.id)
             await task_service.start(event.task.id)
             try:  # noqa: WPS225
-                await run_handler(task_handler, event, context)
+                await run_handler(route.callback, event, context)
             except CancelError as error:
                 record_exception(span, error)  # noqa: WPS204
                 handler_logger.info("Task %s cancelled", event.task.id)
@@ -95,25 +94,14 @@ def create_task_route(  # noqa: WPS213, WPS217
     return router
 
 
-def create_non_task_route(  # noqa: WPS213
-    path: str,
-    event_callback: Callable[[Event, ExecutionContext], Awaitable[None] | None],
-    extension_app: ExtensionApp,
-) -> APIRouter:  # noqa: WPS213
-    """Create a FastAPI router for a non-task event handler.
-
-    Args:
-        path: The absolute URL path for this route.
-        event_callback: The event handler function.
-        extension_app: The extension app.
-
-    Returns:
-        A configured `APIRouter` instance.
-    """
+def create_non_task_event_route(  # noqa: WPS213
+    route: EventRouteDefinition, extension_app: ExtensionApp
+) -> APIRouter:
+    """Create a FastAPI router for a non-task event handler."""
     router = APIRouter()
-    handler_logger = logging.getLogger(event_callback.__module__)
+    handler_logger = logging.getLogger(route.callback.__module__)
 
-    @router.post(path, status_code=status.HTTP_200_OK, response_model=EventResponse)
+    @router.post(route.path, status_code=status.HTTP_200_OK, response_model=EventResponse)
     async def handle_event(event: Event) -> EventResponse:  # noqa: WPS430,WPS213
         handler_logger.info("Received event (%s): %s", event.id, event.to_dict())
         set_event_context()
@@ -122,8 +110,8 @@ def create_non_task_route(  # noqa: WPS213
             handler_logger,
             mpt_api_service_type=extension_app.mpt_api_service_type,
         )
-        context = extension_app.build_context(context)
-        with start_event_span(path, task_based=False, event=event) as span:
+        context = extension_app.build_context(route, context)
+        with start_event_span(route.path, task_based=False, event=event) as span:
             business_attributes = get_business_attributes(context)
             set_event_context(
                 order_id=str(business_attributes.get("order.id", "")),
@@ -131,7 +119,7 @@ def create_non_task_route(  # noqa: WPS213
             )
             set_attributes(span, business_attributes)
             try:  # noqa: WPS225
-                await run_handler(event_callback, event, context)
+                await run_handler(route.callback, event, context)
             except CancelError as error:
                 record_exception(span, error)
                 handler_logger.info("Event (%s) canceled", event.id)
@@ -157,27 +145,16 @@ def create_non_task_route(  # noqa: WPS213
 def get_tasks_service(
     runtime_settings: Annotated[RuntimeSettings, Depends(get_runtime_settings)],
 ) -> TaskService:
-    """Return the task service authenticated with the extension token.
-
-    Task lifecycle operations are part of the extension runtime contract with
-    the platform, so they use the extension API key rather than the
-    Marketplace API token used by business services.
-    """
+    """Return the task service authenticated with the extension token."""
     return MPTAPIService.from_config(
         base_url=runtime_settings.mpt_api_base_url, api_token=runtime_settings.ext_api_key
     ).tasks
 
 
 async def run_handler(
-    event_handler: Callable[..., Awaitable[None] | None], event: Any, context: ExecutionContext
+    event_handler: Callable[..., Awaitable[None] | None], event: Any, context: EventBaseContext
 ) -> None:
-    """Invoke a handler and await the result if it is a coroutine.
-
-    Args:
-        event_handler: The handler function to invoke.
-        event: The event payload.
-        context: The execution context to pass to the handler.
-    """
+    """Invoke a handler and await the result if it is a coroutine."""
     handler_result = event_handler(event, context)
     if isawaitable(handler_result):
         await handler_result

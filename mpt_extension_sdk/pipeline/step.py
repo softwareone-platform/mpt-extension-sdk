@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 from asyncio import CancelledError
-
-from mpt_extension_sdk.pipeline.context.base import ExecutionContext
+from typing import Any
 
 
 class BaseStep(ABC):
@@ -12,7 +11,7 @@ class BaseStep(ABC):
         """Step name."""
         return self.__class__.__name__
 
-    async def run(self, ctx: ExecutionContext) -> None:
+    async def run(self, ctx: Any) -> None:
         """Execute the full step lifecycle.
 
         `post()` runs after `process()` both on success and on failure so the
@@ -35,15 +34,15 @@ class BaseStep(ABC):
         if process_error is not None:
             raise process_error
 
-    async def pre(self, ctx: ExecutionContext) -> None:
+    async def pre(self, ctx: Any) -> None:
         """Run pre-processing hook."""
         return  # noqa: WPS324
 
     @abstractmethod
-    async def process(self, ctx: ExecutionContext) -> None:
+    async def process(self, ctx: Any) -> None:
         """Run business processing."""
         raise NotImplementedError
 
-    async def post(self, ctx: ExecutionContext) -> None:
+    async def post(self, ctx: Any) -> None:
         """Run post-processing hook."""
         return  # noqa: WPS324

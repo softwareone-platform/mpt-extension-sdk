@@ -11,12 +11,12 @@ from mpt_extension_sdk.observability import tracing
 PATH = "/api/v2/events/orders/change"
 
 
-class SpanRunResult(NamedTuple):
+class FakeSpanRunResult(NamedTuple):
     current_span: object
     related_span: object
 
 
-class EventSpanRunner:
+class FakeEventSpanRunner:
     def __init__(self, exporter, tracer):
         self.exporter = exporter
         self.tracer = tracer
@@ -31,7 +31,7 @@ class EventSpanRunner:
         related_span = next(
             span for span in self.exporter.get_finished_spans() if span.name == span_name
         )
-        return SpanRunResult(current_span=current_span, related_span=related_span)
+        return FakeSpanRunResult(current_span=current_span, related_span=related_span)
 
 
 @pytest.fixture
@@ -46,7 +46,7 @@ def span_exporter():
 def event_span_runner(mocker, span_exporter):
     exporter, tracer = span_exporter
     mocker.patch.object(tracing, "TRACER", tracer)
-    return EventSpanRunner(exporter=exporter, tracer=tracer)
+    return FakeEventSpanRunner(exporter=exporter, tracer=tracer)
 
 
 def test_event_span_keeps_parent(event_factory, event_span_runner):

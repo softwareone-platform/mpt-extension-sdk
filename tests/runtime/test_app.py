@@ -4,15 +4,17 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from mpt_extension_sdk import APIRouter
 from mpt_extension_sdk.errors.runtime import ConfigError
-from mpt_extension_sdk.extension_app import ExtensionApp, ExtensionRouter
+from mpt_extension_sdk.extension_app import ExtensionApp
+from mpt_extension_sdk.routing import APIRouteDefinition, EventRouter, RouteType
 from mpt_extension_sdk.runtime import app as runtime_app
 
 
 @pytest.fixture
 def extension_runtime_app(dummy_handler):
-    router = ExtensionRouter(prefix="/events/orders")
-    router.route(path="/purchase", name="purchase", event="OrderPurchased")(dummy_handler)
+    router = EventRouter(prefix="/events/orders")
+    router.event(path="/purchase", name="purchase", event="OrderPurchased")(dummy_handler)
     extension_app = ExtensionApp(prefix="/api/v1")
     extension_app.include_router(router)
 
@@ -118,17 +120,30 @@ def test_create_runtime_app_registers_ext_routes(runtime_settings, runtime_app_p
 def test_register_ext_routes(dummy_handler):
     app = FastAPI()
     extension_app = ExtensionApp(prefix="/api/v1")
-    router = ExtensionRouter(prefix="/events/orders")
-    router.route(path="/purchase", name="purchase", event="OrderPurchased")(dummy_handler)
-    router.task_route(path="/change", name="change", event="OrderChanged")(dummy_handler)
+    router = EventRouter(prefix="/events/orders")
+    router.event(path="/purchase", name="purchase", event="OrderPurchased")(dummy_handler)
+    router.task(path="/change", name="change", event="OrderChanged")(dummy_handler)
     extension_app.include_router(router)
 
-    result = runtime_app.register_extension_routes(app, extension_app)
+    runtime_app.register_extension_routes(app, extension_app)  # act
 
-    assert result is None
     paths = {route.path for route in app.routes}
     assert "/api/v1/events/orders/purchase" in paths
     assert "/api/v1/events/orders/change" in paths
+
+
+def test_register_not_supported_ext_routes(dummy_handler):
+    app = FastAPI()
+    extension_app = ExtensionApp(prefix="/api/v1")
+    api_route = APIRouteDefinition(
+        path="/fake", name="fake", route_type=RouteType.API, callback=dummy_handler
+    )
+    api_router = APIRouter(prefix="/auth")
+    api_router._routes.append(api_route)
+    extension_app.include_router(api_router)
+
+    with pytest.raises(ConfigError, match="Only event routes are supported"):
+        runtime_app.register_extension_routes(app, extension_app)
 
 
 def test_middlewares_propagate_request_headers(middleware_test_app):

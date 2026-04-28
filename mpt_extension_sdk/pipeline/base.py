@@ -6,7 +6,7 @@ from mpt_extension_sdk.errors.step import DeferStepError, SkipStepError, StopSte
 from mpt_extension_sdk.observability.decorators import start_pipeline_span, start_step_span
 
 if TYPE_CHECKING:
-    from mpt_extension_sdk.pipeline import BaseStep, ExecutionContext
+    from mpt_extension_sdk.pipeline import BaseStep, EventBaseContext
 
 
 class BasePipeline(ABC):  # noqa: WPS214
@@ -24,42 +24,42 @@ class BasePipeline(ABC):  # noqa: WPS214
         raise NotImplementedError
 
     @start_pipeline_span
-    async def execute(self, ctx: "ExecutionContext") -> None:
+    async def execute(self, ctx: "EventBaseContext") -> None:
         """Execute pipeline steps sequentially."""
         ctx.logger.info("Starting pipeline %s", self.name)
         for step in self.steps:
             await self._execute_step(step, ctx)  # noqa: WPS476
 
     async def on_step_deferred(
-        self, step: "BaseStep", ctx: "ExecutionContext", error: DeferStepError
+        self, step: "BaseStep", ctx: "EventBaseContext", error: DeferStepError
     ) -> None:
         """Handle a deferred step outcome."""
         ctx.logger.info("Step %s deferred - reason: %s", step.name, error)
 
     async def on_step_failed(
-        self, step: "BaseStep", ctx: "ExecutionContext", error: Exception
+        self, step: "BaseStep", ctx: "EventBaseContext", error: Exception
     ) -> None:
         """Handle an unexpected step exception."""
         ctx.logger.error("Step %s - unhandled exception", step.name, exc_info=error)
 
     async def on_step_skipped(
-        self, step: "BaseStep", ctx: "ExecutionContext", error: SkipStepError
+        self, step: "BaseStep", ctx: "EventBaseContext", error: SkipStepError
     ) -> None:
         """Handle a skipped step outcome."""
         ctx.logger.info("Step %s skipped - reason: %s", step.name, error)
 
     async def on_step_stopped(
-        self, step: "BaseStep", ctx: "ExecutionContext", error: StopStepError
+        self, step: "BaseStep", ctx: "EventBaseContext", error: StopStepError
     ) -> None:
         """Handle a stopped step outcome."""
         ctx.logger.info("Step %s stopped - reason: %s", step.name, error)
 
-    async def on_step_succeeded(self, step: "BaseStep", ctx: "ExecutionContext") -> None:
+    async def on_step_succeeded(self, step: "BaseStep", ctx: "EventBaseContext") -> None:
         """Handle a successful step outcome."""
         ctx.logger.info("Step %s completed", step.name)
 
     @start_step_span
-    async def _execute_step(self, step: "BaseStep", ctx: "ExecutionContext") -> None:  # noqa: WPS217
+    async def _execute_step(self, step: "BaseStep", ctx: "EventBaseContext") -> None:  # noqa: WPS217
         """Execute a single step inside its tracing span."""
         ctx.logger.info("Running step %s", step.name)
         try:  # noqa: WPS225

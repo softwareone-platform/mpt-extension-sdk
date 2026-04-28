@@ -1,6 +1,6 @@
 from typing import override
 
-from mock_app.api.steps import DemoStep
+from mock_app.steps import DemoStep
 from mpt_extension_sdk.pipeline import BasePipeline, BaseStep
 
 

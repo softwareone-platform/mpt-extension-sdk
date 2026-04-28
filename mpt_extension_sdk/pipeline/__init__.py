@@ -5,10 +5,9 @@ from mpt_extension_sdk.pipeline.context.agreement import (
     AgreementStatusAction,
     AgreementStatusActionType,
 )
-from mpt_extension_sdk.pipeline.context.base import (
-    ContextAdapter,
-    ExecutionContext,
-    ExecutionMetadata,
+from mpt_extension_sdk.pipeline.context.event import (
+    EventBaseContext,
+    EventMetadata,
 )
 from mpt_extension_sdk.pipeline.context.order import (
     OrderContext,
@@ -27,9 +26,8 @@ __all__ = [  # noqa: WPS410
     "AgreementStatusActionType",
     "BasePipeline",
     "BaseStep",
-    "ContextAdapter",
-    "ExecutionContext",
-    "ExecutionMetadata",
+    "EventBaseContext",
+    "EventMetadata",
     "OrderContext",
     "OrderState",
     "OrderStatusAction",

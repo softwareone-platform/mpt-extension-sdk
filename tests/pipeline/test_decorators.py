@@ -3,7 +3,7 @@ from collections.abc import Callable
 
 import pytest
 
-from mpt_extension_sdk.pipeline.context.base import ExecutionMetadata
+from mpt_extension_sdk.pipeline.context.event import EventMetadata
 from mpt_extension_sdk.pipeline.context.order import OrderContext
 from mpt_extension_sdk.pipeline.decorators import refresh_order
 from mpt_extension_sdk.pipeline.step import BaseStep
@@ -27,7 +27,7 @@ class SampleStep(BaseStep):
 def test_refresh_order(mocker, logger, runtime_settings, order_factory):
     context = OrderContext(
         logger=logger,
-        meta=ExecutionMetadata(
+        meta=EventMetadata(
             event_id="EVT-1",
             object_id="ORD-1",
             object_type="Order",
@@ -49,7 +49,7 @@ def test_refresh_order(mocker, logger, runtime_settings, order_factory):
 def test_refresh_order_on_failure(mocker, logger, runtime_settings, order_factory):
     context = OrderContext(
         logger=logger,
-        meta=ExecutionMetadata(
+        meta=EventMetadata(
             event_id="EVT-1",
             object_id="ORD-1",
             object_type="Order",

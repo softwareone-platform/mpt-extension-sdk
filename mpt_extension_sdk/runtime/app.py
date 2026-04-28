@@ -4,11 +4,12 @@ from importlib import import_module
 
 from fastapi import FastAPI, Request, Response
 
-from mpt_extension_sdk.api.router import create_non_task_route, create_task_route
+from mpt_extension_sdk.api.builders.event import create_event_route
 from mpt_extension_sdk.errors.runtime import ConfigError
 from mpt_extension_sdk.extension_app import ExtensionApp
 from mpt_extension_sdk.observability.bootstrap import ObservabilityBootstrap
 from mpt_extension_sdk.observability.config import ObservabilityConfig
+from mpt_extension_sdk.routing.models import EventRouteDefinition
 from mpt_extension_sdk.runtime.logging import correlation_id_ctx, setup_logging, task_id_ctx
 from mpt_extension_sdk.settings.runtime import RuntimeSettings
 
@@ -65,6 +66,20 @@ def create_runtime_app(runtime_settings: RuntimeSettings) -> FastAPI:
     return app
 
 
+def register_extension_routes(app: FastAPI, extension_app: ExtensionApp) -> None:
+    """Register all decorated handlers on the FastAPI app.
+
+    Args:
+        app: The FastAPI application to register routes on.
+        extension_app: Extension app that owns the registered routes.
+    """
+    for registered_route in extension_app.routes:
+        if not isinstance(registered_route, EventRouteDefinition):
+            raise ConfigError("Only event routes are supported")
+
+        app.include_router(create_event_route(registered_route, extension_app))
+
+
 def _create_fastapi_app(extension_app: ExtensionApp) -> FastAPI:
     """Create the base FastAPI application for the extension runtime."""
     return FastAPI(
@@ -112,22 +127,3 @@ def _register_builtin_routes(app: FastAPI) -> None:
     @app.get("/health", tags=["ops"])
     async def health() -> dict[str, str]:  # noqa: WPS430
         return {"status": "ok", "version": app.version}
-
-
-def register_extension_routes(app: FastAPI, extension_app: ExtensionApp) -> None:
-    """Register all decorated handlers on the FastAPI app.
-
-    Args:
-        app: The FastAPI application to register routes on.
-        extension_app: Extension app that owns the registered routes.
-    """
-    for registered_route in extension_app.routes:
-        if registered_route.task_based:
-            router = create_task_route(
-                registered_route.path, registered_route.callback, extension_app
-            )
-        else:
-            router = create_non_task_route(
-                registered_route.path, registered_route.callback, extension_app
-            )
-        app.include_router(router)

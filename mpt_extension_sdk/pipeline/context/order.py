@@ -3,7 +3,7 @@ from enum import StrEnum
 from typing import Any
 
 from mpt_extension_sdk.models import Order
-from mpt_extension_sdk.pipeline.context.base import ExecutionContext
+from mpt_extension_sdk.pipeline.context.event import EventBaseContext
 
 
 class OrderStatusActionType(StrEnum):
@@ -32,7 +32,7 @@ class OrderState:
 
 
 @dataclass(kw_only=True)
-class OrderContext(ExecutionContext):
+class OrderContext(EventBaseContext):
     """Execution context specialized for order events."""
 
     order: Order

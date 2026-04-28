@@ -3,7 +3,7 @@ from enum import StrEnum
 from typing import Any
 
 from mpt_extension_sdk.models import Agreement
-from mpt_extension_sdk.pipeline.context.base import ExecutionContext
+from mpt_extension_sdk.pipeline.context.event import EventBaseContext
 
 
 class AgreementStatusActionType(StrEnum):
@@ -18,8 +18,8 @@ class AgreementStatusAction:
 
     target_status: AgreementStatusActionType
     message: str
-    status_notes: dict[str, Any] | None = None
-    parameters: dict[str, Any] | None = None  # noqa: WPS110
+    status_notes: dict[str, Any] = field(default_factory=dict)
+    parameters: dict[str, Any] = field(default_factory=dict)  # noqa: WPS110
 
 
 @dataclass
@@ -31,7 +31,7 @@ class AgreementState:
 
 
 @dataclass(kw_only=True)
-class AgreementContext(ExecutionContext):
+class AgreementContext(EventBaseContext):
     """Execution context specialized for agreement events."""
 
     agreement: Agreement
