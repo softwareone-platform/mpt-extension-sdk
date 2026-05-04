@@ -2,12 +2,9 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from mpt_extension_sdk.extension_validator import ExtensionValidator
-from mpt_extension_sdk.routing import (
-    BaseExtensionRouter,
-    BaseRouteDefinition,
-    EventDeliveryMode,
-    EventRouteDefinition,
-)
+from mpt_extension_sdk.routing.enums import EventDeliveryMode
+from mpt_extension_sdk.routing.models import BaseRouteDefinition, EventRouteDefinition
+from mpt_extension_sdk.routing.routers import BaseExtensionRouter
 from mpt_extension_sdk.runtime.models import MetaConfig, MetaEvent
 from mpt_extension_sdk.services.mpt_api_service import MPTAPIService
 
@@ -20,18 +17,18 @@ class ExtensionApp:
     version: str = "6.0.0"
     openapi: str = "/bypass/openapi.json"
     mpt_api_service_type: type[MPTAPIService] = field(default=MPTAPIService)
-    _routes: list[BaseRouteDefinition] = field(default_factory=list, init=False, repr=False)
+    _routes: list["BaseRouteDefinition"] = field(default_factory=list, init=False, repr=False)
 
     def __post_init__(self) -> None:
         """Validate extension app settings."""
         ExtensionValidator.validate_service_type(self.mpt_api_service_type)
 
     @property
-    def routes(self) -> list[BaseRouteDefinition]:
+    def routes(self) -> list["BaseRouteDefinition"]:
         """Return the registered route definitions."""
         return list(self._routes)
 
-    def build_context(self, route: EventRouteDefinition, context: Any) -> Any:
+    def build_context(self, route: "EventRouteDefinition", context: Any) -> Any:
         """Adapt a base SDK context to the route-specific custom context."""
         adapter_type = route.context_adapter_type
         if adapter_type is None:
@@ -45,7 +42,7 @@ class ExtensionApp:
 
         return adapted_context
 
-    def include_router(self, router: BaseExtensionRouter) -> None:
+    def include_router(self, router: "BaseExtensionRouter") -> None:
         """Include a router in the extension app."""
         for route in router.prefixed_routes(self.prefix):
             ExtensionValidator.validate_route_uniqueness(route=route, routes=self._routes)

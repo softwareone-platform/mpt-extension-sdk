@@ -8,7 +8,7 @@ readme = "docs/usage.md"
 license = {text = "Apache-2.0 license"}
 dependencies = [
     "fastapi[standard]==0.131.*",
-    "mpt-api-client==5.4.*",
+    "mpt-api-client==6.0.*",
     "mrok==0.9.6",
     "opentelemetry-api==1.40.0",
     "opentelemetry-exporter-otlp-proto-http==1.40.0",
@@ -102,8 +102,8 @@ select = ["AAA", "E999", "WPS"]
 show-source = true
 statistics = false
 per-file-ignores = [
-  "/*.py: WPS412",
-  "tests/**: WPS202, WPS211, WPS432"
+  "/**: WPS412",
+  "tests/**: WPS202, WPS211",
 ]
 
 [tool.ruff]

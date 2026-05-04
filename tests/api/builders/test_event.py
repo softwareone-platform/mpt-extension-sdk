@@ -17,8 +17,8 @@ from mpt_extension_sdk.api.models.events import ResponseEnum
 from mpt_extension_sdk.context import BaseContext
 from mpt_extension_sdk.errors.pipeline import CancelError, DeferError, FailError
 from mpt_extension_sdk.extension_app import ExtensionApp
-from mpt_extension_sdk.routing import EventDeliveryMode, EventRouteDefinition
-from mpt_extension_sdk.routing.models import RouteType
+from mpt_extension_sdk.routing.enums import EventDeliveryMode, RouteType
+from mpt_extension_sdk.routing.models import EventRouteDefinition
 from mpt_extension_sdk.services.mpt_api_service.task import TaskService
 
 
@@ -256,7 +256,7 @@ def test_event_route_success(
     ("error", "expected_response"),
     [
         (CancelError("cancelled"), ResponseEnum.CANCEL),
-        (DeferError("retry", delay_seconds=120), ResponseEnum.DEFER),
+        (DeferError("retry", delay_seconds=100), ResponseEnum.DEFER),
         (FailError("failed"), ResponseEnum.CANCEL),
         (RuntimeError("boom"), ResponseEnum.CANCEL),
     ],

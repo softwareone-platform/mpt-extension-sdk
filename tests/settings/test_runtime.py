@@ -196,14 +196,11 @@ def test_load_uses_uuid_when_hostname_blank(
         return_value=mocker.Mock(ext_app=FakeExtensionApp(meta_config)),
     )
     mocker.patch(
-        "mpt_extension_sdk.settings.runtime.socket.gethostname",
-        autospec=True,
-        return_value=" ",
+        "mpt_extension_sdk.settings.runtime.socket.gethostname", autospec=True, return_value=" "
     )
+    node = 0xABC
     mocker.patch(
-        "mpt_extension_sdk.settings.runtime.uuid.getnode",
-        autospec=True,
-        return_value=0xABC,
+        "mpt_extension_sdk.settings.runtime.uuid.getnode", autospec=True, return_value=node
     )
 
     result = RuntimeSettings.load()

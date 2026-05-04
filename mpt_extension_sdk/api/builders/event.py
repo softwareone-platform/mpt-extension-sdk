@@ -16,9 +16,10 @@ from mpt_extension_sdk.observability.tracing import (
     start_event_span,
 )
 from mpt_extension_sdk.pipeline import EventBaseContext, build_context
-from mpt_extension_sdk.routing.models import EventDeliveryMode, EventRouteDefinition
+from mpt_extension_sdk.routing.enums import EventDeliveryMode
+from mpt_extension_sdk.routing.models import EventRouteDefinition
 from mpt_extension_sdk.runtime.logging import set_event_context
-from mpt_extension_sdk.services.mpt_api_service.api_service import MPTAPIService
+from mpt_extension_sdk.services.mpt_api_service import MPTAPIService
 from mpt_extension_sdk.services.mpt_api_service.task import TaskService
 from mpt_extension_sdk.settings.runtime import RuntimeSettings, get_runtime_settings
 
@@ -152,7 +153,7 @@ def get_tasks_service(
 
 
 async def run_handler(
-    event_handler: Callable[..., Awaitable[None] | None], event: Any, context: EventBaseContext
+    event_handler: Callable[..., Awaitable[object] | object], event: Any, context: EventBaseContext
 ) -> None:
     """Invoke a handler and await the result if it is a coroutine."""
     handler_result = event_handler(event, context)

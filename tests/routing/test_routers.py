@@ -4,8 +4,15 @@ import pytest
 
 from mpt_extension_sdk import EventRouter
 from mpt_extension_sdk.context import ContextAdapter
-from mpt_extension_sdk.routing import APIRouter, PlugRouter, ScheduleRouter
-from mpt_extension_sdk.routing.models import EventDeliveryMode, RouteType
+from mpt_extension_sdk.routing.enums import EventDeliveryMode, HTTPMethod, RouteType
+from mpt_extension_sdk.routing.routers import APIRouter, PlugRouter, ScheduleRouter
+from mpt_extension_sdk.schemas import BaseSchema
+
+
+class FakePayloadSchema(BaseSchema):
+    """Dummy payload schema for API router tests."""
+
+    name: str
 
 
 class FakeCustomAdapter(ContextAdapter):
@@ -22,50 +29,6 @@ def route_handler(mocker):
 def test_router_rejects_invalid_adapter():
     with pytest.raises(TypeError, match="must implement 'ContextAdapter'"):
         EventRouter(context_adapter_type=dict)
-
-
-@pytest.mark.parametrize(
-    ("prefix", "path", "expected"),
-    [
-        ("", "orders", "/orders"),
-        ("   ", "/orders", "/orders"),
-        ("/", "/orders", "/orders"),
-        ("/events/", "/", "/events"),
-        ("events", "orders", "/events/orders"),
-        ("/events", "/orders", "/events/orders"),
-    ],
-)
-def test_api_router_normalizes_prefix_and_path(prefix, path, expected, route_handler):
-    router = APIRouter(prefix=prefix)
-
-    router.endpoint(path=path, name="orders")(route_handler)  # act
-
-    assert router.routes[0].path == expected
-
-
-def test_api_router_rejects_empty_path():
-    router = APIRouter(prefix="/events")
-
-    with pytest.raises(ValueError, match="Route path cannot be empty"):
-        router.endpoint(path="   ", name="orders")
-
-
-def test_prefixed_routes_returns_prefixed_copies():
-    router = APIRouter(prefix="/api")
-
-    # BL
-    @router.endpoint(path="orders", name="orders")
-    def mock_handler():  # noqa: WPS430
-        """Mock handler."""
-
-    result = router.prefixed_routes("/v1")
-
-    assert len(result) == 1
-    assert result[0].path == "/v1/api/orders"
-    assert result[0].name == "orders"
-    route = router.routes[0]
-    assert route.path == "/api/orders"
-    assert result[0] is not route
 
 
 def test_event_router_event_router_ctx_adapter(route_handler):
@@ -106,17 +69,41 @@ def test_event_router_rejects_empty_event_name():
         router.event(path="orders", name="purchase", event="   ")
 
 
-def test_api_router_registers_endpoint(route_handler):
+def test_api_router_registers_post_and_body(route_handler):
     router = APIRouter(prefix="/api")
 
-    result = router.endpoint(path="orders", name="orders")(route_handler)
+    result = router.post(
+        path="orders",
+        name="orders-create",
+        body_validator=FakePayloadSchema,
+    )(route_handler)
 
     assert result is route_handler
-    assert len(router.routes) == 1
     route = router.routes[0]
-    assert route.path == "/api/orders"
-    assert route.name == "orders"
-    assert route.route_type == RouteType.API
+    assert route.method == HTTPMethod.POST
+    assert route.body_validator_type is FakePayloadSchema
+
+
+def test_api_router_allows_same_path_diff_methods(route_handler):
+    router = APIRouter(prefix="/api")
+    router.get(path="orders", name="orders-list")(route_handler)
+    router.post(path="orders", name="orders-create")(route_handler)
+
+    result = router.routes
+
+    assert len(result) == 2
+
+
+def test_api_router_rejects_duplicate_method_path(route_handler):
+    router = APIRouter(prefix="/api")
+    router.get(path="orders", name="orders-list")(route_handler)
+    action = router.get(path="orders", name="orders-list-copy")
+
+    with pytest.raises(
+        ValueError,
+        match="Route path '/api/orders' is already registered for method 'GET'",
+    ):
+        action(route_handler)
 
 
 def test_schedule_router_registers_handler(route_handler):

@@ -4,6 +4,7 @@ from mpt_extension_sdk.services.api_client_v2.mpt_api_client import AsyncMPTClie
 from mpt_extension_sdk.services.mpt_api_service.agreement import AgreementService
 from mpt_extension_sdk.services.mpt_api_service.asset import AssetService
 from mpt_extension_sdk.services.mpt_api_service.client_factory import build_mpt_client
+from mpt_extension_sdk.services.mpt_api_service.installation import InstallationService
 from mpt_extension_sdk.services.mpt_api_service.order import OrderService
 from mpt_extension_sdk.services.mpt_api_service.product import (
     ProductItemService,
@@ -26,6 +27,7 @@ class MPTAPIService:  # noqa: WPS215, WPS230
         self.client = client
         self.agreements = AgreementService(client)
         self.assets = AssetService(client)
+        self.installations = InstallationService(client)
         self.products = ProductService(client)
         self.product_items = ProductItemService(client)
         self.orders = OrderService(client)

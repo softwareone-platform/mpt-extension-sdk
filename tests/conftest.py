@@ -7,8 +7,7 @@ import pytest
 
 from mpt_extension_sdk import EventRouter
 from mpt_extension_sdk.api.models.events import Event, TaskEvent
-from mpt_extension_sdk.models.agreement import Agreement
-from mpt_extension_sdk.models.order import Order
+from mpt_extension_sdk.models import Agreement, Order
 from mpt_extension_sdk.runtime.models import MetaConfig, MetaEvent
 from mpt_extension_sdk.services.mpt_api_service import MPTAPIService
 from mpt_extension_sdk.settings.runtime import RuntimeSettings
@@ -36,14 +35,14 @@ def agreement_factory():
 
 
 @pytest.fixture
-def event_factory():
+def event_factory(mocker):
     def factory(object_type="Order", object_id="ORD-1111-1112", event_id="EVT-1111-1112"):
         return Event.model_validate({
             "id": event_id,
             "details": {
-                "enqueue_time": dt.datetime(2024, 1, 1, 12, 0, tzinfo=dt.UTC),
+                "enqueue_time": dt.datetime(2024, 1, 1, 12, 0, tzinfo=dt.UTC),  # noqa: WPS432
                 "event_type": "OrderPurchased",
-                "delivery_time": dt.datetime(2024, 1, 1, 12, 1, tzinfo=dt.UTC),
+                "delivery_time": dt.datetime(2024, 1, 1, 12, 1, tzinfo=dt.UTC),  # noqa: WPS432
             },
             "object": {
                 "id": object_id,
@@ -97,7 +96,7 @@ def runtime_settings(meta_config):
         meta_config=meta_config,
         meta_file_path=Path("/tmp/meta.yaml"),
         local_host="0.0.0.0",
-        local_port=8080,
+        local_port=8080,  # noqa: WPS432
         local_reload=True,
         local_workers=1,
         log_level="INFO",

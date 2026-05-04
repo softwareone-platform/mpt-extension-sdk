@@ -4,16 +4,16 @@ from typing import cast
 
 from mpt_extension_sdk.context import ContextAdapter
 from mpt_extension_sdk.extension_validator import ExtensionValidator
+from mpt_extension_sdk.routing.enums import EventDeliveryMode, HTTPMethod, RouteType
 from mpt_extension_sdk.routing.models import (
     APIRouteDefinition,
     BaseRouteDefinition,
-    EventDeliveryMode,
     EventRouteDefinition,
     PlugRouteDefinition,
     RouteCallback,
-    RouteType,
     ScheduleRouteDefinition,
 )
+from mpt_extension_sdk.schemas import BaseSchema
 
 _NO_CONTEXT_ADAPTER = object()
 
@@ -161,9 +161,52 @@ class EventRouter(BaseExtensionRouter):
 class APIRouter(BaseExtensionRouter):
     """Router object for authenticated API endpoints."""
 
-    def endpoint(self, path: str, name: str) -> Callable[[RouteCallback], RouteCallback]:
-        """Register an authenticated API handler."""
+    def get(
+        self, path: str, name: str, body_validator: type[BaseSchema] | None = None
+    ) -> Callable[[RouteCallback], RouteCallback]:
+        """Register an authenticated GET handler."""
+        return self._create_api_decorator(
+            method=HTTPMethod.GET, path=path, name=name, body_validator=body_validator
+        )
+
+    def post(
+        self, path: str, name: str, body_validator: type[BaseSchema] | None = None
+    ) -> Callable[[RouteCallback], RouteCallback]:
+        """Register an authenticated POST handler."""
+        return self._create_api_decorator(
+            method=HTTPMethod.POST, path=path, name=name, body_validator=body_validator
+        )
+
+    def put(
+        self, path: str, name: str, body_validator: type[BaseSchema] | None = None
+    ) -> Callable[[RouteCallback], RouteCallback]:
+        """Register an authenticated PUT handler."""
+        return self._create_api_decorator(
+            method=HTTPMethod.PUT, path=path, name=name, body_validator=body_validator
+        )
+
+    def patch(
+        self, path: str, name: str, body_validator: type[BaseSchema] | None = None
+    ) -> Callable[[RouteCallback], RouteCallback]:
+        """Register an authenticated PATCH handler."""
+        return self._create_api_decorator(
+            method=HTTPMethod.PATCH, path=path, name=name, body_validator=body_validator
+        )
+
+    def delete(
+        self, path: str, name: str, body_validator: type[BaseSchema] | None = None
+    ) -> Callable[[RouteCallback], RouteCallback]:
+        """Register an authenticated DELETE handler."""
+        return self._create_api_decorator(
+            method=HTTPMethod.DELETE, path=path, name=name, body_validator=body_validator
+        )
+
+    def _create_api_decorator(
+        self, *, method: HTTPMethod, path: str, name: str, body_validator: type[BaseSchema] | None
+    ) -> Callable[[RouteCallback], RouteCallback]:
+        """Create a decorator for an authenticated API route."""
         normalized_path = self._join_paths(self.prefix, path)
+        ExtensionValidator.validate_body_validator_type(body_validator)
 
         def decorator(route_handler: RouteCallback) -> RouteCallback:
             self._register_base_route(
@@ -172,6 +215,8 @@ class APIRouter(BaseExtensionRouter):
                     path=normalized_path,
                     route_type=RouteType.API,
                     callback=route_handler,
+                    method=method,
+                    body_validator_type=body_validator,
                 )
             )
             return route_handler

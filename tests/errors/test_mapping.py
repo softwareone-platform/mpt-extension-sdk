@@ -24,11 +24,14 @@ def test_map_exc_to_event_response_cancel_reason(mocker):
 
 def test_map_exc_to_event_response_defer(mocker):
     mock_event_response = mocker.patch.object(EventResponse, "reschedule", autospec=True)
+    delay_seconds = 30
 
-    result = map_exception_to_event_response(DeferError("fake error msg", delay_seconds=30))
+    result = map_exception_to_event_response(
+        DeferError("fake error msg", delay_seconds=delay_seconds)
+    )
 
     assert result == mock_event_response.return_value
-    mock_event_response.assert_called_once_with(seconds=30)
+    mock_event_response.assert_called_once_with(seconds=delay_seconds)
 
 
 def test_map_exc_to_event_response_fail(mocker):

@@ -38,22 +38,238 @@ extension app is the root SDK object for one extension package.
 # mock_app/app.py
 from mpt_extension_sdk import ExtensionApp
 
-from mock_app.api.routes import orders_router
+from mock_app.api.routes.events import orders_router
 
 ext_app = ExtensionApp(prefix="/api/v2")
 ext_app.include_router(orders_router)
 ```
 
 ```python
-# mock_app/api/routes.py
+# mock_app/api/routes/events.py
 from mpt_extension_sdk import EventRouter
 
 orders_router = EventRouter(prefix="/events/orders")
 ```
 
-The SDK also exposes `ApiRouter`, `ScheduleRouter`, and `PlugRouter`. In the
-current SDK version, only `EventRouter` is implemented end-to-end in runtime
-and metadata generation.
+The SDK also exposes `APIRouter`, `ScheduleRouter`, and `PlugRouter`. In the
+current SDK version, `EventRouter` and `APIRouter` are implemented end-to-end
+in runtime. `ScheduleRouter` and `PlugRouter` remain declarative SDK contracts
+for future runtime work.
+
+## Register API Handlers
+
+Use `APIRouter` when the extension must expose authenticated HTTP endpoints to
+the platform or other authorized consumers.
+
+```python
+# mock_app/api/routes/api.py
+from mpt_extension_sdk import APIRouter
+
+api_router = APIRouter(prefix="/")
+```
+
+Include the router in the extension app the same way as any other route family:
+
+```python
+# mock_app/app.py
+from mpt_extension_sdk import ExtensionApp
+
+from mock_app.api.routes.api import api_router
+from mock_app.api.routes.events import orders_router
+
+ext_app = ExtensionApp(prefix="/api/v2")
+ext_app.include_router(orders_router)
+ext_app.include_router(api_router)
+```
+
+`APIRouter` exposes one method per HTTP operation:
+
+- `get(...)`
+- `post(...)`
+- `put(...)`
+- `patch(...)`
+- `delete(...)`
+
+Each route defines:
+
+- `path`
+- `name`
+- optional `body_validator`
+
+Route names must remain unique within the app. API routes also remain unique by
+`(method, path)`, so `GET /agreements` and `POST /agreements` can coexist, but
+two `POST /agreements` registrations cannot.
+
+### Access Authenticated Context
+
+API handlers receive a request-scoped context parameter, usually named `ctx`.
+The Extension Framework service validates the incoming JWT before forwarding
+requests to the SDK runtime. The SDK extracts those trusted claims through
+`ctx.auth` and injects request metadata through `ctx.request`.
+
+```python
+from mpt_extension_sdk.api import APIContext, APIResponse, ForbiddenError
+
+
+@api_router.post(
+    path="/agreements/{agreement_id}/sync",
+    name="agreement-sync",
+)
+async def handle_agreement_sync(
+    agreement_id: str,
+    ctx: APIContext,
+) -> APIResponse:
+    if not ctx.auth.account.is_client():
+        raise ForbiddenError("Only client accounts are supported")
+
+    await AgreementSync().execute(agreement_id=agreement_id, account_id=ctx.auth.account.id)
+    return APIResponse.no_content()
+```
+
+The API context includes:
+
+- `ctx.auth.account.id`
+- `ctx.auth.account.type`
+- `ctx.auth.extension_id`
+- `ctx.auth.permissions`
+- `ctx.request.query`
+- `ctx.request.headers`
+- `ctx.request.method`
+- `ctx.request.url`
+- `ctx.request.body`
+- `ctx.request.pagination`
+- `ctx.mpt_api_service`
+
+For API routes, `ctx.mpt_api_service` is built with an account-scoped token
+derived from the authenticated account. The SDK caches and refreshes that token
+automatically when it expires.
+
+`ctx.request.query` wraps the incoming query string and exposes typed helpers:
+
+- `ctx.request.query.get("name")`
+- `ctx.request.query.get_int("limit", default=100)`
+- `ctx.request.query.get_bool("include_closed", default=False)`
+
+Boolean query parsing accepts `true`/`false`, `1`/`0`, and `yes`/`no`
+case-insensitively. Unrecognized boolean values return the provided default.
+Integer query parsing returns `422 Unprocessable Content` when the value cannot
+be parsed as an integer.
+
+`ctx.request.body` contains the parsed JSON payload or `None` when the request
+has no body. Invalid JSON returns `422 Unprocessable Content`.
+
+### Validate Request Bodies
+
+Use `BaseSchema` to describe the expected JSON payload and pass it through the
+route `body_validator`. The SDK validates the request before invoking the
+handler and injects the validated object as a handler argument.
+
+```python
+from pydantic import Field
+
+from mpt_extension_sdk.api import APIContext, APIResponse
+from mpt_extension_sdk.schemas import BaseSchema
+
+
+class AgreementSchema(BaseSchema):
+    status: str = Field(pattern="^(Processing|Complete)$")
+
+
+@api_router.post(
+    path="/agreements/{agreement_id}",
+    name="agreement-create",
+    body_validator=AgreementSchema,
+)
+async def handle_agreement_create(
+    agreement_id: str,
+    agreement: AgreementSchema,
+    ctx: APIContext,
+) -> APIResponse:
+    created_agreement = await AgreementCreate().execute(
+        agreement_id=agreement_id,
+        payload=agreement,
+    )
+    return APIResponse.created(payload=created_agreement)
+```
+
+If body validation fails, the SDK returns `422 Unprocessable Content` using the
+problem-details error format.
+
+### Return API Responses
+
+Authenticated API handlers must return `APIResponse`. The SDK serializes the
+response using the standard JSON envelope:
+
+```json
+{
+  "data": {},
+  "meta": {},
+  "links": {}
+}
+```
+
+Use the helpers that match the response semantics:
+
+- `APIResponse.ok(payload=...)`
+- `APIResponse.created(payload=...)`
+- `APIResponse.accepted(payload=...)`
+- `APIResponse.paginated(PaginatedResult.from_pagination(...))`
+- `APIResponse.no_content()`
+
+For collection responses, you can optionally provide typed `Meta` and `Links`
+objects:
+
+```python
+from mpt_extension_sdk.api import APIContext, APIResponse, Links, Meta
+
+
+@api_router.get(
+    path="/adobe/orders",
+    name="adobe-orders",
+)
+async def get_adobe_orders(ctx: APIContext) -> APIResponse:
+    orders = await AdobeOrderService(ctx).list_orders()
+    meta = Meta(total=100, page=1, page_size=20, total_pages=5)
+    links = Links(
+        self="https://extension.example.com/api/v2/adobe/orders?page=1&page_size=20",
+        first="https://extension.example.com/api/v2/adobe/orders?page=1&page_size=20",
+        next="https://extension.example.com/api/v2/adobe/orders?page=2&page_size=20",
+        last="https://extension.example.com/api/v2/adobe/orders?page=5&page_size=20",
+    )
+    return APIResponse.ok(payload=orders, meta=meta, links=links)
+```
+
+For page-based collection responses, use `ctx.request.pagination` and
+`PaginatedResult`. The SDK parses `page` and `page_size` lazily from the query
+string and builds `meta` plus pagination links from the current request URL.
+
+```python
+from mpt_extension_sdk.api import APIContext, APIResponse, PaginatedResult
+
+
+@api_router.get(
+    path="/adobe/orders",
+    name="adobe-orders",
+)
+async def get_adobe_orders(ctx: APIContext) -> APIResponse:
+    pagination = ctx.request.pagination
+    result = await AdobeOrderService(ctx).list_orders(
+        page=pagination.page,
+        page_size=pagination.page_size,
+    )
+    return APIResponse.paginated(
+        PaginatedResult.from_pagination(
+            pagination,
+            payload=result.orders,
+            total=result.total,
+        )
+    )
+```
+
+Raise `APIError` subclasses such as `ForbiddenError` when the handler must
+return a specific client-facing error. Unhandled exceptions are treated as
+internal errors and are returned as `500 Internal Server Error` problem-details
+responses with the current correlation identifier.
 
 ## Register Event Handlers
 

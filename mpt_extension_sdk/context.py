@@ -1,12 +1,14 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from logging import Logger
-from typing import Any, Self
+from typing import TYPE_CHECKING, Any, Self
 
-from mpt_extension_sdk.services.mpt_api_service import MPTAPIService
 from mpt_extension_sdk.settings.account import AccountSettings
-from mpt_extension_sdk.settings.extension import BaseExtensionSettings
-from mpt_extension_sdk.settings.runtime import RuntimeSettings
+
+if TYPE_CHECKING:
+    from mpt_extension_sdk.services.mpt_api_service import MPTAPIService
+    from mpt_extension_sdk.settings.extension import BaseExtensionSettings
+    from mpt_extension_sdk.settings.runtime import RuntimeSettings
 
 
 @dataclass(kw_only=True)
@@ -14,11 +16,11 @@ class BaseContext:
     """Base context."""
 
     logger: Logger
-    mpt_api_service: MPTAPIService
+    mpt_api_service: "MPTAPIService"
 
     account_settings: AccountSettings = field(default_factory=AccountSettings)
-    ext_settings: BaseExtensionSettings
-    runtime_settings: RuntimeSettings
+    ext_settings: "BaseExtensionSettings"
+    runtime_settings: "RuntimeSettings"
 
 
 class ContextAdapter(ABC):

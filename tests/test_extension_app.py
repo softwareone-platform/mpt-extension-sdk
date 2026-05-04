@@ -10,12 +10,9 @@ from mpt_extension_sdk.pipeline.context.event import (
     EventMetadata,
 )
 from mpt_extension_sdk.pipeline.context.order import OrderContext
-from mpt_extension_sdk.routing import (
-    APIRouter,
-    EventDeliveryMode,
-    EventRouteDefinition,
-)
-from mpt_extension_sdk.routing.models import RouteType
+from mpt_extension_sdk.routing.enums import EventDeliveryMode, RouteType
+from mpt_extension_sdk.routing.models import EventRouteDefinition
+from mpt_extension_sdk.routing.routers import APIRouter
 from mpt_extension_sdk.runtime.models import MetaConfig
 from mpt_extension_sdk.services.mpt_api_service import MPTAPIService
 from mpt_extension_sdk.settings.extension import BaseExtensionSettings
@@ -104,7 +101,7 @@ def test_meta_config_ignores_non_event_routes(dummy_handler):
     api_router = APIRouter(prefix="/api")
     app = ExtensionApp(prefix="/api/v1")
     event_router.task(path="/change", name="change", event="OrderChanged")(dummy_handler)
-    api_router.endpoint(path="/healthz", name="healthz")(dummy_handler)
+    api_router.get(path="/healthz", name="healthz")(dummy_handler)
     app.include_router(event_router)
     app.include_router(api_router)
 
@@ -115,6 +112,18 @@ def test_meta_config_ignores_non_event_routes(dummy_handler):
     assert result.events[0].event == "OrderChanged"
     assert result.events[0].path == "/api/v1/events/orders/change"
     assert result.events[0].task is True
+
+
+def test_ext_app_rejects_api_event_path_collision(dummy_handler):
+    event_router = EventRouter(prefix="/events")
+    api_router = APIRouter(prefix="/events")
+    app = ExtensionApp()
+    event_router.event(path="/orders", name="orders-event", event="OrdersUpdated")(dummy_handler)
+    api_router.post(path="/orders", name="orders-create")(dummy_handler)
+    app.include_router(event_router)
+
+    with pytest.raises(ValueError, match="Route path '/events/orders' is already registered"):
+        app.include_router(api_router)
 
 
 def test_ext_app_rejects_invalid_service_type():

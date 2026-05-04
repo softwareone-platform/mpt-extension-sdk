@@ -1,19 +1,17 @@
 # Testing
 
-This file documents repository-specific testing behavior and the shared testing
-rules imported from `mpt-extension-skills`:
+Shared unit-test rules live in [unittests.md](https://github.com/softwareone-platform/mpt-extension-skills/blob/main/standards/unittests.md).
 
-- `standards/unittests.md`
-- `knowledge/build-and-checks.md`
-- `knowledge/make-targets.md`
+Shared build and target knowledge also applies:
 
-The repository-local rules below override or narrow those shared rules where
-needed.
+- [knowledge/build-and-checks.md](https://github.com/softwareone-platform/mpt-extension-skills/blob/main/knowledge/build-and-checks.md)
+- [knowledge/make-targets.md](https://github.com/softwareone-platform/mpt-extension-skills/blob/main/knowledge/make-targets.md)
+
+This file documents repository-specific testing behavior.
 
 ## Test Scope
 
-The repository has pytest configured in [`pyproject.toml`](../pyproject.toml)
-and the `tests/` tree already covers the main SDK domains, including:
+The repository currently has stable coverage in these areas:
 
 - extension app and route registration under `tests/test_extension_app.py`
 - pipeline contexts, decorators, and factories under `tests/pipeline/`
@@ -37,18 +35,10 @@ make check-all
 Repository command mapping:
 
 - `make test` runs `pytest`
-- `make check` runs local validation checks such as formatting, linting, typing, and lockfile validation
+- `make check` runs `ruff format --check`, `ruff check`, `flake8`, `mypy` and `uv lock --check`
 - `make check-all` runs both checks and tests
 
-Shared make-target knowledge also applies in this repository:
-
-- `make build`: build the local runnable or testable environment
-- `make format`: automatically format the source code
-- `make check`: run local validation checks
-- `make test`: run the automated test suite
-- `make check-all`: run the full local validation flow expected before merge
-- `make bash`: open a shell in the application container or runtime environment
-- `make shell`: open an application-specific shell
+The CI workflow in [`.github/workflows/pr-build-merge.yml`](../.github/workflows/pr-build-merge.yml) uses the same `make build` and `make check-all` flow.
 
 ## Pytest Configuration
 

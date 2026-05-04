@@ -98,14 +98,15 @@ def test_execute_logs_pipeline_and_steps(pipeline_ctx):
 
 
 def test_execute_defers_pipeline(pipeline_ctx):
-    error = DeferStepError("later", delay_seconds=42)
+    delay_seconds = 42
+    error = DeferStepError("later", delay_seconds=delay_seconds)
     step = FakePipelineStep("defer", side_effect=error)
     pipeline = FakePipeline([step])
 
     with pytest.raises(DeferError, match="later") as exc_info:
         asyncio.run(pipeline.execute(pipeline_ctx))
 
-    assert exc_info.value.delay_seconds == 42
+    assert exc_info.value.delay_seconds == delay_seconds
     assert pipeline.deferred == [step_event(step, pipeline_ctx, error)]
 
 

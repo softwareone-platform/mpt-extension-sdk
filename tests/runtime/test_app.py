@@ -1,3 +1,4 @@
+from http import HTTPStatus
 from types import ModuleType
 
 import pytest
@@ -5,9 +6,12 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from mpt_extension_sdk import APIRouter
+from mpt_extension_sdk.api import APIResponse
 from mpt_extension_sdk.errors.runtime import ConfigError
 from mpt_extension_sdk.extension_app import ExtensionApp
-from mpt_extension_sdk.routing import APIRouteDefinition, EventRouter, RouteType
+from mpt_extension_sdk.routing.enums import RouteType
+from mpt_extension_sdk.routing.models import ScheduleRouteDefinition
+from mpt_extension_sdk.routing.routers import EventRouter
 from mpt_extension_sdk.runtime import app as runtime_app
 
 
@@ -46,10 +50,23 @@ def middleware_test_app():
     runtime_app._configure_middlewares(app)
 
     @app.get("/dummy")
-    def dummy():  # noqa: WPS430
+    def wrapper():
         return {"status": "ok"}
 
     return app
+
+
+@pytest.fixture
+def api_extension_app():
+    api_router = APIRouter(prefix="/auth")
+    extension_app = ExtensionApp(prefix="/api/v1")
+
+    @api_router.get(path="/fake", name="fake")
+    def wrapper(ctx):
+        return APIResponse.ok(payload={"ok": bool(ctx)})
+
+    extension_app.include_router(api_router)
+    return extension_app
 
 
 def test_load_ext_app_rejects_empty_module_name():
@@ -107,7 +124,7 @@ def test_create_runtime_app_registers_health(runtime_settings, runtime_app_patch
     result = runtime_app.create_runtime_app(runtime_settings)
 
     response = TestClient(result).get("/health")
-    assert response.status_code == 200
+    assert response.status_code == HTTPStatus.OK
     assert response.json() == {"status": "ok", "version": extension_app.version}
 
 
@@ -132,17 +149,25 @@ def test_register_ext_routes(dummy_handler):
     assert "/api/v1/events/orders/change" in paths
 
 
+def test_register_api_ext_routes(api_extension_app):
+    app = FastAPI()
+
+    runtime_app.register_extension_routes(app, api_extension_app)  # act
+
+    api_route = next(route for route in app.routes if route.path == "/api/v1/auth/fake")
+    assert "GET" in api_route.methods
+
+
 def test_register_not_supported_ext_routes(dummy_handler):
     app = FastAPI()
     extension_app = ExtensionApp(prefix="/api/v1")
-    api_route = APIRouteDefinition(
-        path="/fake", name="fake", route_type=RouteType.API, callback=dummy_handler
+    extension_app._routes.append(
+        ScheduleRouteDefinition(
+            path="/cron", name="cron", route_type=RouteType.SCHEDULE, callback=dummy_handler
+        )
     )
-    api_router = APIRouter(prefix="/auth")
-    api_router._routes.append(api_route)
-    extension_app.include_router(api_router)
 
-    with pytest.raises(ConfigError, match="Only event routes are supported"):
+    with pytest.raises(ConfigError, match="Only event and api routes are supported"):
         runtime_app.register_extension_routes(app, extension_app)
 
 
@@ -151,6 +176,6 @@ def test_middlewares_propagate_request_headers(middleware_test_app):
         "/dummy", headers={"x-request-id": "req-1", "mpt-task-id": "task-1"}
     )
 
-    assert result.status_code == 200
+    assert result.status_code == HTTPStatus.OK
     assert result.headers["x-request-id"] == "req-1"
     assert result.headers["mpt-task-id"] == "task-1"

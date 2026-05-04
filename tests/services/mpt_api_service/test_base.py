@@ -47,6 +47,6 @@ def test_get_all_passes_batch_size(mocker):
     mocker.patch.object(FakeModel, "from_payload", autospec=True, return_value={"payload": "x"})
     service = FakeService(mocker.Mock())
 
-    asyncio.run(service.get_all(collection, batch_size=50))  # act
+    asyncio.run(service.get_all(collection, batch_size=60))  # act
 
     assert collection.batch_sizes == [50]

@@ -85,8 +85,9 @@ def test_run_ziti_passes_expected_arguments(mocker, tmp_path):
 
 
 def test_run_fastapi_passes_expected_arguments(mocker):
+    port = 9000
     uvicorn_run = mocker.patch.object(runner.uvicorn, "run", autospec=True)
 
-    runner.run_fastapi("module:app", "127.0.0.1", 9000, reload=False, workers=2)  # act
+    runner.run_fastapi("module:app", "127.0.0.1", port, reload=False, workers=2)  # act
 
-    uvicorn_run.assert_called_once_with("module:app", host="127.0.0.1", port=9000, workers=2)
+    uvicorn_run.assert_called_once_with("module:app", host="127.0.0.1", port=port, workers=2)

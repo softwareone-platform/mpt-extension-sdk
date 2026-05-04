@@ -12,6 +12,12 @@ logger = logging.getLogger(__name__)
 class AgreementService(BaseService[Agreement]):
     """Agreements service."""
 
+    async def create(self, agreement: Mapping[str, Any] | BaseModel) -> Agreement:
+        """Create an agreement."""
+        return Agreement.from_payload(
+            await self._client.commerce.agreements.create(self._serialize_attributes(agreement))
+        )
+
     async def get_by_id(self, agreement_id: str) -> Agreement:
         """Fetch an agreement."""
         agreement = await self._client.commerce.agreements.get(
