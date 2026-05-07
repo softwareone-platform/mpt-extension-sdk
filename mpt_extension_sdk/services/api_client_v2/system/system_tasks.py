@@ -26,16 +26,16 @@ class AsyncTasksService(  # noqa: WPS215
 
     async def complete(self, resource_id: str, resource_data: ResourceData) -> None:
         """Complete the task."""
-        await self._resource_action(resource_id, "POST", "complete", resource_data)
+        await self._resource(resource_id).post("complete", json=resource_data)
 
     async def fail(self, resource_id: str) -> None:
         """Fail the task."""
-        await self._resource_action(resource_id, "POST", "fail")
+        await self._resource(resource_id).post("fail")
 
     async def reschedule(self, resource_id: str) -> None:
         """Reschedule the task."""
-        await self._resource_action(resource_id, "POST", "reschedule")
+        await self._resource(resource_id).post("reschedule")
 
     async def execute(self, resource_id: str) -> None:
         """Start the task."""
-        await self._resource_action(resource_id, "POST", "execute")
+        await self._resource(resource_id).post("execute")
