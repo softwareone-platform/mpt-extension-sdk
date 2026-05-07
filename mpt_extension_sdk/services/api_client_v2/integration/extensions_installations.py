@@ -1,23 +1,22 @@
 from mpt_api_client.http import AsyncService
-from mpt_api_client.http.mixins import AsyncGetMixin
+from mpt_api_client.http.mixins import AsyncCreateMixin
 from mpt_api_client.models import Model
 
 
-class ExtensionsInstallations(Model):
-    """Extensions installations model."""
+class IntegrationInstallations(Model):
+    """Integration installations model."""
 
 
-class ExtensionsInstallationsServiceConfig:
-    """Extensions installations service config."""
+class IntegrationInstallationsServiceConfig:
+    """Integration installations service config."""
 
-    _endpoint = "/public/v1/integration/extensions/{extension_id}/installations"
-    _model_class = ExtensionsInstallations
-    _collection_key = "data"
+    _endpoint = "/public/v1/integration/installations/-/token"
+    _model_class = IntegrationInstallations
 
 
-class AsyncExtensionsInstallationsService(
-    AsyncGetMixin[ExtensionsInstallations],
-    AsyncService[ExtensionsInstallations],
-    ExtensionsInstallationsServiceConfig,
+class AsyncIntegrationInstallationsService(
+    AsyncCreateMixin[IntegrationInstallations],
+    AsyncService[IntegrationInstallations],
+    IntegrationInstallationsServiceConfig,
 ):
     """Extensions installations service."""
