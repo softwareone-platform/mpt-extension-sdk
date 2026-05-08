@@ -24,7 +24,6 @@ class RuntimeSettings(BaseSettings):
     base_url: str
     extension_id: str
     mpt_api_base_url: str
-    mpt_api_token: str
     external_id: str
     identity_file_path: Path
     meta_config: MetaConfig
@@ -53,7 +52,6 @@ class RuntimeSettings(BaseSettings):
             (self.ext_api_key, "SDK API key is required (SDK_EXTENSION_API_KEY)"),
             (self.extension_id, "SDK extension ID is required (SDK_EXTENSION_ID)"),
             (self.mpt_api_base_url, "MPT API base URL is required (MPT_API_BASE_URL)"),
-            (self.mpt_api_token, "MPT API token is required (MPT_API_TOKEN)"),
         ]
 
     @override
@@ -68,7 +66,6 @@ class RuntimeSettings(BaseSettings):
             base_url=os.getenv("SDK_EXTENSION_URL", ""),
             extension_id=os.getenv("SDK_EXTENSION_ID", ""),
             mpt_api_base_url=os.getenv("MPT_API_BASE_URL", ""),
-            mpt_api_token=os.getenv("MPT_API_TOKEN", ""),
             external_id=external_id,
             identity_file_path=cls._resolve_identity_file_path(external_id),
             meta_config=cls._load_generated_meta_config(root_package),

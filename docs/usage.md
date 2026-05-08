@@ -204,7 +204,6 @@ The SDK commonly relies on:
 - `SDK_EXTENSION_API_KEY`
 - `SDK_EXTENSION_ID`
 - `MPT_API_BASE_URL`
-- `MPT_API_TOKEN`
 
 Example configuration:
 
@@ -213,7 +212,6 @@ SDK_EXTENSION_URL=https://extensions.example.com
 SDK_EXTENSION_API_KEY=<extension-api-key>
 SDK_EXTENSION_ID=EXT-1234
 MPT_API_BASE_URL=https://api.s1.show
-MPT_API_TOKEN=<marketplace-api-token>
 SDK_LOCAL_PORT=8080
 ```
 
@@ -230,6 +228,11 @@ Marketplace reads and writes.
 - `update(..., attributes)` accepts a partial attribute mapping for flexible updates
 - order transitions such as `complete(...)`, `query(...)`, and `fail(...)` remain
   explicit service methods instead of generic updates
+
+Event handler contexts use the JWT delivered in the event request
+`Authorization` header. Authenticated API route contexts use the request auth
+context to generate an account-scoped Marketplace token. The auth context is
+also carried on SDK execution contexts as `ctx.auth`.
 
 Example:
 

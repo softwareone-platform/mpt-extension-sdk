@@ -3,8 +3,9 @@ from collections.abc import Awaitable, Callable
 from inspect import isawaitable
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 
+from mpt_extension_sdk.api.auth import AuthenticationError, RequestAuthenticationService
 from mpt_extension_sdk.api.models.events import Event, EventResponse, TaskEvent
 from mpt_extension_sdk.errors.mapping import map_exception_to_event_response
 from mpt_extension_sdk.errors.pipeline import CancelError, DeferError, FailError
@@ -35,7 +36,8 @@ def create_event_route(route: EventRouteDefinition, extension_app: ExtensionApp)
     return create_non_task_event_route(route, extension_app)
 
 
-def create_task_event_route(  # noqa: WPS213, WPS217
+# TODO: Refactor event route builders in a separate PR.
+def create_task_event_route(  # noqa: C901, WPS213, WPS217
     route: EventRouteDefinition, extension_app: ExtensionApp
 ) -> APIRouter:
     """Create a router for a task-based event handler."""
@@ -43,15 +45,22 @@ def create_task_event_route(  # noqa: WPS213, WPS217
     handler_logger = logging.getLogger(route.callback.__module__)
 
     @router.post(route.path, status_code=status.HTTP_200_OK, response_model=EventResponse)
-    async def handle_task_event(  # noqa: WPS213, WPS217, WPS430
+    async def handle_task_event(  # noqa: WPS212, WPS213, WPS217, WPS430
+        request: Request,
         event: TaskEvent,
         task_service: Annotated[TaskService, Depends(get_tasks_service)],
     ) -> EventResponse:
         handler_logger.info("Received event (%s): %s", event.id, event.to_dict())
         set_event_context(task_id=event.task.id)
+        try:
+            auth = RequestAuthenticationService().authenticate(request)
+        except AuthenticationError as error:
+            handler_logger.exception("Task event authentication failed", exc_info=error)
+            return map_exception_to_event_response(error)  # noqa: WPS204
         context = await build_context(
             event,
             handler_logger,
+            auth=auth,
             mpt_api_service_type=extension_app.mpt_api_service_type,
         )
         context = extension_app.build_context(route, context)
@@ -94,7 +103,8 @@ def create_task_event_route(  # noqa: WPS213, WPS217
     return router
 
 
-def create_non_task_event_route(  # noqa: WPS213
+# TODO: Refactor event route builders in a separate PR.
+def create_non_task_event_route(  # noqa: C901, WPS213
     route: EventRouteDefinition, extension_app: ExtensionApp
 ) -> APIRouter:
     """Create a FastAPI router for a non-task event handler."""
@@ -102,12 +112,20 @@ def create_non_task_event_route(  # noqa: WPS213
     handler_logger = logging.getLogger(route.callback.__module__)
 
     @router.post(route.path, status_code=status.HTTP_200_OK, response_model=EventResponse)
-    async def handle_event(event: Event) -> EventResponse:  # noqa: WPS430,WPS213
+    async def handle_event(  # noqa: WPS212, WPS213, WPS430
+        request: Request, event: Event
+    ) -> EventResponse:
         handler_logger.info("Received event (%s): %s", event.id, event.to_dict())
         set_event_context()
+        try:
+            auth = RequestAuthenticationService().authenticate(request)
+        except AuthenticationError as error:
+            handler_logger.exception("Event authentication failed", exc_info=error)
+            return map_exception_to_event_response(error)  # noqa: WPS204
         context = await build_context(
             event,
             handler_logger,
+            auth=auth,
             mpt_api_service_type=extension_app.mpt_api_service_type,
         )
         context = extension_app.build_context(route, context)
