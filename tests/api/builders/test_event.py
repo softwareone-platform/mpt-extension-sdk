@@ -1,4 +1,6 @@
 import asyncio
+import base64
+import json
 from collections.abc import Callable
 from unittest.mock import call
 
@@ -6,6 +8,12 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from mpt_extension_sdk.api.auth.constants import (
+    CLAIM_ACCOUNT_ID,
+    CLAIM_ACCOUNT_TYPE,
+    CLAIM_EXTENSION_ID,
+    CLAIM_MODULES,
+)
 from mpt_extension_sdk.api.builders.event import (
     create_event_route,
     create_non_task_event_route,
@@ -25,6 +33,25 @@ from mpt_extension_sdk.services.mpt_api_service.task import TaskService
 @pytest.fixture
 def mock_callable(mocker):
     return mocker.Mock(spec=Callable)
+
+
+@pytest.fixture
+def auth_token():
+    claims = {
+        CLAIM_ACCOUNT_ID: "ACC-001",
+        CLAIM_ACCOUNT_TYPE: "Client",
+        CLAIM_EXTENSION_ID: "EXT-001",
+        CLAIM_MODULES: {"billing": ["edit"]},
+        "exp": 4102444800,
+    }
+    payload = json.dumps(claims).encode("utf-8")
+    encoded_payload = base64.urlsafe_b64encode(payload).decode("utf-8").rstrip("=")
+    return f"header.{encoded_payload}."
+
+
+@pytest.fixture
+def auth_headers(auth_token):
+    return {"Authorization": f"Bearer {auth_token}"}
 
 
 @pytest.fixture
@@ -226,6 +253,8 @@ def test_create_event_route(mock_callable, make_event_route):
 
 
 def test_event_route_success(
+    auth_headers,
+    auth_token,
     fake_context,
     event_client,
     event_payload,
@@ -237,11 +266,16 @@ def test_event_route_success(
     event_span,
     business_attributes,
 ):
-    result = event_client(mock_callable).post("/test/event", json=event_payload)
+    result = event_client(mock_callable).post(
+        "/test/event", json=event_payload, headers=auth_headers
+    )
 
-    assert result.json()["response"] == ResponseEnum.OK
+    response = result.json()
+    assert response["response"] == ResponseEnum.OK
     mock_callable.assert_called_once_with(mock_callable.call_args.args[0], fake_context)
-    build_context_mock.assert_awaited_once()
+    auth = build_context_mock.call_args.kwargs["auth"]
+    assert auth.token == auth_token
+    assert auth.account.id == "ACC-001"
     start_event_span_mock.assert_called_once_with(
         "/test/event", task_based=False, event=mock_callable.call_args.args[0]
     )
@@ -262,6 +296,7 @@ def test_event_route_success(
     ],
 )
 def test_event_route_error(
+    auth_headers,
     error,
     expected_response,
     event_client,
@@ -272,10 +307,24 @@ def test_event_route_error(
 ):
     mock_callable.side_effect = error
 
+    result = event_client(mock_callable).post(
+        "/test/event", json=event_payload, headers=auth_headers
+    )
+
+    response = result.json()
+    assert response["response"] == expected_response
+    record_exception_mock.assert_called_once_with(event_span, error)
+
+
+def test_event_route_authentication_error(
+    build_context_mock, event_client, event_payload, mock_callable
+):
     result = event_client(mock_callable).post("/test/event", json=event_payload)
 
-    assert result.json()["response"] == expected_response
-    record_exception_mock.assert_called_once_with(event_span, error)
+    response = result.json()
+    assert response["response"] == ResponseEnum.CANCEL
+    build_context_mock.assert_not_called()
+    mock_callable.assert_not_called()
 
 
 def test_create_task_event_route(mock_callable, make_event_route):
@@ -294,21 +343,30 @@ def test_create_task_event_route(mock_callable, make_event_route):
 
 
 def test_task_route_success(
+    auth_headers,
+    auth_token,
     task_client,
     task_event_payload,
     mock_callable,
     fake_task_service,
     fake_context,
+    build_context_mock,
     start_event_span_mock,
     set_event_context_mock,
 ):
-    result = task_client(mock_callable).post("/test/task", json=task_event_payload)
+    result = task_client(mock_callable).post(
+        "/test/task", json=task_event_payload, headers=auth_headers
+    )
 
-    assert result.json()["response"] == ResponseEnum.OK
+    response = result.json()
+    assert response["response"] == ResponseEnum.OK
     fake_task_service.start.assert_awaited_once()
     fake_task_service.complete.assert_awaited_once()
     fake_task_service.fail.assert_not_awaited()
     mock_callable.assert_called_once_with(mock_callable.call_args.args[0], fake_context)
+    auth = build_context_mock.call_args.kwargs["auth"]
+    assert auth.token == auth_token
+    assert auth.account.id == "ACC-001"
     start_event_span_mock.assert_called_once_with(
         "/test/task", task_based=True, event=mock_callable.call_args.args[0]
     )
@@ -318,7 +376,33 @@ def test_task_route_success(
     ]
 
 
-def test_task_route_cancel_error(
+def test_task_route_authentication_error(
+    build_context_mock, fake_task_service, task_client, task_event_payload, mock_callable
+):
+    result = task_client(mock_callable).post("/test/task", json=task_event_payload)
+
+    response = result.json()
+    assert response["response"] == ResponseEnum.CANCEL
+    build_context_mock.assert_not_called()
+    fake_task_service.start.assert_not_awaited()
+    fake_task_service.fail.assert_not_awaited()
+    mock_callable.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("error", "expected_response", "expected_task_action"),
+    [
+        (CancelError("not allowed"), ResponseEnum.CANCEL, "fail"),
+        (DeferError("retry later", delay_seconds=60), ResponseEnum.DEFER, "reschedule"),
+        (FailError("processing failed"), ResponseEnum.CANCEL, "fail"),
+        (RuntimeError("unexpected"), ResponseEnum.CANCEL, "fail"),
+    ],
+)
+def test_task_route_error(
+    auth_headers,
+    error,
+    expected_response,
+    expected_task_action,
     fake_task_service,
     task_client,
     task_event_payload,
@@ -326,68 +410,17 @@ def test_task_route_cancel_error(
     record_exception_mock,
     event_span,
 ):
-    mock_callable.side_effect = CancelError("not allowed")
+    mock_callable.side_effect = error
 
-    result = task_client(mock_callable).post("/test/task", json=task_event_payload)
+    result = task_client(mock_callable).post(
+        "/test/task", json=task_event_payload, headers=auth_headers
+    )
 
-    assert result.json()["response"] == ResponseEnum.CANCEL
-    fake_task_service.fail.assert_awaited_once()
+    response = result.json()
+    assert response["response"] == expected_response
+    getattr(fake_task_service, expected_task_action).assert_awaited_once()
     fake_task_service.complete.assert_not_awaited()
-    record_exception_mock.assert_called_once_with(event_span, mock_callable.side_effect)
-
-
-def test_task_route_defer_error(
-    fake_task_service,
-    task_client,
-    task_event_payload,
-    mock_callable,
-    record_exception_mock,
-    event_span,
-):
-    mock_callable.side_effect = DeferError("retry later", delay_seconds=60)
-
-    result = task_client(mock_callable).post("/test/task", json=task_event_payload)
-
-    assert result.json()["response"] == ResponseEnum.DEFER
-    fake_task_service.reschedule.assert_awaited_once()
-    fake_task_service.complete.assert_not_awaited()
-    record_exception_mock.assert_called_once_with(event_span, mock_callable.side_effect)
-
-
-def test_task_route_fail(
-    fake_task_service,
-    task_client,
-    task_event_payload,
-    mock_callable,
-    record_exception_mock,
-    event_span,
-):
-    mock_callable.side_effect = FailError("processing failed")
-
-    result = task_client(mock_callable).post("/test/task", json=task_event_payload)
-
-    assert result.json()["response"] == ResponseEnum.CANCEL
-    fake_task_service.fail.assert_awaited_once()
-    fake_task_service.complete.assert_not_awaited()
-    record_exception_mock.assert_called_once_with(event_span, mock_callable.side_effect)
-
-
-def test_task_route_unexpected_error(
-    fake_task_service,
-    task_client,
-    task_event_payload,
-    mock_callable,
-    record_exception_mock,
-    event_span,
-):
-    mock_callable.side_effect = RuntimeError("unexpected")
-
-    result = task_client(mock_callable).post("/test/task", json=task_event_payload)
-
-    assert result.json()["response"] == ResponseEnum.CANCEL
-    fake_task_service.fail.assert_awaited_once()
-    fake_task_service.complete.assert_not_awaited()
-    record_exception_mock.assert_called_once_with(event_span, mock_callable.side_effect)
+    record_exception_mock.assert_called_once_with(event_span, error)
 
 
 def test_get_tasks_service(mocker, runtime_settings):

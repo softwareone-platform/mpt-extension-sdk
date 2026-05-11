@@ -1,4 +1,7 @@
-from pydantic import Field
+import datetime as dt
+from typing import Any
+
+from pydantic import Field, model_validator
 
 from mpt_extension_sdk.models.base import BaseModel
 
@@ -38,3 +41,25 @@ class SellerAccount(Account):
     """Seller model."""
 
     currency: str | None = None
+
+
+class AccountToken(BaseModel):
+    """Account-scoped token returned by Marketplace."""
+
+    token: str
+    exp: int
+    expires_at: dt.datetime
+
+    @model_validator(mode="before")
+    @classmethod
+    def fill_expires_at(cls, payload: dict[str, Any]) -> dict[str, Any]:
+        """Calculate the expiration datetime from the token expiration timestamp."""
+        exp = payload.get("exp")
+        if not isinstance(exp, int):
+            raise TypeError("Account token expiration claim is invalid")
+
+        return {
+            **payload,
+            "exp": exp,
+            "expires_at": dt.datetime.fromtimestamp(exp, tz=dt.UTC),
+        }

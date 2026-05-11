@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 from logging import Logger
 from typing import Any, Self
 
+from mpt_extension_sdk.api.auth import AuthContext
 from mpt_extension_sdk.services.mpt_api_service import MPTAPIService
 from mpt_extension_sdk.settings.account import AccountSettings
 from mpt_extension_sdk.settings.extension import BaseExtensionSettings
@@ -19,6 +20,7 @@ class BaseContext:
     account_settings: AccountSettings = field(default_factory=AccountSettings)
     ext_settings: BaseExtensionSettings
     runtime_settings: RuntimeSettings
+    auth: AuthContext | None = None
 
 
 class ContextAdapter(ABC):

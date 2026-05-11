@@ -14,7 +14,6 @@ The SDK runtime relies on these settings:
 | `SDK_EXTENSION_EXTERNAL_ID` | host-derived | `dev-laptop-01` | Stable external id for the running extension instance |
 | `SDK_IDENTITY_FILE_PATH` | `<cwd>/<external_id>_identity.json` | `/tmp/ext_identity.json` | Path where the Ziticorn identity file is stored or loaded |
 | `MPT_API_BASE_URL` | - | `https://api.s1.show` | SoftwareONE Marketplace API base URL |
-| `MPT_API_TOKEN` | - | `eyJhbGciOi...` | Marketplace API token used by business services |
 | `SDK_LOCAL_HOST` | `0.0.0.0` | `127.0.0.1` | Host used by the local Uvicorn runtime |
 | `SDK_LOCAL_PORT` | `8080` | `8081` | Port used by the local Uvicorn runtime |
 | `SDK_LOCAL_RELOAD` | `true` | `false` | Enables Uvicorn reload mode for local development |
@@ -58,7 +57,6 @@ SDK_EXTENSION_API_KEY=<extension-api-key>
 SDK_EXTENSION_ID=EXT-1234
 SDK_EXTENSION_EXTERNAL_ID=local-dev
 MPT_API_BASE_URL=https://api.s1.show
-MPT_API_TOKEN=<marketplace-api-token>
 SDK_LOCAL_HOST=0.0.0.0
 SDK_LOCAL_PORT=8080
 LOG_LEVEL=INFO
@@ -70,7 +68,7 @@ LOG_LEVEL=INFO
   loads runtime configuration from environment variables and auto-discovers the
   extension package.
 - `RuntimeSettings` validates `SDK_EXTENSION_URL`, `SDK_EXTENSION_API_KEY`,
-  `SDK_EXTENSION_ID`, `MPT_API_BASE_URL`, and `MPT_API_TOKEN` as required
+  `SDK_EXTENSION_ID`, and `MPT_API_BASE_URL` as required
   environment variables.
 - [`mpt_extension_sdk/runtime/runner.py`](../mpt_extension_sdk/runtime/runner.py)
   writes `meta.yaml` before startup and selects Uvicorn or Ziticorn depending

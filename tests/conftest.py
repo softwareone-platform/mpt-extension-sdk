@@ -91,7 +91,6 @@ def runtime_settings(meta_config):
         base_url="https://extensions.example.com",
         extension_id="EXT-1",
         mpt_api_base_url="https://api.example.com",
-        mpt_api_token="mpt-token",
         external_id="external-id",
         identity_file_path=Path("/tmp/external-id_identity.json"),
         meta_config=meta_config,

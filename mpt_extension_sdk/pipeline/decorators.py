@@ -1,12 +1,12 @@
-from collections.abc import Awaitable, Callable
+from collections.abc import Callable, Coroutine
 from functools import wraps
-from typing import Concatenate, cast
+from typing import Any, Concatenate, cast
 
 from mpt_extension_sdk.pipeline.context.order import OrderContext
 from mpt_extension_sdk.pipeline.step import BaseStep
 
 type StepCallable[StepT: BaseStep, CtxT: OrderContext, ReturnT, **ParamT] = Callable[
-    Concatenate[StepT, CtxT, ParamT], Awaitable[ReturnT]
+    Concatenate[StepT, CtxT, ParamT], Coroutine[Any, Any, ReturnT]
 ]
 
 

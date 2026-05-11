@@ -32,7 +32,6 @@ def runtime_env(mocker):
             "SDK_EXTENSION_API_KEY": "extension-api-key",
             "SDK_EXTENSION_ID": "EXT-1",
             "MPT_API_BASE_URL": "https://api.example.com",
-            "MPT_API_TOKEN": "mpt-token",
         },
         clear=True,
     )
@@ -88,7 +87,6 @@ def test_load_reads_runtime_env(
         result.base_url,
         result.extension_id,
         result.mpt_api_base_url,
-        result.mpt_api_token,
         result.external_id,
         result.identity_file_path,
     ) == (
@@ -98,7 +96,6 @@ def test_load_reads_runtime_env(
         "https://extensions.example.com",
         "EXT-1",
         "https://api.example.com",
-        "mpt-token",
         "host-1",
         Path.cwd() / "host-1_identity.json",
     )
