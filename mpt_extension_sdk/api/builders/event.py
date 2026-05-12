@@ -53,16 +53,12 @@ def create_task_event_route(  # noqa: C901, WPS213, WPS217
         handler_logger.info("Received event (%s): %s", event.id, event.to_dict())
         set_event_context(task_id=event.task.id)
         try:
-            auth = RequestAuthenticationService().authenticate(request)
+            context = await build_authenticated_context(
+                request, event, handler_logger, extension_app
+            )
         except AuthenticationError as error:
             handler_logger.exception("Task event authentication failed", exc_info=error)
             return map_exception_to_event_response(error)  # noqa: WPS204
-        context = await build_context(
-            event,
-            handler_logger,
-            auth=auth,
-            mpt_api_service_type=extension_app.mpt_api_service_type,
-        )
         context = extension_app.build_context(route, context)
         with start_event_span(route.path, task_based=True, event=event) as span:
             business_attributes = get_business_attributes(context)
@@ -118,16 +114,12 @@ def create_non_task_event_route(  # noqa: C901, WPS213
         handler_logger.info("Received event (%s): %s", event.id, event.to_dict())
         set_event_context()
         try:
-            auth = RequestAuthenticationService().authenticate(request)
+            context = await build_authenticated_context(
+                request, event, handler_logger, extension_app
+            )
         except AuthenticationError as error:
             handler_logger.exception("Event authentication failed", exc_info=error)
             return map_exception_to_event_response(error)  # noqa: WPS204
-        context = await build_context(
-            event,
-            handler_logger,
-            auth=auth,
-            mpt_api_service_type=extension_app.mpt_api_service_type,
-        )
         context = extension_app.build_context(route, context)
         with start_event_span(route.path, task_based=False, event=event) as span:
             business_attributes = get_business_attributes(context)
@@ -167,6 +159,22 @@ def get_tasks_service(
     return MPTAPIService.from_config(
         base_url=runtime_settings.mpt_api_base_url, api_token=runtime_settings.ext_api_key
     ).tasks
+
+
+async def build_authenticated_context(
+    request: Request,
+    event: Event,
+    handler_logger: logging.Logger,
+    extension_app: ExtensionApp,
+) -> EventBaseContext:
+    """Build an event context after authenticating the incoming request."""
+    auth = RequestAuthenticationService().authenticate(request)
+    return await build_context(
+        event,
+        handler_logger,
+        auth=auth,
+        mpt_api_service_type=extension_app.mpt_api_service_type,
+    )
 
 
 async def run_handler(
