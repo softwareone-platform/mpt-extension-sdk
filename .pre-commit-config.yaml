@@ -32,3 +32,23 @@ repos:
             flake8-pyproject==1.2.*,
             wemake-python-styleguide==1.6.*,
           ]
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v2.0.0
+    hooks:
+      - id: mypy
+        args: ["--config-file=pyproject.toml", "."]
+        pass_filenames: false
+        additional_dependencies:
+          - fastapi[standard]==0.131.*
+          - mpt-api-client==6.0.*
+          - mrok==0.9.6
+          - opentelemetry-api==1.40.0
+          - opentelemetry-exporter-otlp-proto-http==1.40.0
+          - opentelemetry-instrumentation-fastapi==0.61b0
+          - opentelemetry-instrumentation-httpx==0.61b0
+          - opentelemetry-instrumentation-logging==0.61b0
+          - opentelemetry-sdk==1.40.0
+          - pydantic==2.12.*
+          - typer==0.24.*
+          - types-pyyaml>=6.0.12.20260408
