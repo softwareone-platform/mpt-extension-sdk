@@ -8,25 +8,14 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from mpt_extension_sdk.api.auth.constants import (
-    CLAIM_ACCOUNT_ID,
-    CLAIM_ACCOUNT_TYPE,
-    CLAIM_EXTENSION_ID,
-    CLAIM_MODULES,
-)
-from mpt_extension_sdk.api.builders.event import (
-    create_event_route,
-    create_non_task_event_route,
-    create_task_event_route,
-    get_tasks_service,
-    run_handler,
-)
+from mpt_extension_sdk import routing
+from mpt_extension_sdk.api.auth import AuthenticationError
+from mpt_extension_sdk.api.auth import constants as auth_constants
+from mpt_extension_sdk.api.builders import event as event_builder
 from mpt_extension_sdk.api.models.events import ResponseEnum
 from mpt_extension_sdk.context import BaseContext
-from mpt_extension_sdk.errors.pipeline import CancelError, DeferError, FailError
+from mpt_extension_sdk.errors import pipeline as pipeline_errors
 from mpt_extension_sdk.extension_app import ExtensionApp
-from mpt_extension_sdk.routing import EventDeliveryMode, EventRouteDefinition
-from mpt_extension_sdk.routing.models import RouteType
 from mpt_extension_sdk.services.mpt_api_service.task import TaskService
 
 
@@ -38,10 +27,10 @@ def mock_callable(mocker):
 @pytest.fixture
 def auth_token():
     claims = {
-        CLAIM_ACCOUNT_ID: "ACC-001",
-        CLAIM_ACCOUNT_TYPE: "Client",
-        CLAIM_EXTENSION_ID: "EXT-001",
-        CLAIM_MODULES: {"billing": ["edit"]},
+        auth_constants.CLAIM_ACCOUNT_ID: "ACC-001",
+        auth_constants.CLAIM_ACCOUNT_TYPE: "Client",
+        auth_constants.CLAIM_EXTENSION_ID: "EXT-001",
+        auth_constants.CLAIM_MODULES: {"billing": ["edit"]},
         "exp": 4102444800,
     }
     payload = json.dumps(claims).encode("utf-8")
@@ -107,10 +96,10 @@ def fake_context(mocker):
 @pytest.fixture
 def make_event_route():
     def factory(path, callback, *, delivery_mode):
-        return EventRouteDefinition(
+        return routing.EventRouteDefinition(
             name=path,
             path=path,
-            route_type=RouteType.EVENT,
+            route_type=routing.RouteType.EVENT,
             callback=callback,
             event="OrderPurchased",
             delivery_mode=delivery_mode,
@@ -184,11 +173,13 @@ def task_client(
     make_event_route,
 ):
     def factory(mock_callable):
-        route = make_event_route("/test/task", mock_callable, delivery_mode=EventDeliveryMode.TASK)
-        router = create_task_event_route(route, app_instance)
+        route = make_event_route(
+            "/test/task", mock_callable, delivery_mode=routing.EventDeliveryMode.TASK
+        )
+        router = event_builder.create_task_event_route(route, app_instance)
         app = FastAPI()
         app.include_router(router)
-        app.dependency_overrides[get_tasks_service] = lambda: fake_task_service
+        app.dependency_overrides[event_builder.get_tasks_service] = lambda: fake_task_service
         return TestClient(app, raise_server_exceptions=False)
 
     return factory
@@ -207,9 +198,9 @@ def event_client(
 ):
     def factory(mock_callable):
         route = make_event_route(
-            "/test/event", mock_callable, delivery_mode=EventDeliveryMode.EVENT
+            "/test/event", mock_callable, delivery_mode=routing.EventDeliveryMode.EVENT
         )
-        router = create_non_task_event_route(route, app_instance)
+        router = event_builder.create_non_task_event_route(route, app_instance)
         app = FastAPI()
         app.include_router(router)
         return TestClient(app, raise_server_exceptions=False)
@@ -219,29 +210,29 @@ def event_client(
 
 def test_create_event_route_dispatches_task(mock_callable, make_event_route):
     route = make_event_route(
-        "/events/orders/purchase", mock_callable, delivery_mode=EventDeliveryMode.TASK
+        "/events/orders/purchase", mock_callable, delivery_mode=routing.EventDeliveryMode.TASK
     )
 
-    result = create_event_route(route, ExtensionApp())
+    result = event_builder.create_event_route(route, ExtensionApp())
 
     assert result.routes[0].name == "handle_task_event"
 
 
 def test_create_event_route_dispatches_non_task(mock_callable, make_event_route):
     route = make_event_route(
-        "/events/orders/purchase", mock_callable, delivery_mode=EventDeliveryMode.EVENT
+        "/events/orders/purchase", mock_callable, delivery_mode=routing.EventDeliveryMode.EVENT
     )
 
-    result = create_event_route(route, ExtensionApp())
+    result = event_builder.create_event_route(route, ExtensionApp())
 
     assert result.routes[0].name == "handle_event"
 
 
 def test_create_event_route(mock_callable, make_event_route):
     route = make_event_route(
-        "/events/orders/purchase", mock_callable, delivery_mode=EventDeliveryMode.EVENT
+        "/events/orders/purchase", mock_callable, delivery_mode=routing.EventDeliveryMode.EVENT
     )
-    router = create_non_task_event_route(route, ExtensionApp())
+    router = event_builder.create_non_task_event_route(route, ExtensionApp())
 
     result = router.routes
 
@@ -289,9 +280,9 @@ def test_event_route_success(
 @pytest.mark.parametrize(
     ("error", "expected_response"),
     [
-        (CancelError("cancelled"), ResponseEnum.CANCEL),
-        (DeferError("retry", delay_seconds=120), ResponseEnum.DEFER),
-        (FailError("failed"), ResponseEnum.CANCEL),
+        (pipeline_errors.CancelError("cancelled"), ResponseEnum.CANCEL),
+        (pipeline_errors.DeferError("retry", delay_seconds=120), ResponseEnum.DEFER),
+        (pipeline_errors.FailError("failed"), ResponseEnum.CANCEL),
         (RuntimeError("boom"), ResponseEnum.CANCEL),
     ],
 )
@@ -327,11 +318,25 @@ def test_event_route_authentication_error(
     mock_callable.assert_not_called()
 
 
+def test_event_route_context_authentication_error(
+    auth_headers, build_context_mock, event_client, event_payload, mock_callable
+):
+    build_context_mock.side_effect = AuthenticationError
+
+    result = event_client(mock_callable).post(
+        "/test/event", json=event_payload, headers=auth_headers
+    )
+
+    response = result.json()
+    assert response.get("response") == ResponseEnum.CANCEL
+    mock_callable.assert_not_called()
+
+
 def test_create_task_event_route(mock_callable, make_event_route):
     route = make_event_route(
-        "/events/orders/purchase", mock_callable, delivery_mode=EventDeliveryMode.TASK
+        "/events/orders/purchase", mock_callable, delivery_mode=routing.EventDeliveryMode.TASK
     )
-    router = create_task_event_route(route, ExtensionApp())
+    router = event_builder.create_task_event_route(route, ExtensionApp())
 
     result = router.routes
 
@@ -389,12 +394,37 @@ def test_task_route_authentication_error(
     mock_callable.assert_not_called()
 
 
+def test_task_route_context_authentication_error(
+    auth_headers,
+    build_context_mock,
+    fake_task_service,
+    task_client,
+    task_event_payload,
+    mock_callable,
+):
+    build_context_mock.side_effect = AuthenticationError
+
+    result = task_client(mock_callable).post(
+        "/test/task", json=task_event_payload, headers=auth_headers
+    )
+
+    response = result.json()
+    assert response.get("response") == ResponseEnum.CANCEL
+    fake_task_service.start.assert_not_awaited()
+    fake_task_service.fail.assert_not_awaited()
+    mock_callable.assert_not_called()
+
+
 @pytest.mark.parametrize(
     ("error", "expected_response", "expected_task_action"),
     [
-        (CancelError("not allowed"), ResponseEnum.CANCEL, "fail"),
-        (DeferError("retry later", delay_seconds=60), ResponseEnum.DEFER, "reschedule"),
-        (FailError("processing failed"), ResponseEnum.CANCEL, "fail"),
+        (pipeline_errors.CancelError("not allowed"), ResponseEnum.CANCEL, "fail"),
+        (
+            pipeline_errors.DeferError("retry later", delay_seconds=60),
+            ResponseEnum.DEFER,
+            "reschedule",
+        ),
+        (pipeline_errors.FailError("processing failed"), ResponseEnum.CANCEL, "fail"),
         (RuntimeError("unexpected"), ResponseEnum.CANCEL, "fail"),
     ],
 )
@@ -430,7 +460,7 @@ def test_get_tasks_service(mocker, runtime_settings):
     )
     mock_mpt_api_service.from_config.return_value = fake_api
 
-    result = get_tasks_service(runtime_settings)
+    result = event_builder.get_tasks_service(runtime_settings)
 
     assert result is fake_api.tasks
     mock_mpt_api_service.from_config.assert_called_once_with(
@@ -441,13 +471,13 @@ def test_get_tasks_service(mocker, runtime_settings):
 def test_run_handler(mocker, fake_context, mock_callable):
     mock_callable = mocker.AsyncMock(spec=Callable, side_effect=mock_callable)
 
-    asyncio.run(run_handler(mock_callable, "evt", fake_context))  # act
+    asyncio.run(event_builder.run_handler(mock_callable, "evt", fake_context))  # act
 
     mock_callable.assert_awaited_once_with("evt", fake_context)
 
 
 def test_run_handler_supports_sync_handler(fake_context, mock_callable):
-    asyncio.run(run_handler(mock_callable, "evt", fake_context))  # act
+    asyncio.run(event_builder.run_handler(mock_callable, "evt", fake_context))  # act
 
     mock_callable.assert_called_once_with("evt", fake_context)
 
@@ -456,4 +486,4 @@ def test_run_handler_propagates_async_exception(mocker, fake_context, mock_calla
     mock_callable = mocker.AsyncMock(spec=Callable, side_effect=ValueError("async boom"))
 
     with pytest.raises(ValueError, match="async boom"):
-        asyncio.run(run_handler(mock_callable, "evt", fake_context))
+        asyncio.run(event_builder.run_handler(mock_callable, "evt", fake_context))

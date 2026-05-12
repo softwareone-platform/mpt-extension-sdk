@@ -1,7 +1,7 @@
 import logging
 from typing import Any
 
-from mpt_extension_sdk.api.auth import AuthContext
+from mpt_extension_sdk.api.auth import AuthContext, AuthenticationError
 from mpt_extension_sdk.api.models.events import Event
 from mpt_extension_sdk.pipeline.context.agreement import AgreementContext
 from mpt_extension_sdk.pipeline.context.event import EventBaseContext, EventMetadata
@@ -21,11 +21,18 @@ async def build_context(
 ) -> EventBaseContext:
     """Build the fully hydrated execution context for an incoming event."""
     runtime_settings = get_runtime_settings()
+    _assert_extension_id_matches(auth, runtime_settings.extension_id)
     api_service = await mpt_api_service_type.from_auth_context(
         base_url=runtime_settings.mpt_api_base_url,
         auth=auth,
     )
     return await _build_context_with_model(event, handler_logger, api_service, auth=auth)
+
+
+def _assert_extension_id_matches(auth: AuthContext, extension_id: str) -> None:
+    """Ensure the incoming token targets the configured extension."""
+    if auth.extension_id != extension_id:
+        raise AuthenticationError
 
 
 def _build_execution_metadata(event: Event) -> EventMetadata:
