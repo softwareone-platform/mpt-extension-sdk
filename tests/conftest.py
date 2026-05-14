@@ -5,10 +5,10 @@ from pathlib import Path
 
 import pytest
 
-from mpt_extension_sdk import EventRouter
-from mpt_extension_sdk.api.models.events import Event, TaskEvent
+from mpt_extension_sdk.api.models.events import Event
 from mpt_extension_sdk.models.agreement import Agreement
 from mpt_extension_sdk.models.order import Order
+from mpt_extension_sdk.routing import EventRouter
 from mpt_extension_sdk.runtime.models import MetaConfig, MetaEvent
 from mpt_extension_sdk.services.mpt_api_service import MPTAPIService
 from mpt_extension_sdk.settings.runtime import RuntimeSettings
@@ -51,17 +51,6 @@ def event_factory():
                 "name": f"{object_type}Name",
             },
         })
-
-    return factory
-
-
-@pytest.fixture
-def task_event_factory(event_factory):
-    def factory(object_type="Order", task_id="TASK-1111-1112"):
-        event = event_factory(object_type=object_type)
-        payload = event.model_dump(by_alias=False)
-        payload["task"] = {"id": task_id}
-        return TaskEvent.model_validate(payload)
 
     return factory
 

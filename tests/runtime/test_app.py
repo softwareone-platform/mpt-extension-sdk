@@ -4,10 +4,9 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from mpt_extension_sdk import APIRouter
 from mpt_extension_sdk.errors.runtime import ConfigError
 from mpt_extension_sdk.extension_app import ExtensionApp
-from mpt_extension_sdk.routing import APIRouteDefinition, EventRouter, RouteType
+from mpt_extension_sdk.routing import APIRouteDefinition, APIRouter, EventRouter, RouteType
 from mpt_extension_sdk.runtime import app as runtime_app
 
 

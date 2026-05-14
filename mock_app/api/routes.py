@@ -2,8 +2,8 @@ import logging
 
 from mock_app.context import MockContext
 from mock_app.pipelines import PurchasePipeline
-from mpt_extension_sdk import EventRouter
 from mpt_extension_sdk.api.models.events import Event
+from mpt_extension_sdk.routing import EventRouter
 
 logger = logging.getLogger(__name__)
 orders_router = EventRouter(prefix="/events/orders")

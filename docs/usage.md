@@ -46,7 +46,7 @@ ext_app.include_router(orders_router)
 
 ```python
 # mock_app/api/routes.py
-from mpt_extension_sdk import EventRouter
+from mpt_extension_sdk.routing import EventRouter
 
 orders_router = EventRouter(prefix="/events/orders")
 ```

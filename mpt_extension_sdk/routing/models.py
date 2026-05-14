@@ -1,26 +1,9 @@
-from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from enum import StrEnum
 
 from mpt_extension_sdk.context import ContextAdapter
-
-RouteCallback = Callable[..., Awaitable[None] | None]
-
-
-class RouteType(StrEnum):
-    """Supported route families."""
-
-    EVENT = "event"
-    API = "api"
-    SCHEDULE = "schedule"
-    PLUG = "plug"
-
-
-class EventDeliveryMode(StrEnum):
-    """Supported event delivery modes."""
-
-    EVENT = "event"
-    TASK = "task"
+from mpt_extension_sdk.routing.enums import EventDeliveryMode, HTTPMethod, RouteType
+from mpt_extension_sdk.routing.types import APIRouteCallback, EventRouteCallback, RouteCallback
+from mpt_extension_sdk.schemas import BaseSchema
 
 
 @dataclass(frozen=True)
@@ -37,6 +20,7 @@ class BaseRouteDefinition:
 class EventRouteDefinition(BaseRouteDefinition):
     """Route definition for Marketplace events."""
 
+    callback: EventRouteCallback
     event: str
     delivery_mode: EventDeliveryMode
     condition: str | None = None
@@ -46,6 +30,10 @@ class EventRouteDefinition(BaseRouteDefinition):
 @dataclass(frozen=True)
 class APIRouteDefinition(BaseRouteDefinition):
     """Route definition for authenticated API endpoints."""
+
+    callback: APIRouteCallback
+    method: HTTPMethod = HTTPMethod.GET
+    body_validator_type: type[BaseSchema] | None = None
 
 
 @dataclass(frozen=True)
