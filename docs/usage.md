@@ -51,9 +51,10 @@ from mpt_extension_sdk.routing import EventRouter
 orders_router = EventRouter(prefix="/events/orders")
 ```
 
-The SDK also exposes `ApiRouter`, `ScheduleRouter`, and `PlugRouter`. In the
-current SDK version, only `EventRouter` is implemented end-to-end in runtime
-and metadata generation.
+The SDK also exposes `APIRouter`, `ScheduleRouter`, and `PlugRouter`.
+`EventRouter` and `APIRouter` are mounted by the runtime. `ScheduleRouter` and
+`PlugRouter` are modeled in the SDK contract but are not yet mounted by the
+runtime or emitted into metadata.
 
 ## Register Event Handlers
 
@@ -94,6 +95,49 @@ async def process_order_change(event, context):
 
 Within one router or app, each route `name` and `path` must be unique. Event
 subscriptions must also be unique among event routes.
+
+## Register Authenticated API Handlers
+
+Use `APIRouter` for authenticated extension API endpoints. The incoming request
+must include an `Authorization` bearer token for the configured extension.
+
+```python
+from mpt_extension_sdk import APIRouter
+from mpt_extension_sdk.api import APIResponse
+
+orders_api = APIRouter(prefix="/orders")
+
+
+@orders_api.get(path="/{order_id}", name="orders-detail")
+async def get_order(order_id: str, ctx):
+    order = await ctx.mpt_api_service.orders.get_by_id(order_id)
+    return APIResponse.ok(payload=order.to_dict())
+```
+
+For request bodies, pass a `BaseSchema` validator. The validated model is passed
+to the handler through the body parameter.
+
+```python
+from mpt_extension_sdk import APIRouter
+from mpt_extension_sdk.api import APIResponse
+from mpt_extension_sdk.schemas import BaseSchema
+
+
+class SyncAgreementPayload(BaseSchema):
+    status: str
+
+
+agreements_api = APIRouter(prefix="/agreements")
+
+
+@agreements_api.post(
+    path="/{agreement_id}/sync",
+    name="agreements-sync",
+    body_validator=SyncAgreementPayload,
+)
+async def sync_agreement(agreement_id: str, payload: SyncAgreementPayload, ctx):
+    return APIResponse.accepted(payload={"id": agreement_id, "status": payload.status})
+```
 
 ## Event Context Resolution
 

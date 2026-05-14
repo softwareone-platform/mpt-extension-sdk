@@ -59,7 +59,10 @@ The SDK runtime has two main execution surfaces:
 
 `runtime/runner.py` generates `meta.yaml` before startup. In platform mode it registers the extension instance, persists the returned identity when present, and starts the exported ASGI app through Ziticorn. `runtime/app.py` assembles the FastAPI app, configures middleware and observability, loads the extension's exported `ext_app`, and mounts every registered route.
 
-At the moment, only the `event` route family is implemented end-to-end in runtime and metadata generation. `api`, `schedule`, and `plug` route families are modeled in the SDK contract but are not yet mounted by the runtime or emitted into `meta.yaml`.
+At the moment, `event` and `api` route families are implemented end-to-end in
+runtime request handling. Event routes are also emitted into `meta.yaml`.
+`schedule` and `plug` route families are modeled in the SDK contract but are
+not yet mounted by the runtime or emitted into `meta.yaml`.
 
 ## Boundaries
 

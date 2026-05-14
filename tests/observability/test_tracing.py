@@ -72,3 +72,48 @@ def test_event_span_sets_attributes(event_factory, event_span_runner):
     assert result.related_span.attributes["mpt.event.id"] == "EVT-1111-1112"
     assert result.related_span.attributes["mpt.event.type"] == "OrderPurchased"
     assert result.related_span.attributes["order.id"] == "ORD-1111-1112"
+
+
+def test_event_span_sets_agreement_attributes(event_factory, event_span_runner):
+    result = event_span_runner(
+        event=event_factory(object_type="Agreement", object_id="AGR-1111-1112"),
+        task_based=False,
+        span_name="Process agreement AGR-1111-1112",
+    )
+
+    assert result.related_span.attributes["agreement.id"] == "AGR-1111-1112"
+    assert result.related_span.attributes["mpt.extension.route_type"] == "event"
+
+
+def test_event_span_uses_generic_name(event_factory, event_span_runner):
+    result = event_span_runner(
+        event=event_factory(object_type="Asset", object_id="AST-1111-1112"),
+        task_based=False,
+        span_name="Event asset",
+    )
+
+    assert result.related_span.name == "Event asset"
+
+
+def test_business_attributes_return_agreement_id(agreement_factory):
+    ctx = type("Context", (), {"agreement": agreement_factory(), "order": None})()
+
+    result = tracing.get_business_attributes(ctx)
+
+    assert result == {"agreement.id": "AGR-1111-1112"}
+
+
+def test_business_attributes_return_order_id(order_factory):
+    ctx = type("Context", (), {"agreement": None, "order": order_factory()})()
+
+    result = tracing.get_business_attributes(ctx)
+
+    assert result == {"order.id": "ORD-1111-1112"}
+
+
+def test_business_attributes_return_empty():
+    ctx = type("Context", (), {"agreement": None, "order": None})()
+
+    result = tracing.get_business_attributes(ctx)
+
+    assert not result

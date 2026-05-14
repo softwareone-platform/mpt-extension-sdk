@@ -4,12 +4,13 @@ from importlib import import_module
 
 from fastapi import FastAPI, Request, Response
 
+from mpt_extension_sdk.api.builders.api import create_api_route
 from mpt_extension_sdk.api.builders.event import create_event_route
 from mpt_extension_sdk.errors.runtime import ConfigError
 from mpt_extension_sdk.extension_app import ExtensionApp
 from mpt_extension_sdk.observability.bootstrap import ObservabilityBootstrap
 from mpt_extension_sdk.observability.config import ObservabilityConfig
-from mpt_extension_sdk.routing.models import EventRouteDefinition
+from mpt_extension_sdk.routing.models import APIRouteDefinition, EventRouteDefinition
 from mpt_extension_sdk.runtime.logging import correlation_id_ctx, setup_logging, task_id_ctx
 from mpt_extension_sdk.settings.runtime import RuntimeSettings
 
@@ -74,10 +75,13 @@ def register_extension_routes(app: FastAPI, extension_app: ExtensionApp) -> None
         extension_app: Extension app that owns the registered routes.
     """
     for registered_route in extension_app.routes:
-        if not isinstance(registered_route, EventRouteDefinition):
-            raise ConfigError("Only event routes are supported")
-
-        app.include_router(create_event_route(registered_route, extension_app))
+        if isinstance(registered_route, EventRouteDefinition):
+            app.include_router(create_event_route(registered_route, extension_app))
+            continue
+        if isinstance(registered_route, APIRouteDefinition):
+            app.include_router(create_api_route(registered_route, extension_app))
+            continue
+        raise ConfigError("Only event and api routes are supported")
 
 
 def _create_fastapi_app(extension_app: ExtensionApp) -> FastAPI:
