@@ -3,11 +3,11 @@ from typing import Any
 
 from mpt_extension_sdk.extension_validator import ExtensionValidator
 from mpt_extension_sdk.routing import (
-    BaseExtensionRouter,
     BaseRouteDefinition,
     EventDeliveryMode,
     EventRouteDefinition,
 )
+from mpt_extension_sdk.routing.routers.base import BaseExtensionRouter
 from mpt_extension_sdk.runtime.models import MetaConfig, MetaEvent
 from mpt_extension_sdk.services.mpt_api_service import MPTAPIService
 
