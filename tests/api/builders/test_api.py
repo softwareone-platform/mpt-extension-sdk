@@ -1,3 +1,4 @@
+import asyncio
 from contextlib import contextmanager
 from http import HTTPStatus
 
@@ -11,9 +12,7 @@ from mpt_extension_sdk.api.auth import AccountType
 from mpt_extension_sdk.api.builders.api import create_api_route
 from mpt_extension_sdk.api.builders.arguments import APIHandlerArgumentsBuilder
 from mpt_extension_sdk.extension_app import ExtensionApp
-from mpt_extension_sdk.routing import APIRouter
-from mpt_extension_sdk.routing.enums import HTTPMethod, RouteType
-from mpt_extension_sdk.routing.models import APIRouteDefinition
+from mpt_extension_sdk.routing import APIRouteDefinition, APIRouter, HTTPMethod, RouteType
 from mpt_extension_sdk.runtime import app as runtime_app
 from mpt_extension_sdk.schemas import BaseSchema
 from mpt_extension_sdk.services.mpt_api_service import MPTAPIService
@@ -180,7 +179,8 @@ def ok_response_factory():
 
 @pytest.fixture
 def async_ok_handler(ok_response_factory):
-    async def wrapper(ctx):  # noqa: RUF029
+    async def wrapper(ctx):
+        await asyncio.sleep(0)
         return ok_response_factory(payload={"ok": bool(ctx)})
 
     return wrapper

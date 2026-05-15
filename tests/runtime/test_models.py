@@ -4,7 +4,7 @@ import pytest
 import yaml
 
 from mpt_extension_sdk.errors.runtime import ConfigError
-from mpt_extension_sdk.runtime.models import MetaConfig
+from mpt_extension_sdk.runtime.models import MetaConfig, MetaPlug
 
 
 def test_meta_config_from_file_reads_yaml(meta_config, tmp_path):
@@ -53,3 +53,41 @@ def test_meta_config_to_file_writes_yaml(meta_config, tmp_path):
         sort_keys=False,
         allow_unicode=False,
     )
+
+
+def test_meta_config_supports_plugs(tmp_path):
+    metadata_path = tmp_path / "meta.yaml"
+    metadata_path.write_text(
+        yaml.safe_dump(
+            {
+                "openapi": "/bypass/openapi.json",
+                "version": "1.0.0",
+                "events": [],
+                "plugs": [
+                    {
+                        "id": "adobe",
+                        "name": "Adobe",
+                        "description": "Adobe widget",
+                        "icon": "/static/adobe.png",
+                        "socket": "commerce.agreements.agreement",
+                        "href": "/static/main-menu.js",
+                    }
+                ],
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+
+    result = MetaConfig.from_file(metadata_path)
+
+    assert result.plugs == [
+        MetaPlug(
+            id="adobe",
+            name="Adobe",
+            description="Adobe widget",
+            icon="/static/adobe.png",
+            socket="commerce.agreements.agreement",
+            href="/static/main-menu.js",
+        )
+    ]

@@ -2,7 +2,12 @@ from dataclasses import dataclass
 
 from mpt_extension_sdk.context import ContextAdapter
 from mpt_extension_sdk.routing.enums import EventDeliveryMode, HTTPMethod, RouteType
-from mpt_extension_sdk.routing.types import APIRouteCallback, EventRouteCallback, RouteCallback
+from mpt_extension_sdk.routing.types import (
+    APIRouteCallback,
+    EventRouteCallback,
+    PlugRouteCallback,
+    RouteCallback,
+)
 from mpt_extension_sdk.schemas import BaseSchema
 
 
@@ -44,3 +49,5 @@ class ScheduleRouteDefinition(BaseRouteDefinition):
 @dataclass(frozen=True)
 class PlugRouteDefinition(BaseRouteDefinition):
     """Route definition for plug handlers."""
+
+    callback: PlugRouteCallback

@@ -4,11 +4,24 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from mpt_extension_sdk import APIRouter, EventRouter, Plug, PlugRouter
 from mpt_extension_sdk.api import APIResponse
 from mpt_extension_sdk.errors.runtime import ConfigError
 from mpt_extension_sdk.extension_app import ExtensionApp
-from mpt_extension_sdk.routing import APIRouter, EventRouter, RouteType, ScheduleRouteDefinition
+from mpt_extension_sdk.routing import RouteType, ScheduleRouteDefinition
 from mpt_extension_sdk.runtime import app as runtime_app
+
+
+def runtime_plug_provider():
+    return [
+        Plug(
+            id="adobe",
+            name="Adobe",
+            description="Adobe widget",
+            socket="commerce.agreements.agreement",
+            href="main-menu.js",
+        )
+    ]
 
 
 @pytest.fixture
@@ -62,6 +75,15 @@ def api_extension_app():
         return APIResponse.ok(payload={"ok": bool(ctx)})
 
     extension_app.include_router(api_router)
+    return extension_app
+
+
+@pytest.fixture
+def plug_extension_app():
+    extension_app = ExtensionApp(prefix="/api/v1")
+    plug_router = PlugRouter()
+    plug_router.register()(runtime_plug_provider)
+    extension_app.include_router(plug_router)
     return extension_app
 
 
@@ -130,6 +152,12 @@ def test_create_runtime_app_registers_ext_routes(runtime_settings, runtime_app_p
     assert "/api/v1/events/orders/purchase" in {route.path for route in result.routes}
 
 
+def test_create_runtime_app_mounts_static(runtime_settings, runtime_app_patches):
+    result = runtime_app.create_runtime_app(runtime_settings)
+
+    assert "/static" in {route.path for route in result.routes}
+
+
 def test_register_ext_routes(dummy_handler):
     app = FastAPI()
     extension_app = ExtensionApp(prefix="/api/v1")
@@ -154,6 +182,14 @@ def test_register_api_ext_routes(api_extension_app):
     assert "GET" in api_route.methods
 
 
+def test_register_ext_routes_ignores_plugs(plug_extension_app):
+    app = FastAPI()
+
+    runtime_app.register_extension_routes(app, plug_extension_app)  # act
+
+    assert all(route.path != "/api/v1/plug_provider" for route in app.routes)
+
+
 def test_register_not_supported_ext_routes(dummy_handler):
     app = FastAPI()
     extension_app = ExtensionApp(prefix="/api/v1")
@@ -163,7 +199,7 @@ def test_register_not_supported_ext_routes(dummy_handler):
         )
     )
 
-    with pytest.raises(ConfigError, match="Only event and api routes are supported"):
+    with pytest.raises(ConfigError, match="Only event, api, and plug routes are supported"):
         runtime_app.register_extension_routes(app, extension_app)
 
 

@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from dataclasses import dataclass
 
 import pytest
@@ -9,9 +10,15 @@ from mpt_extension_sdk.pipeline.context.event import (
     EventMetadata,
 )
 from mpt_extension_sdk.pipeline.context.order import OrderContext
-from mpt_extension_sdk.routing import APIRouter, EventRouter
-from mpt_extension_sdk.routing.enums import EventDeliveryMode, RouteType
-from mpt_extension_sdk.routing.models import EventRouteDefinition
+from mpt_extension_sdk.routing import (
+    APIRouter,
+    EventDeliveryMode,
+    EventRouteDefinition,
+    EventRouter,
+    Plug,
+    PlugRouter,
+    RouteType,
+)
 from mpt_extension_sdk.runtime.models import MetaConfig
 from mpt_extension_sdk.services.mpt_api_service import MPTAPIService
 from mpt_extension_sdk.settings.extension import BaseExtensionSettings
@@ -108,9 +115,92 @@ def test_meta_config_ignores_non_event_routes(dummy_handler):
 
     assert isinstance(result, MetaConfig)
     assert len(result.events) == 1
-    assert result.events[0].event == "OrderChanged"
-    assert result.events[0].path == "/api/v1/events/orders/change"
-    assert result.events[0].task is True
+    assert result.events[0].model_dump() == {
+        "event": "OrderChanged",
+        "condition": None,
+        "path": "/api/v1/events/orders/change",
+        "task": True,
+    }
+    assert result.plugs is None
+
+
+def test_meta_config_includes_plugs(mocker):
+    plug_router = PlugRouter()
+    app = ExtensionApp()
+    plug_router.register()(
+        mocker.MagicMock(
+            return_value=[
+                Plug(
+                    id="adobe",
+                    name="Adobe",
+                    description="Adobe widget",
+                    icon="adobe.png",
+                    socket="commerce.agreements.agreement",
+                    condition="eq(product.id,'PRD-1234-5677')",
+                    href="main-menu.js",
+                )
+            ],
+            spec=Callable,
+            __name__="plug_provider",
+        )
+    )
+    app.include_router(plug_router)
+
+    result = app.to_meta_config()
+
+    assert result.plugs is not None
+    assert result.plugs[0].model_dump(exclude_none=True) == {
+        "id": "adobe",
+        "name": "Adobe",
+        "description": "Adobe widget",
+        "icon": "/static/adobe.png",
+        "socket": "commerce.agreements.agreement",
+        "condition": "eq(product.id,'PRD-1234-5677')",
+        "href": "/static/main-menu.js",
+    }
+
+
+def test_meta_config_rejects_duplicate_plug_ids(mocker):
+    plug_router = PlugRouter()
+    app = ExtensionApp()
+    plug_router.register()(
+        mocker.MagicMock(
+            return_value=[
+                Plug(
+                    id="adobe",
+                    name="Adobe",
+                    description="Adobe widget",
+                    socket="commerce.agreements.agreement",
+                    href="main-menu.js",
+                ),
+                Plug(
+                    id="adobe",
+                    name="Adobe Copy",
+                    description="Adobe widget copy",
+                    socket="commerce.agreements.agreement",
+                    href="copy.js",
+                ),
+            ],
+            spec=Callable,
+            __name__="plug_provider",
+        )
+    )
+    app.include_router(plug_router)
+
+    with pytest.raises(ValueError, match="Plug id 'adobe' is already registered"):
+        app.to_meta_config()
+
+
+def test_meta_config_rejects_invalid_plug(mocker):
+    plug_router = PlugRouter()
+    app = ExtensionApp()
+    plug_router.register()(
+        mocker.MagicMock(return_value=["not-a-plug"], spec=Callable, __name__="not-a-plug")
+    )
+    app.include_router(plug_router)
+
+    with pytest.raises(TypeError, match="Plug providers must return Plug instances"):
+        app.to_meta_config()
 
 
 def test_ext_app_rejects_api_event_path_collision(dummy_handler):

@@ -3,9 +3,9 @@ from dataclasses import replace
 import pytest
 from typer.testing import CliRunner
 
-from mpt_extension_sdk.cli.main import app
+from mpt_extension_sdk.cli.main import app, validate_plug_static_assets
 from mpt_extension_sdk.errors.runtime import ConfigError
-from mpt_extension_sdk.runtime.models import MetaConfig, MetaEvent
+from mpt_extension_sdk.runtime.models import MetaConfig, MetaEvent, MetaPlug
 
 
 @pytest.fixture
@@ -24,6 +24,25 @@ def meta():
                 condition=None,
                 path="/events/orders/purchase",
                 task=False,
+            )
+        ],
+    )
+
+
+@pytest.fixture
+def plug_meta():
+    return MetaConfig(
+        version="1.0.0",
+        openapi="/bypass/openapi.json",
+        events=[],
+        plugs=[
+            MetaPlug(
+                id="adobe",
+                name="Adobe",
+                description="Adobe widget",
+                icon="/static/assets/adobe.png",
+                socket="commerce.agreements.agreement",
+                href="/static/main-menu.js",
             )
         ],
     )
@@ -83,6 +102,63 @@ def test_validate_succeeds_when_meta_matches(
 
     assert result.exit_code == 0
     assert "Metadata is valid" in result.stdout
+
+
+def test_validate_checks_plug_static_assets(
+    runtime_settings_factory, cli_runner, mocker, monkeypatch, plug_meta, tmp_path
+):
+    static_dir = tmp_path / "static"
+    (static_dir / "assets").mkdir(parents=True)
+    (static_dir / "assets" / "adobe.png").write_text("icon", encoding="utf-8")
+    (static_dir / "main-menu.js").write_text("plug", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    settings = runtime_settings_factory(
+        meta_config=plug_meta, meta_file_path=tmp_path / "meta.yaml"
+    )
+    mocker.patch(
+        "mpt_extension_sdk.cli.main.RuntimeSettings.load", autospec=True, return_value=settings
+    )
+    mocker.patch(
+        "mpt_extension_sdk.cli.main.MetaConfig.from_file", autospec=True, return_value=plug_meta
+    )
+
+    result = cli_runner.invoke(app, ["meta", "validate"])
+
+    assert result.exit_code == 0
+
+
+def test_validate_writes_missing_plug_asset(
+    runtime_settings_factory, cli_runner, mocker, monkeypatch, plug_meta, tmp_path
+):
+    (tmp_path / "static").mkdir()
+    monkeypatch.chdir(tmp_path)
+    settings = runtime_settings_factory(
+        meta_config=plug_meta, meta_file_path=tmp_path / "meta.yaml"
+    )
+    mocker.patch(
+        "mpt_extension_sdk.cli.main.RuntimeSettings.load", autospec=True, return_value=settings
+    )
+
+    result = cli_runner.invoke(app, ["meta", "validate"])
+
+    assert result.exit_code == 1
+    assert "Invalid plug static assets" in result.stderr
+    assert "Plug asset file was not found" in result.stderr
+    assert (tmp_path / "meta.generated.yaml").exists()
+
+
+def test_validate_plug_assets_rejects_unprefixed(plug_meta, tmp_path):
+    plug_meta.plugs[0].href = "main-menu.js"
+
+    with pytest.raises(ConfigError, match="must start with /static/"):
+        validate_plug_static_assets(plug_meta, tmp_path / "static")
+
+
+def test_validate_plug_assets_rejects_traversal(plug_meta, tmp_path):
+    plug_meta.plugs[0].href = "/static/../secret.js"
+
+    with pytest.raises(ConfigError, match="escapes static folder"):
+        validate_plug_static_assets(plug_meta, tmp_path / "static")
 
 
 def test_validate_generates_missing_meta_file(
