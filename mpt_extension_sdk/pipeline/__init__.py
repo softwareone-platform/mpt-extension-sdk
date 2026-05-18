@@ -16,7 +16,7 @@ from mpt_extension_sdk.pipeline.context.order import (
     OrderStatusActionType,
 )
 from mpt_extension_sdk.pipeline.decorators import refresh_order
-from mpt_extension_sdk.pipeline.factory import build_context
+from mpt_extension_sdk.pipeline.factory import build_api_context, build_context
 from mpt_extension_sdk.pipeline.step import BaseStep
 
 __all__ = [  # noqa: WPS410
@@ -32,6 +32,7 @@ __all__ = [  # noqa: WPS410
     "OrderState",
     "OrderStatusAction",
     "OrderStatusActionType",
+    "build_api_context",
     "build_context",
     "refresh_order",
 ]

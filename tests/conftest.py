@@ -1,10 +1,18 @@
+import base64
 import datetime as dt
+import json
 import logging
 from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
 
+from mpt_extension_sdk.api.auth.constants import (
+    CLAIM_ACCOUNT_ID,
+    CLAIM_ACCOUNT_TYPE,
+    CLAIM_EXTENSION_ID,
+    CLAIM_MODULES,
+)
 from mpt_extension_sdk.api.models.events import Event
 from mpt_extension_sdk.models.agreement import Agreement
 from mpt_extension_sdk.models.order import Order
@@ -12,6 +20,43 @@ from mpt_extension_sdk.routing import EventRouter
 from mpt_extension_sdk.runtime.models import MetaConfig, MetaEvent
 from mpt_extension_sdk.services.mpt_api_service import MPTAPIService
 from mpt_extension_sdk.settings.runtime import RuntimeSettings
+
+FUTURE_EXP_TIMESTAMP = 4102444800
+
+
+@pytest.fixture
+def auth_claims_factory():
+    def factory(
+        *,
+        account_id: str = "ACC-1",
+        account_type: str = "Client",
+        extension_id: str = "EXT-1",
+        modules: dict[str, list[str]] | object | None = None,
+        exp: int = FUTURE_EXP_TIMESTAMP,
+    ) -> dict[str, object]:
+        claim_modules = {} if modules is None else modules
+        return {
+            CLAIM_ACCOUNT_ID: account_id,
+            CLAIM_ACCOUNT_TYPE: account_type,
+            CLAIM_EXTENSION_ID: extension_id,
+            CLAIM_MODULES: claim_modules,
+            "exp": exp,
+        }
+
+    return factory
+
+
+@pytest.fixture
+def jwt_token_factory():
+    def factory(claims: dict[str, object] | str | None = None) -> str:
+        payload = {"exp": FUTURE_EXP_TIMESTAMP} if claims is None else claims
+        serialized_payload = payload if isinstance(payload, str) else json.dumps(payload)
+        encoded_payload = base64.urlsafe_b64encode(serialized_payload.encode("utf-8")).decode(
+            "utf-8"
+        )
+        return f"header.{encoded_payload.rstrip('=')}."
+
+    return factory
 
 
 @pytest.fixture

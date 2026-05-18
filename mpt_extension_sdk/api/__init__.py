@@ -1,3 +1,8 @@
+from mpt_extension_sdk.api.context import (
+    APIContext,
+    AuthenticatedRequestContext,
+    RequestQueryParams,
+)
 from mpt_extension_sdk.api.errors import (
     APIError,
     ForbiddenError,
@@ -11,8 +16,10 @@ from mpt_extension_sdk.api.pagination import PaginatedResult, Pagination
 from mpt_extension_sdk.api.responses import APIResponse, Links, Meta
 
 __all__ = [  # noqa: WPS410
+    "APIContext",
     "APIError",
     "APIResponse",
+    "AuthenticatedRequestContext",
     "ErrorDetail",
     "ForbiddenError",
     "Links",
@@ -21,6 +28,7 @@ __all__ = [  # noqa: WPS410
     "PaginatedResult",
     "Pagination",
     "ProblemDetails",
+    "RequestQueryParams",
     "UnauthorizedError",
     "UpstreamServiceError",
     "ValidationError",
