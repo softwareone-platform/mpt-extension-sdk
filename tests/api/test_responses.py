@@ -55,7 +55,7 @@ def test_api_response_ok_serializes_body():
         links={"self": "https://example.com/orders/ORD-1"},
     )
 
-    result = response.to_http_response()  # act
+    result = response.to_http_response()
 
     assert result.status_code == HTTPStatus.OK
     assert json.loads(result.body) == {
@@ -97,7 +97,7 @@ def test_api_response_paginated_adds_links():
 
     result = APIResponse.paginated(paginated_result).to_http_response(
         request_url="https://example.com/orders?page=2&page_size=5"
-    )  # act
+    )
 
     payload = json.loads(result.body)
     assert result.status_code == HTTPStatus.OK

@@ -19,6 +19,21 @@ class MetaEvent(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class MetaPlug(BaseModel):
+    """MetaPlug model for loading metadata."""
+
+    # Keep the order of fields in the model consistent with the order in the metadata file
+    id: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+    description: str = Field(min_length=1)
+    icon: str | None = Field(default=None, min_length=1)
+    socket: str = Field(min_length=1)
+    condition: str | None = Field(default=None, min_length=1)
+    href: str = Field(min_length=1)
+
+    model_config = ConfigDict(extra="forbid")
+
+
 class MetaConfig(BaseModel):
     """MetaConfig model for loading metadata."""
 
@@ -27,6 +42,7 @@ class MetaConfig(BaseModel):
     version: str = Field(default="1.0.0", min_length=1)
 
     events: list[MetaEvent]
+    plugs: list[MetaPlug] | None = None
 
     model_config = ConfigDict(extra="forbid")
 

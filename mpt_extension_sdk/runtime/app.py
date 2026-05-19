@@ -1,8 +1,10 @@
 import logging
 from collections.abc import Awaitable, Callable
 from importlib import import_module
+from pathlib import Path
 
 from fastapi import FastAPI, Request, Response
+from fastapi.staticfiles import StaticFiles
 
 from mpt_extension_sdk.api.builders.api import create_api_route
 from mpt_extension_sdk.api.builders.event import create_event_route
@@ -10,7 +12,11 @@ from mpt_extension_sdk.errors.runtime import ConfigError
 from mpt_extension_sdk.extension_app import ExtensionApp
 from mpt_extension_sdk.observability.bootstrap import ObservabilityBootstrap
 from mpt_extension_sdk.observability.config import ObservabilityConfig
-from mpt_extension_sdk.routing.models import APIRouteDefinition, EventRouteDefinition
+from mpt_extension_sdk.routing.models import (
+    APIRouteDefinition,
+    EventRouteDefinition,
+    PlugRouteDefinition,
+)
 from mpt_extension_sdk.runtime.logging import correlation_id_ctx, setup_logging, task_id_ctx
 from mpt_extension_sdk.settings.runtime import RuntimeSettings
 
@@ -63,11 +69,16 @@ def create_runtime_app(runtime_settings: RuntimeSettings) -> FastAPI:
     _configure_observability(app, observability_config)
     _configure_middlewares(app)
     _register_builtin_routes(app)
+    app.mount(
+        "/static",
+        StaticFiles(directory=Path.cwd() / "static", check_dir=False),
+        name="static",
+    )
     register_extension_routes(app, extension_app)
     return app
 
 
-def register_extension_routes(app: FastAPI, extension_app: ExtensionApp) -> None:
+def register_extension_routes(app: FastAPI, extension_app: ExtensionApp) -> None:  # noqa: WPS231
     """Register all decorated handlers on the FastAPI app.
 
     Args:
@@ -75,13 +86,15 @@ def register_extension_routes(app: FastAPI, extension_app: ExtensionApp) -> None
         extension_app: Extension app that owns the registered routes.
     """
     for registered_route in extension_app.routes:
-        if isinstance(registered_route, EventRouteDefinition):
-            app.include_router(create_event_route(registered_route, extension_app))
-            continue
-        if isinstance(registered_route, APIRouteDefinition):
-            app.include_router(create_api_route(registered_route, extension_app))
-            continue
-        raise ConfigError("Only event and api routes are supported")
+        match registered_route:
+            case PlugRouteDefinition():
+                continue
+            case EventRouteDefinition():
+                app.include_router(create_event_route(registered_route, extension_app))
+            case APIRouteDefinition():
+                app.include_router(create_api_route(registered_route, extension_app))
+            case _:
+                raise ConfigError("Only event, api, and plug routes are supported")
 
 
 def _create_fastapi_app(extension_app: ExtensionApp) -> FastAPI:

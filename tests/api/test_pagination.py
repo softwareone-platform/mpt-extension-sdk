@@ -47,23 +47,23 @@ def test_pagination_validates_page(query):
 
 
 def test_pagination_links_first_page():
-    links = PaginationLinksBuilder.build(
+    result = PaginationLinksBuilder.build(
         "https://example.com/orders", PaginatedResult(payload=[], total=0, page=1, page_size=10)
-    )  # act
+    )
 
-    assert links["prev"] is None
-    assert links["next"] is None
-    assert links["last"] == "https://example.com/orders?page=1&page_size=10"
+    assert result["prev"] is None
+    assert result["next"] is None
+    assert result["last"] == "https://example.com/orders?page=1&page_size=10"
 
 
 def test_pagination_links_replace_page_params():
-    links = PaginationLinksBuilder.build(
+    result = PaginationLinksBuilder.build(
         "https://example.com/orders?foo=bar&page=9&page_size=1",
         PaginatedResult(payload=[], total=TOTAL_ITEMS, page=2, page_size=10),
-    )  # act
+    )
 
-    assert links["self"] == "https://example.com/orders?foo=bar&page=2&page_size=10"
-    assert links["first"] == "https://example.com/orders?foo=bar&page=1&page_size=10"
-    assert links["prev"] == "https://example.com/orders?foo=bar&page=1&page_size=10"
-    assert links["next"] == "https://example.com/orders?foo=bar&page=3&page_size=10"
-    assert links["last"] == "https://example.com/orders?foo=bar&page=3&page_size=10"
+    assert result["self"] == "https://example.com/orders?foo=bar&page=2&page_size=10"
+    assert result["first"] == "https://example.com/orders?foo=bar&page=1&page_size=10"
+    assert result["prev"] == "https://example.com/orders?foo=bar&page=1&page_size=10"
+    assert result["next"] == "https://example.com/orders?foo=bar&page=3&page_size=10"
+    assert result["last"] == "https://example.com/orders?foo=bar&page=3&page_size=10"

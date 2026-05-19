@@ -8,7 +8,8 @@ from mpt_extension_sdk.routing import (
     EventRouteDefinition,
 )
 from mpt_extension_sdk.routing.routers.base import BaseExtensionRouter
-from mpt_extension_sdk.runtime.models import MetaConfig, MetaEvent
+from mpt_extension_sdk.runtime.builders import PlugMetadataBuilder
+from mpt_extension_sdk.runtime.models import MetaConfig, MetaEvent, MetaPlug
 from mpt_extension_sdk.services.mpt_api_service import MPTAPIService
 
 
@@ -65,4 +66,9 @@ class ExtensionApp:
                 for route in self._routes
                 if isinstance(route, EventRouteDefinition)
             ],
+            plugs=self._build_meta_plugs() or None,
         )
+
+    def _build_meta_plugs(self) -> list[MetaPlug]:
+        """Build plug metadata from registered plug providers."""
+        return PlugMetadataBuilder(routes=self._routes).build()

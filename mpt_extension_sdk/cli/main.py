@@ -1,8 +1,10 @@
+from pathlib import Path
 from typing import Annotated
 
 import typer
 
 from mpt_extension_sdk.errors.runtime import ConfigError
+from mpt_extension_sdk.routing import STATIC_PATH_PREFIX
 from mpt_extension_sdk.runtime.models import MetaConfig
 from mpt_extension_sdk.runtime.runner import run_extension
 from mpt_extension_sdk.settings.runtime import RuntimeSettings
@@ -34,11 +36,19 @@ def generate_meta() -> None:
 
 
 @meta_app.command()
-def validate() -> None:
+def validate() -> None:  # noqa: WPS213
     """Validate that the generated metadata matches the checked-in file."""
     runtime_settings = RuntimeSettings.load()
     generated_meta = runtime_settings.meta_config
     generated_path = runtime_settings.meta_file_path.with_name("meta.generated.yaml")
+    try:
+        validate_plug_static_assets(generated_meta)
+    except ConfigError as error:
+        generated_meta.to_file(generated_path)
+        typer.secho(f"Invalid plug static assets: {error}", err=True, fg=typer.colors.RED)
+        typer.secho(f"Generated file written to: {generated_path}", err=True)
+        raise typer.Exit(code=1) from None
+
     try:
         checked_in_meta = MetaConfig.from_file(runtime_settings.meta_file_path)
     except ConfigError as error:
@@ -58,6 +68,29 @@ def validate() -> None:
         raise typer.Exit(code=1)
 
     typer.echo(f"Metadata is valid: {runtime_settings.meta_file_path}")
+
+
+def validate_plug_static_assets(meta_config: MetaConfig, static_root: Path | None = None) -> None:
+    """Validate local static assets referenced by registered plugs."""
+    asset_root = static_root or Path.cwd() / "static"
+    for plug in getattr(meta_config, "plugs", None) or []:
+        _validate_static_asset(plug.href, asset_root)
+        if plug.icon is not None:
+            _validate_static_asset(plug.icon, asset_root)
+
+
+def _validate_static_asset(asset_path: str, static_root: Path) -> None:
+    """Validate that a metadata asset path resolves under the local static folder."""
+    if not asset_path.startswith(STATIC_PATH_PREFIX):
+        raise ConfigError(f"Plug asset path must start with {STATIC_PATH_PREFIX}: {asset_path}")
+
+    relative_asset_path = asset_path.removeprefix(STATIC_PATH_PREFIX)
+    resolved_root = static_root.resolve()
+    resolved_asset = (resolved_root / relative_asset_path).resolve()
+    if not resolved_asset.is_relative_to(resolved_root):
+        raise ConfigError(f"Plug asset path escapes static folder: {asset_path}")
+    if not resolved_asset.is_file():
+        raise ConfigError(f"Plug asset file was not found: {asset_path}")
 
 
 @app.callback()
