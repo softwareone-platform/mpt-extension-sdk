@@ -1,9 +1,13 @@
+import logging
 from collections.abc import Awaitable, Callable
 from functools import wraps
-from typing import TYPE_CHECKING, Concatenate, cast
+from inspect import iscoroutinefunction
+from typing import TYPE_CHECKING, Any, Concatenate, cast
 
 from mpt_extension_sdk.observability.tracing import (
     TRACER,
+    Attributes,
+    AttributeValue,
     get_business_attributes,
     set_attributes,
 )
@@ -22,6 +26,46 @@ type StepCallable[
     ReturnT,
     **ParamT,
 ] = Callable[Concatenate[PipelineT, StepT, CtxT, ParamT], Awaitable[ReturnT]]
+type SpanAttributeValue = AttributeValue | Callable[..., AttributeValue | None] | None
+type SpanAttributes = dict[str, SpanAttributeValue]
+type SpanArgs = tuple[Any, ...]
+type SpanKwargs = dict[str, Any]
+
+logger = logging.getLogger(__name__)
+SPAN_ATTRIBUTE_RESOLUTION_ERRORS: tuple[type[Exception], ...] = (
+    AttributeError,
+    IndexError,
+    KeyError,
+    TypeError,
+    ValueError,
+)
+
+
+def trace_span(
+    name: str, attributes: SpanAttributes | None = None
+) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+    """Start a child span around extension-defined business code."""
+
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+        if iscoroutinefunction(func):
+
+            @wraps(func)
+            async def async_wrapper(*args: Any, **kwargs: Any) -> Any:  # noqa: WPS430
+                with TRACER.start_as_current_span(name) as span:
+                    set_attributes(span, _resolve_span_attributes(attributes, args, kwargs))
+                    return await func(*args, **kwargs)
+
+            return async_wrapper
+
+        @wraps(func)
+        def sync_wrapper(*args: Any, **kwargs: Any) -> Any:  # noqa: WPS430
+            with TRACER.start_as_current_span(name) as span:
+                set_attributes(span, _resolve_span_attributes(attributes, args, kwargs))
+                return func(*args, **kwargs)
+
+        return sync_wrapper
+
+    return decorator
 
 
 def start_pipeline_span[PipelineT: "BasePipeline", CtxT: "EventBaseContext", ReturnT, **ParamT](
@@ -76,3 +120,26 @@ def start_step_span[
             return await func(self, step, ctx, *args, **kwargs)
 
     return cast(StepCallable[PipelineT, StepT, CtxT, ReturnT, ParamT], wrapper)
+
+
+def _resolve_span_attributes(
+    attributes: SpanAttributes | None, args: SpanArgs, kwargs: SpanKwargs
+) -> Attributes:
+    """Resolve static or callable span attributes from decorated call arguments."""
+    if not attributes:
+        return {}
+
+    resolved_attributes: Attributes = {}
+    for key, attribute_source in attributes.items():
+        try:
+            resolved_value = (
+                attribute_source(*args, **kwargs)
+                if callable(attribute_source)
+                else attribute_source
+            )
+        except SPAN_ATTRIBUTE_RESOLUTION_ERRORS:
+            logger.debug("Skipping trace span attribute %s", key, exc_info=True)
+            continue
+        if isinstance(resolved_value, bool | str | int | float):
+            resolved_attributes[key] = resolved_value
+    return resolved_attributes
