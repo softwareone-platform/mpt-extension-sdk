@@ -197,7 +197,7 @@ def forbidden_handler():
 @pytest.fixture
 def invalid_pagination_handler(ok_response_factory):
     def wrapper(ctx):
-        return ok_response_factory(payload={"page": ctx.request.pagination.page})
+        return ok_response_factory(payload={"offset": ctx.request.pagination.offset})
 
     return wrapper
 
@@ -674,22 +674,12 @@ def test_api_route_builds_paginated_response(api_route_dependencies, auth_header
         name="adobe-orders",
     )
 
-    result = client.get(
-        "/adobe/orders?page=2&page_size=2&filter=open",
-        headers=auth_headers,
-    )
+    result = client.get("/adobe/orders?offset=2&limit=2", headers=auth_headers)
 
     assert result.status_code == HTTPStatus.OK
     assert result.json() == {
         "data": [{"id": "ORD-1"}, {"id": "ORD-2"}],
-        "meta": {"total": 5, "page": 2, "page_size": 2, "total_pages": 3},
-        "links": {
-            "self": "http://testserver/adobe/orders?filter=open&page=2&page_size=2",
-            "first": "http://testserver/adobe/orders?filter=open&page=1&page_size=2",
-            "prev": "http://testserver/adobe/orders?filter=open&page=1&page_size=2",
-            "next": "http://testserver/adobe/orders?filter=open&page=3&page_size=2",
-            "last": "http://testserver/adobe/orders?filter=open&page=3&page_size=2",
-        },
+        "$meta": {"pagination": {"offset": 2, "limit": 2, "total": 5}},
     }
 
 
@@ -703,15 +693,12 @@ def test_api_route_maps_invalid_pagination_errors(
         name="adobe-orders",
     )
 
-    result = client.get(
-        "/adobe/orders?page_size=999",
-        headers=auth_headers,
-    )
+    result = client.get("/adobe/orders?limit=-1", headers=auth_headers)
 
     assert result.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
     assert result.json()["errors"] == [
         {
-            "detail": "Value must be less than or equal to 500",
-            "pointer": "#/page_size",
+            "detail": "Value must be greater than or equal to 0",
+            "pointer": "#/limit",
         }
     ]

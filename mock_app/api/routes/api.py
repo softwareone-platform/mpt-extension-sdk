@@ -19,8 +19,11 @@ async def handle_get_agreement(agreement_id: str, ctx: APIContext) -> APIRespons
 @api_router.get("/agreements", name="agreements-list")
 async def handle_get_agreements(ctx: APIContext) -> APIResponse:
     """Return paginated mock agreements."""
-    agreements = await ctx.mpt_api_service.agreements.get_all(batch_size=3)  # type: ignore[attr-defined]
-    result = PaginatedResult.from_pagination(ctx.request.pagination, payload=agreements, total=10)
+    pagination = ctx.request.pagination
+    page = await ctx.mpt_api_service.agreements.get_all(
+        offset=pagination.offset, limit=pagination.limit
+    )
+    result = PaginatedResult.from_pagination(pagination, payload=page.resources, total=page.total)
     return APIResponse.paginated(result)
 
 

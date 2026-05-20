@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 from mpt_extension_sdk.models.base import BaseModel
 from mpt_extension_sdk.services.api_client_v2.mpt_api_client import AsyncMPTClient
 from mpt_extension_sdk.services.mpt_api_service.base import BaseService
@@ -10,23 +12,37 @@ class FakeModel(BaseModel):
 
 
 class FakeService(BaseService[FakeModel]):
-    async def get_all(self, collection, batch_size=100):
-        return await self._iterate_all(collection, FakeModel, batch_size=batch_size)
+    """Fake service exposing base pagination for tests."""
 
 
-class FakeCollection:
-    def __init__(self, elements):
+@dataclass
+class FakePagination:
+    limit: int
+    offset: int
+    total: int
+
+
+@dataclass
+class FakeMeta:
+    pagination: FakePagination
+
+
+class FakePage:
+    def __init__(self, elements, meta=None):
         self.elements = elements
-        self.batch_sizes = []
+        self.meta = meta
 
-    async def iterate(self, *, batch_size):
-        self.batch_sizes.append(batch_size)
-        for element in self.elements:
-            yield element
+    def __iter__(self):
+        return iter(self.elements)
+
+    def __len__(self):
+        return len(self.elements)
 
 
-async def test_get_all_collects_models(mocker):
-    collection = FakeCollection(["one", "two"])
+async def test_paginate_fetches_page(mocker):
+    meta = FakeMeta(FakePagination(limit=2, offset=4, total=10))
+    collection = mocker.Mock(spec=["fetch_page"])
+    collection.fetch_page = mocker.AsyncMock(return_value=FakePage(["one", "two"], meta=meta))
     mocker.patch.object(
         FakeModel,
         "from_payload",
@@ -35,16 +51,30 @@ async def test_get_all_collects_models(mocker):
     )
     service = FakeService(mocker.Mock(spec=AsyncMPTClient))
 
-    result = await service.get_all(collection)
+    result = await service._paginate(collection, FakeModel, offset=4, limit=2)
 
-    assert result == [{"payload": "one"}, {"payload": "two"}]
+    collection.fetch_page.assert_awaited_once_with(offset=4, limit=2)
+    assert result.offset == 4
+    assert result.limit == 2
+    assert result.resources == [{"payload": "one"}, {"payload": "two"}]
+    assert result.total == 10
 
 
-async def test_get_all_passes_batch_size(mocker):
-    collection = FakeCollection(["x"])
-    mocker.patch.object(FakeModel, "from_payload", autospec=True, return_value={"payload": "x"})
-    service = FakeService(mocker.Mock())
+async def test_paginate_falls_back_when_meta_missing(mocker):
+    collection = mocker.Mock(spec=["fetch_page"])
+    collection.fetch_page = mocker.AsyncMock(return_value=FakePage(["one", "two"], meta=None))
+    mocker.patch.object(
+        FakeModel,
+        "from_payload",
+        autospec=True,
+        side_effect=[{"payload": "one"}, {"payload": "two"}],
+    )
+    service = FakeService(mocker.Mock(spec=AsyncMPTClient))
 
-    await service.get_all(collection, batch_size=50)  # act
+    result = await service._paginate(collection, FakeModel, offset=4, limit=2)
 
-    assert collection.batch_sizes == [50]
+    collection.fetch_page.assert_awaited_once_with(offset=4, limit=2)
+    assert result.offset == 4
+    assert result.limit == 2
+    assert result.resources == [{"payload": "one"}, {"payload": "two"}]
+    assert result.total == 6

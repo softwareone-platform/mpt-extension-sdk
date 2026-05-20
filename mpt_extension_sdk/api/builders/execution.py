@@ -112,7 +112,7 @@ class APIRequestExecutor:  # noqa: WPS214
                 request=request,
                 correlation_id=correlation_id_ctx.get(),
             )
-        return response.to_http_response(request_url=str(request.url))
+        return response.to_http_response()
 
     async def _execute_in_span(
         self, *, context: APIContext, request: Request, span: Span

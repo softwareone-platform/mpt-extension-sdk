@@ -60,7 +60,7 @@ def test_api_response_ok_serializes_body():
     assert result.status_code == HTTPStatus.OK
     assert json.loads(result.body) == {
         "data": {"id": "ORD-1"},
-        "meta": {"total": 1, "page": None, "page_size": None, "total_pages": None},
+        "$meta": {"total": 1, "offset": None, "limit": None},
         "links": {
             "self": "https://example.com/orders/ORD-1",
             "first": None,
@@ -90,17 +90,14 @@ def test_api_response_preserves_typed_metadata():
     assert result.links is links
 
 
-def test_api_response_paginated_adds_links():
+def test_api_response_paginated_adds_meta():
     paginated_result = PaginatedResult(
-        payload=[{"id": "ORD-1"}], total=TOTAL_ITEMS, page=2, page_size=5
+        payload=[{"id": "ORD-1"}], total=TOTAL_ITEMS, offset=5, limit=5
     )
 
-    result = APIResponse.paginated(paginated_result).to_http_response(
-        request_url="https://example.com/orders?page=2&page_size=5"
-    )
+    result = APIResponse.paginated(paginated_result).to_http_response()
 
     payload = json.loads(result.body)
     assert result.status_code == HTTPStatus.OK
     assert payload["data"] == [{"id": "ORD-1"}]
-    assert payload["meta"] == {"total": 12, "page": 2, "page_size": 5, "total_pages": 3}
-    assert payload["links"]["next"] == "https://example.com/orders?page=3&page_size=5"
+    assert payload["$meta"] == {"pagination": {"offset": 5, "limit": 5, "total": 12}}
