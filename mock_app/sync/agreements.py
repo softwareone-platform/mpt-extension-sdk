@@ -2,13 +2,13 @@ from mpt_extension_sdk.api import APIContext
 from mpt_extension_sdk.observability import trace_span
 
 
-class SyncAdobeAgreements:
+class SyncAgreements:
     """Mock agreement sync use case."""
 
-    @trace_span("adobe.sync_agreements")
+    @trace_span("sync_agreements")
     async def execute(self, ctx: APIContext) -> None:
-        """Sync Adobe agreements."""
-        ctx.logger.info("Sync Adobe agreements")
+        """Sync agreements."""
+        ctx.logger.info("Sync agreements")
         agreements = await ctx.mpt_api_service.agreements.get_all(batch_size=5)  # type: ignore[attr-defined]
         for agreement in agreements:
             ctx.logger.info("Syncing agreement %s", agreement.id)
@@ -16,7 +16,7 @@ class SyncAdobeAgreements:
             ctx.logger.info("Agreement %s synced", agreement.id)
 
     @trace_span(
-        "adobe.sync_agreement",
+        "sync_agreement",
         attributes={
             "agreement.id": lambda _, agreement_id: agreement_id,
         },

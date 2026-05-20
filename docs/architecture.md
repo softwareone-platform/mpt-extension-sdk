@@ -77,7 +77,9 @@ contract but is not yet mounted by the runtime or emitted into `meta.yaml`.
 - Keep configuration loading under `settings/`.
 - Keep tracing and logging concerns under `observability/`.
 - Keep package metadata, tool configuration, and CLI entrypoints in [`pyproject.toml`](../pyproject.toml).
-- Keep SDK usage guidance in [`docs/usage.md`](usage.md). Repository source documentation belongs in `README.md` and `docs/`.
+- Keep SDK usage guidance indexed from [`docs/usage.md`](usage.md), with granular
+  examples under [`docs/sdk_usage/`](sdk_usage/). Repository source documentation
+  belongs in `README.md` and `docs/`.
 
 ## Tests And Tooling
 

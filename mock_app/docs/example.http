@@ -1,10 +1,22 @@
+# Create a JWT with this payload and paste it into auth_token:
+#
+# {
+#   "https://claims.softwareone.com/extensionId": "EXT-2345-3554",
+#   "https://claims.softwareone.com/accountId": "ACC-0000-3453",
+#   "https://claims.softwareone.com/accountType": "Client",
+#   "exp": 1877516378
+# }
+@auth_token = <paste-non-prod-jwt-here>
+
 # [health]
 GET http://localhost:8080/health
 
 ###
-# [purchase] Supported purchase order (expected OK)
+
+# [event][purchase] Supported purchase order (expected OK)
 POST http://localhost:8080/api/v2/events/orders/purchase
 Content-Type: application/json
+Authorization: Bearer {{auth_token}}
 mpt-task-id: TSK-0014-3792-0694-1776
 x-request-id: 10147b5c-d430-482c-8c42-d17c5df5e207
 
@@ -23,6 +35,61 @@ x-request-id: 10147b5c-d430-482c-8c42-d17c5df5e207
   "task": {
     "id": "TSK-0014-3792-0694-1776"
   }
+}
+
+###
+
+# [API][agreements-retrieve] (expected 200 OK)
+GET http://localhost:8080/api/v2/agreements/AGR-1234-1234-1234
+Content-Type: application/json
+Authorization: Bearer {{auth_token}}
+
+###
+
+# [API][agreements-retrieve] (expected 404 Not Found)
+GET http://localhost:8080/api/v2/agreements/not-found
+Content-Type: application/json
+Authorization: Bearer {{auth_token}}
+
+###
+
+# [API][agreements-list] (expected 200 Ok - Paginated)
+GET http://localhost:8080/api/v2/agreements?page=2&page_size=3
+Content-Type: application/json
+Authorization: Bearer {{auth_token}}
+
+###
+
+# [API][agreements-sync] (expected 204 No content)
+POST http://localhost:8080/api/v2/agreements/sync
+Content-Type: application/json
+Authorization: Bearer {{auth_token}}
+
+###
+
+# [API][agreements-create] (expected 201 Created)
+POST http://localhost:8080/api/v2/agreements
+Content-Type: application/json
+Authorization: Bearer {{auth_token}}
+
+{
+    "id": "AGR-111",
+    "name": "Test Agreement",
+    "client": {"id": "CLT-111", "name": "Test Client"},
+    "licensee": {"id": "LIC-111", "name": "Test Licensee", "status": "Active"},
+    "parameters": {},
+    "product": {"id": "PROD-111", "name": "Test Product"}
+}
+
+###
+
+# [API][agreements-create] (expected 422 Unprocessable Entity)
+POST http://localhost:8080/api/v2/agreements
+Content-Type: application/json
+Authorization: Bearer {{auth_token}}
+
+{
+    "id": "AGR-111"
 }
 
 ###
