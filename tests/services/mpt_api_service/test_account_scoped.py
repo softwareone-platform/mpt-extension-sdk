@@ -1,4 +1,3 @@
-import asyncio
 import base64
 import datetime as dt
 import json
@@ -49,9 +48,9 @@ def build_token_provider(mocker, runtime_settings):  # noqa: WPS210
     return provider, service_type, installations
 
 
-def get_provider_tokens(provider):
+async def get_provider_tokens(provider):
     """Request the account token twice."""
-    return [asyncio.run(provider.get_token()), asyncio.run(provider.get_token())]
+    return [await provider.get_token(), await provider.get_token()]
 
 
 @pytest.fixture
@@ -61,7 +60,7 @@ def clear_account_token_cache():
     AccountTokenProvider.clear_cache()
 
 
-def test_create_token_query_params(mocker, async_mpt_client):
+async def test_create_token_query_params(mocker, async_mpt_client):
     installations = mocker.Mock()
     installations.path = "/public/v1/integration/installations/-/token"
     response = mocker.Mock()
@@ -70,7 +69,7 @@ def test_create_token_query_params(mocker, async_mpt_client):
     async_mpt_client.integration.installations.return_value = installations
     service = InstallationService(async_mpt_client)
 
-    result = asyncio.run(service.create_token("ACC-1"))
+    result = await service.create_token("ACC-1")
 
     assert result.token == build_token(4102444800)
     installations.http_client.request.assert_awaited_once_with(
@@ -80,10 +79,10 @@ def test_create_token_query_params(mocker, async_mpt_client):
     )
 
 
-def test_provider_caches_token(clear_account_token_cache, mocker, runtime_settings):
+async def test_provider_caches_token(clear_account_token_cache, mocker, runtime_settings):
     provider, service_type, installations = build_token_provider(mocker, runtime_settings)
 
-    token_results = get_provider_tokens(provider)  # act
+    token_results = await get_provider_tokens(provider)  # act
 
     assert token_results == ["account-token", "account-token"]
     service_type.from_config.assert_called_once_with(
@@ -105,7 +104,7 @@ def test_mpt_client_uses_refreshing_http_client(mocker):
     assert isinstance(result.http_client, AccountScopedAsyncHTTPClient)
 
 
-def test_http_client_refreshes_each_request(mocker):
+async def test_http_client_refreshes_each_request(mocker):
     token_provider = mocker.Mock()
     token_provider.get_token = mocker.AsyncMock(side_effect=["account-token-1", "account-token-2"])
     response = mocker.Mock()
@@ -117,8 +116,8 @@ def test_http_client_refreshes_each_request(mocker):
     )
 
     request_results = [
-        asyncio.run(client.request("get", "/orders/ORD-1", headers={"x-test": "1"})),
-        asyncio.run(client.request("get", "/orders/ORD-1", headers={"x-test": "1"})),
+        await client.request("get", "/orders/ORD-1", headers={"x-test": "1"}),
+        await client.request("get", "/orders/ORD-1", headers={"x-test": "1"}),
     ]  # act
 
     assert request_results == [response, response]

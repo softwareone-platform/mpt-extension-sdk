@@ -1,4 +1,3 @@
-import asyncio
 from collections.abc import Callable
 
 import pytest
@@ -17,7 +16,7 @@ def agreement_service_factory(mocker, async_mpt_client):
     return factory
 
 
-def test_get_by_id(mocker, agreement_service_factory):
+async def test_get_by_id(mocker, agreement_service_factory):
     api_agreement = mocker.Mock(spec=["to_dict"])
     service, agreements_client = agreement_service_factory()
     agreements_client.get = mocker.AsyncMock(spec=Callable, return_value=api_agreement)
@@ -27,7 +26,7 @@ def test_get_by_id(mocker, agreement_service_factory):
         return_value="agreement-model",
     )
 
-    result = asyncio.run(service.get_by_id("AGR-1"))
+    result = await service.get_by_id("AGR-1")
 
     assert result == "agreement-model"
     agreements_client.get.assert_awaited_once_with(
@@ -47,10 +46,10 @@ def test_get_by_id(mocker, agreement_service_factory):
     from_payload.assert_called_once_with(api_agreement)
 
 
-def test_update_calls_agreement_update(mocker, agreement_service_factory):
+async def test_update_calls_agreement_update(mocker, agreement_service_factory):
     service, agreement_client = agreement_service_factory()
     agreement_client.update = mocker.AsyncMock(spec=Callable)
 
-    asyncio.run(service.update("AGR-1", {"status": "processing"}))  # act
+    await service.update("AGR-1", {"status": "processing"})  # act
 
     agreement_client.update.assert_awaited_once_with("AGR-1", {"status": "processing"})

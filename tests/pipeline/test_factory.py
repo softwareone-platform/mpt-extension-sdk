@@ -1,4 +1,3 @@
-import asyncio
 from contextlib import contextmanager
 
 import pytest
@@ -29,7 +28,7 @@ def event_context_scope():
         task_id_ctx.reset(task_token)
 
 
-def test_build_context_returns_order_context(
+async def test_build_context_returns_order_context(
     mocker, logger, runtime_settings, event_factory, order_factory
 ):
     auth = mocker.Mock()
@@ -49,13 +48,11 @@ def test_build_context_returns_order_context(
     )
     FakeAuthAPIService.from_auth_context = mocker.AsyncMock(return_value=fake_service)
 
-    result = asyncio.run(
-        build_context(
-            event_factory("Order", "ORD-1"),
-            logger,
-            auth=auth,
-            mpt_api_service_type=FakeAuthAPIService,
-        )
+    result = await build_context(
+        event_factory("Order", "ORD-1"),
+        logger,
+        auth=auth,
+        mpt_api_service_type=FakeAuthAPIService,
     )
 
     assert isinstance(result, OrderContext)
@@ -64,7 +61,7 @@ def test_build_context_returns_order_context(
     assert result.meta.object_type == "Order"
 
 
-def test_build_context_returns_agreement_context(
+async def test_build_context_returns_agreement_context(
     mocker, logger, runtime_settings, event_factory, agreement_factory
 ):
     auth = mocker.Mock(spec=AuthContext)
@@ -86,20 +83,20 @@ def test_build_context_returns_agreement_context(
     fake_service.agreements.get_by_id = mocker.AsyncMock(return_value=agreement_factory("AGR-1"))
     FakeAuthAPIService.from_auth_context = mocker.AsyncMock(return_value=fake_service)
 
-    result = asyncio.run(
-        build_context(
-            event_factory("Agreement", "AGR-1"),
-            logger,
-            auth=auth,
-            mpt_api_service_type=FakeAuthAPIService,
-        )
+    result = await build_context(
+        event_factory("Agreement", "AGR-1"),
+        logger,
+        auth=auth,
+        mpt_api_service_type=FakeAuthAPIService,
     )
 
     assert isinstance(result, AgreementContext)
     assert result.meta.object_type == "Agreement"
 
 
-def test_build_ctx_rejects_unsupported_obj_type(mocker, logger, runtime_settings, event_factory):
+async def test_build_ctx_rejects_unsupported_obj_type(
+    mocker, logger, runtime_settings, event_factory
+):
     auth = mocker.Mock(spec=AuthContext)
     auth.extension_id = "EXT-1"
     mocker.patch(
@@ -116,17 +113,15 @@ def test_build_ctx_rejects_unsupported_obj_type(mocker, logger, runtime_settings
     FakeAuthAPIService.from_auth_context = mocker.AsyncMock(return_value=mocker.AsyncMock())
 
     with pytest.raises(RuntimeError, match="Unsupported context type: Subscription"):
-        asyncio.run(
-            build_context(
-                event_factory("Subscription", "SUB-1"),
-                logger,
-                auth=auth,
-                mpt_api_service_type=FakeAuthAPIService,
-            )
+        await build_context(
+            event_factory("Subscription", "SUB-1"),
+            logger,
+            auth=auth,
+            mpt_api_service_type=FakeAuthAPIService,
         )
 
 
-def test_build_context_carries_contextvars(
+async def test_build_context_carries_contextvars(
     mocker, logger, runtime_settings, event_factory, order_factory
 ):
     auth = mocker.Mock()
@@ -143,20 +138,18 @@ def test_build_context_carries_contextvars(
     )
 
     with event_context_scope():
-        result = asyncio.run(
-            build_context(
-                event_factory("Order", "ORD-1"),
-                logger,
-                auth=auth,
-                mpt_api_service_type=FakeAuthAPIService,
-            )
+        result = await build_context(
+            event_factory("Order", "ORD-1"),
+            logger,
+            auth=auth,
+            mpt_api_service_type=FakeAuthAPIService,
         )
 
         assert result.meta.correlation_id == "corr-1"
         assert result.meta.task_id == "task-ctx"
 
 
-def test_build_context_uses_auth_context(
+async def test_build_context_uses_auth_context(
     mocker, logger, runtime_settings, event_factory, order_factory
 ):
     auth = mocker.Mock(spec=AuthContext)
@@ -175,13 +168,11 @@ def test_build_context_uses_auth_context(
     )
     FakeAuthAPIService.from_auth_context = mocker.AsyncMock(return_value=service)
 
-    result = asyncio.run(
-        build_context(
-            event_factory("Order", "ORD-1"),
-            logger,
-            auth=auth,
-            mpt_api_service_type=FakeAuthAPIService,
-        )
+    result = await build_context(
+        event_factory("Order", "ORD-1"),
+        logger,
+        auth=auth,
+        mpt_api_service_type=FakeAuthAPIService,
     )
 
     assert result.auth is auth
@@ -191,7 +182,9 @@ def test_build_context_uses_auth_context(
     )
 
 
-def test_build_context_rejects_mismatched_ext_id(mocker, logger, runtime_settings, event_factory):
+async def test_build_context_rejects_mismatched_ext_id(
+    mocker, logger, runtime_settings, event_factory
+):
     auth = mocker.Mock(spec=AuthContext)
     auth.extension_id = "EXT-2"
     FakeAuthAPIService.from_auth_context = mocker.AsyncMock()
@@ -207,13 +200,11 @@ def test_build_context_rejects_mismatched_ext_id(mocker, logger, runtime_setting
     )
 
     with pytest.raises(AuthenticationError):
-        asyncio.run(
-            build_context(
-                event_factory("Order", "ORD-1"),
-                logger,
-                auth=auth,
-                mpt_api_service_type=FakeAuthAPIService,
-            )
+        await build_context(
+            event_factory("Order", "ORD-1"),
+            logger,
+            auth=auth,
+            mpt_api_service_type=FakeAuthAPIService,
         )
 
     FakeAuthAPIService.from_auth_context.assert_not_awaited()

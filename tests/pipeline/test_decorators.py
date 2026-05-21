@@ -1,4 +1,3 @@
-import asyncio
 from collections.abc import Callable
 
 import pytest
@@ -24,7 +23,7 @@ class SampleStep(BaseStep):
         return ctx
 
 
-def test_refresh_order(mocker, logger, runtime_settings, order_factory):
+async def test_refresh_order(mocker, logger, runtime_settings, order_factory):
     context = OrderContext(
         logger=logger,
         meta=EventMetadata(
@@ -40,13 +39,13 @@ def test_refresh_order(mocker, logger, runtime_settings, order_factory):
     )
     context.refresh_order = mocker.AsyncMock(spec=Callable)
 
-    result = asyncio.run(SampleStep().decorated(context))
+    result = await SampleStep().decorated(context)
 
     assert result == context
     context.refresh_order.assert_awaited_once_with()
 
 
-def test_refresh_order_on_failure(mocker, logger, runtime_settings, order_factory):
+async def test_refresh_order_on_failure(mocker, logger, runtime_settings, order_factory):
     context = OrderContext(
         logger=logger,
         meta=EventMetadata(
@@ -63,6 +62,6 @@ def test_refresh_order_on_failure(mocker, logger, runtime_settings, order_factor
     context.refresh_order = mocker.AsyncMock(spec=Callable)
 
     with pytest.raises(RuntimeError, match="boom"):
-        asyncio.run(SampleStep().failing(context))
+        await SampleStep().failing(context)
 
     context.refresh_order.assert_not_awaited()

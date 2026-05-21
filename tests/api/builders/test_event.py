@@ -1,4 +1,3 @@
-import asyncio
 import base64
 import json
 from collections.abc import Callable
@@ -468,22 +467,22 @@ def test_get_tasks_service(mocker, runtime_settings):
     )
 
 
-def test_run_handler(mocker, fake_context, mock_callable):
+async def test_run_handler(mocker, fake_context, mock_callable):
     mock_callable = mocker.AsyncMock(spec=Callable, side_effect=mock_callable)
 
-    asyncio.run(event_builder.run_handler(mock_callable, "evt", fake_context))  # act
+    await event_builder.run_handler(mock_callable, "evt", fake_context)  # act
 
     mock_callable.assert_awaited_once_with("evt", fake_context)
 
 
-def test_run_handler_supports_sync_handler(fake_context, mock_callable):
-    asyncio.run(event_builder.run_handler(mock_callable, "evt", fake_context))  # act
+async def test_run_handler_supports_sync_handler(fake_context, mock_callable):
+    await event_builder.run_handler(mock_callable, "evt", fake_context)  # act
 
     mock_callable.assert_called_once_with("evt", fake_context)
 
 
-def test_run_handler_propagates_async_exception(mocker, fake_context, mock_callable):
+async def test_run_handler_propagates_async_exception(mocker, fake_context, mock_callable):
     mock_callable = mocker.AsyncMock(spec=Callable, side_effect=ValueError("async boom"))
 
     with pytest.raises(ValueError, match="async boom"):
-        asyncio.run(event_builder.run_handler(mock_callable, "evt", fake_context))
+        await event_builder.run_handler(mock_callable, "evt", fake_context)

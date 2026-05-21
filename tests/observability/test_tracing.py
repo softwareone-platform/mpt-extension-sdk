@@ -107,11 +107,11 @@ def test_event_span_sets_attributes(event_factory, event_span_runner):
     assert result.related_span.attributes["order.id"] == "ORD-1111-1112"
 
 
-def test_trace_span_wraps_async_attrs(mocker, span_exporter):
+async def test_trace_span_wraps_async_attrs(mocker, span_exporter):
     exporter, tracer = span_exporter
     mocker.patch.object(decorators, "TRACER", tracer)
 
-    result = asyncio.run(trace_sample_async({"id": "AGR-1"}))
+    result = await trace_sample_async({"id": "AGR-1"})
 
     span = next(
         finished_span
@@ -140,11 +140,11 @@ def test_trace_span_wraps_sync_function(mocker, span_exporter):
     assert span.name == "adobe.build_payload"
 
 
-def test_trace_span_omits_failing_callable_attr(mocker, span_exporter):
+async def test_trace_span_omits_failing_callable_attr(mocker, span_exporter):
     exporter, tracer = span_exporter
     mocker.patch.object(decorators, "TRACER", tracer)
 
-    result = asyncio.run(trace_sample_missing_attr({"id": "AGR-2"}))
+    result = await trace_sample_missing_attr({"id": "AGR-2"})
 
     span = next(
         finished_span

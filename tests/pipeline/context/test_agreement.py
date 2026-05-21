@@ -1,5 +1,3 @@
-import asyncio
-
 from mpt_extension_sdk.pipeline.context.agreement import AgreementContext
 from mpt_extension_sdk.pipeline.context.event import EventMetadata
 from mpt_extension_sdk.services.mpt_api_service import MPTAPIService
@@ -29,7 +27,9 @@ def test_agreement_context_exposes_agreement_id(
     assert result == "AGR-99"
 
 
-def test_agreement_context_refreshes_agreement(mocker, logger, runtime_settings, agreement_factory):
+async def test_agreement_context_refreshes_agreement(
+    mocker, logger, runtime_settings, agreement_factory
+):
     service = mocker.AsyncMock(
         spec=MPTAPIService, agreements=mocker.AsyncMock(spec=AgreementService)
     )
@@ -48,7 +48,7 @@ def test_agreement_context_refreshes_agreement(mocker, logger, runtime_settings,
         agreement=agreement_factory("AGR-1"),
     )
 
-    asyncio.run(context.refresh_agreement())  # act
+    await context.refresh_agreement()  # act
 
     assert context.agreement.id == "AGR-2"
     service.agreements.get_by_id.assert_awaited_once_with("AGR-1")

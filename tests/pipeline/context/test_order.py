@@ -1,5 +1,3 @@
-import asyncio
-
 from mpt_extension_sdk.pipeline.context.event import EventMetadata
 from mpt_extension_sdk.pipeline.context.order import OrderContext
 from mpt_extension_sdk.services.mpt_api_service import MPTAPIService
@@ -27,7 +25,7 @@ def test_order_context_exposes_order_id(mocker, logger, runtime_settings, order_
     assert result == "ORD-99"
 
 
-def test_order_context_refreshes_order(mocker, logger, runtime_settings, order_factory):
+async def test_order_context_refreshes_order(mocker, logger, runtime_settings, order_factory):
     service = mocker.AsyncMock(spec=MPTAPIService, orders=mocker.AsyncMock(spec=OrderService))
     service.orders.get_by_id = mocker.AsyncMock(return_value=order_factory("ORD-2"))
     context = OrderContext(
@@ -44,7 +42,7 @@ def test_order_context_refreshes_order(mocker, logger, runtime_settings, order_f
         order=order_factory("ORD-1"),
     )
 
-    asyncio.run(context.refresh_order())  # act
+    await context.refresh_order()  # act
 
     assert context.order.id == "ORD-2"
     service.orders.get_by_id.assert_awaited_once_with("ORD-1")

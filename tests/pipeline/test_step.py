@@ -1,5 +1,3 @@
-import asyncio
-
 import pytest
 
 from mpt_extension_sdk.context import BaseContext
@@ -45,49 +43,49 @@ def test_step_name():
     assert result == "FakeStep"
 
 
-def test_run_calls_pre_process_post(context_mock):
+async def test_run_calls_pre_process_post(context_mock):
     step = FakeStep()
 
-    asyncio.run(step.run(context_mock))  # act
+    await step.run(context_mock)  # act
 
     assert step.calls == [("pre", context_mock), ("process", context_mock), ("post", context_mock)]
 
 
-def test_run_raises_process_error_after_post(context_mock):
+async def test_run_raises_process_error_after_post(context_mock):
     error = RuntimeError("process failed")
     step = FakeStep(process_error=error)
 
     with pytest.raises(RuntimeError, match="process failed"):
-        asyncio.run(step.run(context_mock))
+        await step.run(context_mock)
 
     assert step.calls == [("pre", context_mock), ("process", context_mock), ("post", context_mock)]
 
 
-def test_run_raises_post_error(context_mock):
+async def test_run_raises_post_error(context_mock):
     error = RuntimeError("post failed")
     step = FakeStep(post_error=error)
 
     with pytest.raises(RuntimeError, match="post failed"):
-        asyncio.run(step.run(context_mock))
+        await step.run(context_mock)
 
     assert step.calls == [("pre", context_mock), ("process", context_mock), ("post", context_mock)]
 
 
-def test_run_chains_post_error_from_process_error(context_mock):
+async def test_run_chains_post_error_from_process_error(context_mock):
     process_error = RuntimeError("process failed")
     post_error = RuntimeError("post failed")
     step = FakeStep(process_error=process_error, post_error=post_error)
 
     with pytest.raises(RuntimeError, match="post failed") as exc_info:
-        asyncio.run(step.run(context_mock))
+        await step.run(context_mock)
 
     assert exc_info.value.__cause__ is process_error
     assert step.calls == [("pre", context_mock), ("process", context_mock), ("post", context_mock)]
 
 
-def test_run_uses_default_pre_and_post_hooks(context_mock):
+async def test_run_uses_default_pre_and_post_hooks(context_mock):
     step = FakeMinimalStep()
 
-    asyncio.run(step.run(context_mock))  # act
+    await step.run(context_mock)  # act
 
     assert step.calls == [("process", context_mock)]
