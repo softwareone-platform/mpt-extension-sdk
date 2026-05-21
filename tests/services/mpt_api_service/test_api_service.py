@@ -1,5 +1,3 @@
-import asyncio
-
 from mpt_api_client import AsyncMPTClient
 
 from mpt_extension_sdk.api.auth import AuthContext
@@ -38,7 +36,7 @@ def test_api_service_from_config(mocker):
     assert result.client is client
 
 
-def test_from_auth_context_uses_account_client(mocker, runtime_settings):  # noqa: WPS210
+async def test_from_auth_context_uses_account_client(mocker, runtime_settings):  # noqa: WPS210
     auth = mocker.Mock(spec=AuthContext)
     client = mocker.AsyncMock(spec=AsyncMPTClient)
     get_runtime_settings = mocker.patch(
@@ -57,7 +55,7 @@ def test_from_auth_context_uses_account_client(mocker, runtime_settings):  # noq
         return_value=client,
     )
 
-    result = asyncio.run(MPTAPIService.from_auth_context("https://api.example.com", auth))
+    result = await MPTAPIService.from_auth_context("https://api.example.com", auth)
 
     assert isinstance(result, MPTAPIService)
     assert result.client is client
