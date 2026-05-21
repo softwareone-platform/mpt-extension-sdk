@@ -1,5 +1,5 @@
-from mock_app.api.api_routes import api_router
-from mock_app.api.routes import orders_router
+from mock_app.api.routes.api import api_router
+from mock_app.api.routes.event import orders_router
 from mock_app.mocks.api_service import ExtMPTAPIService
 from mpt_extension_sdk import ExtensionApp
 

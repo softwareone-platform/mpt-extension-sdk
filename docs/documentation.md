@@ -2,9 +2,10 @@
 
 This repository follows the shared documentation standard:
 
-- [standards/documentation.md](https://github.com/softwareone-platform/mpt-extension-skills/blob/main/standards/documentation.md)
+- `standards/documentation.md` in `softwareone-platform/mpt-extension-skills`
 
-This file documents repository-specific documentation rules only.
+The shared standard owns the general documentation rules. This file documents
+only repository-specific additions and exceptions.
 
 ## Repository Rules
 
@@ -12,10 +13,13 @@ This file documents repository-specific documentation rules only.
 - `AGENTS.md` must stay operational and tell AI agents which files to read first.
 - `docs/architecture.md` must describe the SDK package structure and boundaries.
 - `docs/configuration.md` must hold SDK runtime environment-variable guidance.
-- `docs/usage.md` must explain how to use the SDK with practical examples.
+- `docs/usage.md` must stay as the SDK usage entry point and package long
+  description.
+- `docs/sdk_usage/` must hold granular SDK consumer examples split by topic.
 - topic-specific behavior must live in the matching file under [`docs/`](.).
-- `.github/copilot-instructions.md` must remain a thin adapter that points back to [`AGENTS.md`](../AGENTS.md).
-- [`docs/usage.md`](usage.md) is both the SDK usage guide and the package long description referenced by `pyproject.toml`.
+- `.github/copilot-instructions.md` must remain a thin adapter that points back
+  to [`AGENTS.md`](../AGENTS.md).
+- `pyproject.toml` uses [`docs/usage.md`](usage.md) as the package readme.
 
 ## Current Documentation Map
 
@@ -23,7 +27,8 @@ This file documents repository-specific documentation rules only.
 - [`AGENTS.md`](../AGENTS.md): AI entry point and reading order
 - [`architecture.md`](architecture.md): package structure and major boundaries
 - [`configuration.md`](configuration.md): runtime variables and integration-facing settings
-- [`usage.md`](usage.md): SDK usage guide and package long description
+- [`usage.md`](usage.md): SDK usage entry point and package long description
+- [`sdk_usage/`](sdk_usage/): granular SDK usage examples split by topic
 - [`local-development.md`](local-development.md): local setup and command entry points
 - [`contributing.md`](contributing.md): repository-specific development workflow
 - [`testing.md`](testing.md): testing strategy and command mapping
@@ -31,4 +36,6 @@ This file documents repository-specific documentation rules only.
 
 ## Documentation Change Rule
 
-When documentation changes, prefer updating the smallest relevant document instead of creating overlapping summary files.
+When documentation changes, update the smallest topic-specific document. Keep
+[`docs/usage.md`](usage.md) navigational and put full examples in
+[`docs/sdk_usage/`](sdk_usage/).
