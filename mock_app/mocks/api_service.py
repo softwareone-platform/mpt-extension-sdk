@@ -7,6 +7,7 @@ from mpt_extension_sdk.models.base import BaseModel
 from mpt_extension_sdk.services.api_client_v2.mpt_api_client import AsyncMPTClient
 from mpt_extension_sdk.services.mpt_api_service import MPTAPIService
 from mpt_extension_sdk.services.mpt_api_service.agreement import AgreementService
+from mpt_extension_sdk.services.mpt_api_service.base import PaginatedCollection
 from mpt_extension_sdk.services.mpt_api_service.installation import InstallationService
 from mpt_extension_sdk.services.mpt_api_service.order import OrderService
 
@@ -28,9 +29,11 @@ class MockAgreementService(AgreementService):
         """Create an agreement."""
         return Agreement.from_payload(agreement)
 
-    async def get_all(self, batch_size: int = 100) -> list[Agreement]:
-        """Get all agreements."""
-        return [
+    @override
+    async def get_all(self, offset: int = 0, limit: int = 100) -> PaginatedCollection[Agreement]:
+        """Get agreements using offset pagination."""
+        total = 10
+        agreements = [
             Agreement.from_payload({
                 "id": f"AGR-{ind}",
                 "name": "Test Agreement",
@@ -39,8 +42,9 @@ class MockAgreementService(AgreementService):
                 "parameters": {},
                 "product": {"id": f"PROD-11{ind}", "name": "Test Product"},
             })
-            for ind in range(batch_size)
+            for ind in range(offset, min(offset + limit, total))
         ]
+        return PaginatedCollection(limit=limit, offset=offset, resources=agreements, total=total)
 
     @override
     async def get_by_id(self, agreement_id: str) -> Agreement:

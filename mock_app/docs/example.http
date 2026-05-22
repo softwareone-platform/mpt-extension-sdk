@@ -54,7 +54,14 @@ Authorization: Bearer {{auth_token}}
 ###
 
 # [API][agreements-list] (expected 200 Ok - Paginated)
-GET http://localhost:8080/api/v2/agreements?page=2&page_size=3
+GET http://localhost:8080/api/v2/agreements?offset=2&limit=3
+Content-Type: application/json
+Authorization: Bearer {{auth_token}}
+
+###
+
+# [API][agreements-list] (expected 200 Ok - count-based pagination)
+GET http://localhost:8080/api/v2/agreements?limit=0
 Content-Type: application/json
 Authorization: Bearer {{auth_token}}
 

@@ -6,16 +6,15 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse, Response
 
 from mpt_extension_sdk.api.models.base import APIBaseModel
-from mpt_extension_sdk.api.pagination import PaginatedResult, PaginationLinksBuilder
+from mpt_extension_sdk.api.pagination import PaginatedResult
 
 
 class Meta(APIBaseModel):
     """Meta model."""
 
     total: int | None = None
-    page: int | None = None
-    page_size: int | None = None
-    total_pages: int | None = None
+    offset: int | None = None
+    limit: int | None = None
 
 
 class Links(APIBaseModel):
@@ -91,7 +90,7 @@ class APIResponse:  # noqa: WPS214
         """Return a 200 OK paginated response."""
         return cls(status_code=HTTPStatus.OK, payload=result.payload, paginated_result=result)
 
-    def to_http_response(self, *, request_url: str | None = None) -> Response:
+    def to_http_response(self) -> Response:
         """Convert the SDK response envelope to a FastAPI response."""
         if not self.has_body:
             return Response(status_code=self.status_code)
@@ -99,21 +98,16 @@ class APIResponse:  # noqa: WPS214
         payload: dict[str, Any] = {"data": self.payload}
         if self.paginated_result is None:
             if self.meta is not None:
-                payload["meta"] = self.meta
+                payload["$meta"] = self.meta
             if self.links is not None:
                 payload["links"] = self.links
         else:
-            if not request_url:
-                raise ValueError("request_url is required for paginated responses")
-
-            payload["meta"] = Meta(
-                total=self.paginated_result.total,
-                page=self.paginated_result.page,
-                page_size=self.paginated_result.page_size,
-                total_pages=self.paginated_result.total_pages,
-            )
-            payload["links"] = Links(
-                **PaginationLinksBuilder.build(request_url, self.paginated_result)
-            )
+            payload["$meta"] = {
+                "pagination": {
+                    "offset": self.paginated_result.offset,
+                    "limit": self.paginated_result.limit,
+                    "total": self.paginated_result.total,
+                }
+            }
 
         return JSONResponse(content=jsonable_encoder(payload), status_code=self.status_code)

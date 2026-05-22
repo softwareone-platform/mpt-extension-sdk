@@ -1,69 +1,52 @@
 import pytest
 
 from mpt_extension_sdk.api import PaginatedResult, Pagination, ValidationError
-from mpt_extension_sdk.api.pagination import PaginationLinksBuilder
 
 TOTAL_ITEMS = 25
-TOO_LARGE_PAGE_SIZE = "501"
+LARGE_LIMIT = "5000"
 
 
 def test_paginated_result_from_pagination():
-    pagination = Pagination(page=2, page_size=5)
+    pagination = Pagination(offset=25, limit=5)
 
     result = PaginatedResult.from_pagination(pagination, payload=["item"], total=TOTAL_ITEMS)
 
     assert result.payload == ["item"]
     assert result.total == TOTAL_ITEMS
-    assert result.page == 2
-    assert result.page_size == 5
-
-
-def test_paginated_result_total_pages_zero():
-    result = PaginatedResult(payload=[], total=0, page=1, page_size=10)
-
-    assert result.total_pages == 0
+    assert result.offset == 25
+    assert result.limit == 5
 
 
 def test_pagination_from_query_defaults():
     result = Pagination.from_query({})
 
-    assert result.page == 1
-    assert result.page_size == 20
+    assert result.offset == 0
+    assert result.limit == 100
 
 
-def test_pagination_validates_page_size():
-    with pytest.raises(ValidationError) as error_info:
-        Pagination.from_query({"page_size": TOO_LARGE_PAGE_SIZE})
+def test_pagination_accepts_large_limit():
+    result = Pagination.from_query({"limit": LARGE_LIMIT})
 
-    assert error_info.value.errors[0].pointer == "#/page_size"
+    assert result.limit == int(LARGE_LIMIT)
 
 
-@pytest.mark.parametrize("query", [{"page": "abc"}, {"page": "0"}])
-def test_pagination_validates_page(query):
+@pytest.mark.parametrize("query", [{"limit": "abc"}, {"limit": "-1"}])
+def test_pagination_validates_limit_format(query):
     with pytest.raises(ValidationError) as error_info:
         Pagination.from_query(query)
 
-    assert error_info.value.errors[0].pointer == "#/page"
+    assert error_info.value.errors[0].pointer == "#/limit"
 
 
-def test_pagination_links_first_page():
-    result = PaginationLinksBuilder.build(
-        "https://example.com/orders", PaginatedResult(payload=[], total=0, page=1, page_size=10)
-    )
+@pytest.mark.parametrize("query", [{"offset": "abc"}, {"offset": "-1"}])
+def test_pagination_validates_offset(query):
+    with pytest.raises(ValidationError) as error_info:
+        Pagination.from_query(query)
 
-    assert result["prev"] is None
-    assert result["next"] is None
-    assert result["last"] == "https://example.com/orders?page=1&page_size=10"
+    assert error_info.value.errors[0].pointer == "#/offset"
 
 
-def test_pagination_links_replace_page_params():
-    result = PaginationLinksBuilder.build(
-        "https://example.com/orders?foo=bar&page=9&page_size=1",
-        PaginatedResult(payload=[], total=TOTAL_ITEMS, page=2, page_size=10),
-    )
+def test_pagination_accepts_count_only_limit():
+    result = Pagination.from_query({"limit": "0"})
 
-    assert result["self"] == "https://example.com/orders?foo=bar&page=2&page_size=10"
-    assert result["first"] == "https://example.com/orders?foo=bar&page=1&page_size=10"
-    assert result["prev"] == "https://example.com/orders?foo=bar&page=1&page_size=10"
-    assert result["next"] == "https://example.com/orders?foo=bar&page=3&page_size=10"
-    assert result["last"] == "https://example.com/orders?foo=bar&page=3&page_size=10"
+    assert result.limit == 0

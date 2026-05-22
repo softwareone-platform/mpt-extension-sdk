@@ -141,8 +141,7 @@ body, the SDK serializes the result using the standard JSON envelope:
 ```json
 {
   "data": {},
-  "meta": {},
-  "links": {}
+  "$meta": {}
 }
 ```
 
@@ -154,9 +153,26 @@ Use the response helper that matches the endpoint semantics:
 - `APIResponse.paginated(PaginatedResult.from_pagination(...))`
 - `APIResponse.no_content()`
 
-For page-based collection responses, use `ctx.request.pagination` and
-`PaginatedResult`. The SDK parses `page` and `page_size` lazily from the query
-string and builds `meta` plus pagination links from the current request URL.
+For offset-based collection responses, use `ctx.request.pagination` and
+`PaginatedResult`. The SDK parses `offset` and `limit` lazily from the query
+string and serializes pagination under `$meta.pagination`. Missing values
+default to `offset=0` and `limit=100`. Both `offset` and `limit` must be
+greater than or equal to `0`; `limit=0` is treated as a count-only request.
+
+Paginated responses use this shape:
+
+```json
+{
+  "$meta": {
+    "pagination": {
+      "offset": 0,
+      "limit": 100,
+      "total": 250
+    }
+  },
+  "data": []
+}
+```
 
 ```python
 from mpt_extension_sdk.api import APIContext, APIResponse, PaginatedResult
@@ -166,8 +182,8 @@ from mpt_extension_sdk.api import APIContext, APIResponse, PaginatedResult
 async def list_orders(ctx: APIContext) -> APIResponse:
     pagination = ctx.request.pagination
     result = await OrderService().list_orders(
-        page=pagination.page,
-        page_size=pagination.page_size,
+        offset=pagination.offset,
+        limit=pagination.limit,
     )
     return APIResponse.paginated(
         PaginatedResult.from_pagination(
