@@ -32,15 +32,16 @@ async def test_get_by_id(mocker, agreement_service_factory):
     agreements_client.get.assert_awaited_once_with(
         "AGR-1",
         select=[
-            "client",
-            "seller",
-            "buyer",
-            "listing",
-            "product",
-            "subscriptions",
             "assets",
+            "buyer",
+            "client",
+            "licensee",
             "lines",
+            "listing",
             "parameters",
+            "product",
+            "seller",
+            "subscriptions",
         ],
     )
     from_payload.assert_called_once_with(api_agreement)
