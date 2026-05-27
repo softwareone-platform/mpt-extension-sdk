@@ -26,15 +26,16 @@ class AgreementService(BaseService[Agreement]):
         agreement = await self._client.commerce.agreements.get(
             agreement_id,
             select=[
-                "client",
-                "seller",
-                "buyer",
-                "listing",
-                "product",
-                "subscriptions",
                 "assets",
+                "buyer",
+                "client",
+                "licensee",
                 "lines",
+                "listing",
                 "parameters",
+                "product",
+                "seller",
+                "subscriptions",
             ],
         )
         logger.debug("Fetched agreement %s: %s", agreement_id, agreement.to_dict())
