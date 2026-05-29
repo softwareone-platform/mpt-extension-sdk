@@ -17,7 +17,6 @@ def run_extension(*, local: bool) -> None:
             otherwise run with Ziticorn for OpenZiti connectivity.
     """
     settings = get_runtime_settings()
-    create_meta_file(settings)
     if local:
         run_fastapi(
             "mpt_extension_sdk.runtime.main:app",

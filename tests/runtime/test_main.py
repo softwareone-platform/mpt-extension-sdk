@@ -9,6 +9,10 @@ def test_runtime_main_builds_app_from_settings(mocker, runtime_settings):
         autospec=True,
         return_value=expected_app,
     )
+    create_meta_file = mocker.patch(
+        "mpt_extension_sdk.runtime.runner.create_meta_file",
+        autospec=True,
+    )
     get_runtime_settings = mocker.patch(
         "mpt_extension_sdk.settings.runtime.get_runtime_settings",
         autospec=True,
@@ -20,4 +24,5 @@ def test_runtime_main_builds_app_from_settings(mocker, runtime_settings):
 
     assert result.app is expected_app
     get_runtime_settings.assert_called_once_with()
+    create_meta_file.assert_called_once_with(runtime_settings)
     create_runtime_app.assert_called_once_with(runtime_settings=runtime_settings)
