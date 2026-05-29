@@ -27,7 +27,7 @@ def test_run_extension_local_mode(runtime_settings, runner_patches):
 
     runner.run_extension(local=True)  # act
 
-    create_meta_file.assert_called_once_with(runtime_settings)
+    create_meta_file.assert_not_called()
     run_fastapi.assert_called_once_with(
         "mpt_extension_sdk.runtime.main:app",
         host=runtime_settings.local_host,
@@ -47,7 +47,7 @@ def test_run_extension_platform_mode(runtime_settings, runner_patches):
 
     runner.run_extension(local=False)  # act
 
-    create_meta_file.assert_called_once_with(runtime_settings)
+    create_meta_file.assert_not_called()
     register_instance.assert_called_once_with(settings=runtime_settings)
     run_ziti.assert_called_once_with(
         "mpt_extension_sdk.runtime.main:app",
