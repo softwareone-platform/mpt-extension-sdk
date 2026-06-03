@@ -11,7 +11,7 @@ from mpt_extension_sdk.services.mpt_api_service.account_scoped_client import (
     AccountScopedAsyncMPTClient,
     AccountTokenProvider,
 )
-from mpt_extension_sdk.services.mpt_api_service.installation import InstallationService
+from mpt_extension_sdk.services.mpt_api_service.account_token import AccountTokenService
 
 
 @pytest.fixture
@@ -38,17 +38,17 @@ def token_provider_factory(mocker, account_token_factory, runtime_settings):  # 
             extension_id="EXT-1",
             account=Account(id="ACC-1", type=AccountType.CLIENT),
         )
-        installations = mocker.Mock(
+        account_token = mocker.Mock(
             spec=["create_token"], create_token=mocker.AsyncMock(return_value=provider_token)
         )
         service_type = mocker.Mock(spec=["from_config"])
         service_type.from_config.return_value = mocker.Mock(
-            spec=["installations"], installations=installations
+            spec=["account_token"], account_token=account_token
         )
         provider = AccountTokenProvider(
             runtime_settings=runtime_settings, auth=auth, service_type=service_type
         )
-        return provider, service_type, installations
+        return provider, service_type, account_token
 
     return factory
 
@@ -78,9 +78,9 @@ async def test_create_token_query_params(mocker, async_mpt_client, jwt_token_fac
         path="/public/v1/integration/installations/-/token",
         http_client=http_client,
     )
-    async_mpt_client.integration.installations.return_value = installations
+    async_mpt_client.integration.installations_token.return_value = installations
 
-    result = await InstallationService(async_mpt_client).create_token("ACC-1")
+    result = await AccountTokenService(async_mpt_client).create_token("ACC-1")
 
     assert result.token == token
     assert result.exp == 4102444800

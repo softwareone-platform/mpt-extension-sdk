@@ -6,10 +6,10 @@ from mpt_extension_sdk.services.mpt_api_service.account_scoped_client import (
     AccountScopedAsyncMPTClient,
     AccountTokenProvider,
 )
+from mpt_extension_sdk.services.mpt_api_service.account_token import AccountTokenService
 from mpt_extension_sdk.services.mpt_api_service.agreement import AgreementService
 from mpt_extension_sdk.services.mpt_api_service.asset import AssetService
 from mpt_extension_sdk.services.mpt_api_service.client_factory import build_mpt_client
-from mpt_extension_sdk.services.mpt_api_service.installation import InstallationService
 from mpt_extension_sdk.services.mpt_api_service.order import OrderService
 from mpt_extension_sdk.services.mpt_api_service.product import (
     ProductItemService,
@@ -33,7 +33,7 @@ class MPTAPIService:  # noqa: WPS215, WPS230
         self.client = client
         self.agreements = AgreementService(client)
         self.assets = AssetService(client)
-        self.installations = InstallationService(client)
+        self.account_token = AccountTokenService(client)
         self.products = ProductService(client)
         self.product_items = ProductItemService(client)
         self.orders = OrderService(client)

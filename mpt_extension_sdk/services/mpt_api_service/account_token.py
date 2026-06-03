@@ -3,12 +3,12 @@ from mpt_extension_sdk.models.account import AccountToken
 from mpt_extension_sdk.services.mpt_api_service.base import BaseService
 
 
-class InstallationService(BaseService[AccountToken]):
-    """Installation service."""
+class AccountTokenService(BaseService[AccountToken]):
+    """Account-scoped token service."""
 
     async def create_token(self, account_id: str) -> AccountToken:
         """Create an account-scoped token for an installation."""
-        installations = self._client.integration.installations()
+        installations = self._client.integration.installations_token()
         response = await installations.http_client.request(
             "post", installations.path, query_params={"account.id": account_id}
         )

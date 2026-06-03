@@ -6,9 +6,9 @@ from mpt_extension_sdk.models.account import AccountToken
 from mpt_extension_sdk.models.base import BaseModel
 from mpt_extension_sdk.services.api_client_v2.mpt_api_client import AsyncMPTClient
 from mpt_extension_sdk.services.mpt_api_service import MPTAPIService
+from mpt_extension_sdk.services.mpt_api_service.account_token import AccountTokenService
 from mpt_extension_sdk.services.mpt_api_service.agreement import AgreementService
 from mpt_extension_sdk.services.mpt_api_service.base import PaginatedCollection
-from mpt_extension_sdk.services.mpt_api_service.installation import InstallationService
 from mpt_extension_sdk.services.mpt_api_service.order import OrderService
 
 
@@ -18,8 +18,19 @@ class ExtMPTAPIService(MPTAPIService):
     def __init__(self, client: AsyncMPTClient, *args: Any, **kwargs: Any) -> None:
         super().__init__(client)
         self.agreements = MockAgreementService(client)
-        self.installations = MockInstallationService(client)
+        self.account_token = MockAccountTokenService(client)
         self.orders = MockOrderService(client)
+
+
+class MockAccountTokenService(AccountTokenService):
+    """Mock account token service."""
+
+    @override
+    async def create_token(self, account_id: str) -> AccountToken:
+        return AccountToken.from_payload({
+            "token": "mock-account-token",
+            "exp": 1877516378,
+        })
 
 
 class MockAgreementService(AgreementService):
@@ -57,17 +68,6 @@ class MockAgreementService(AgreementService):
             "product": {"id": "PROD-111", "name": "Test Product"},
         }
         return Agreement.from_payload(payload)
-
-
-class MockInstallationService(InstallationService):
-    """Mock installation service."""
-
-    @override
-    async def create_token(self, account_id: str) -> AccountToken:
-        return AccountToken.from_payload({
-            "token": "mock-account-token",
-            "exp": 1877516378,
-        })
 
 
 class MockOrderService(OrderService):

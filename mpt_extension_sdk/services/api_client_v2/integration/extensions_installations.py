@@ -3,20 +3,20 @@ from mpt_api_client.http.mixins import AsyncCreateMixin
 from mpt_api_client.models import Model
 
 
-class IntegrationInstallations(Model):
-    """Integration installations model."""
+class IntegrationInstallationsToken(Model):
+    """Integration installations token model."""
 
 
-class IntegrationInstallationsServiceConfig:
-    """Integration installations service config."""
+class IntegrationInstallationsTokenServiceConfig:
+    """Integration installations token service config."""
 
     _endpoint = "/public/v1/integration/installations/-/token"
-    _model_class = IntegrationInstallations
+    _model_class = IntegrationInstallationsToken
 
 
-class AsyncIntegrationInstallationsService(
-    AsyncCreateMixin[IntegrationInstallations],
-    AsyncService[IntegrationInstallations],
-    IntegrationInstallationsServiceConfig,
+class AsyncIntegrationInstallationsTokenService(
+    AsyncCreateMixin[IntegrationInstallationsToken],
+    AsyncService[IntegrationInstallationsToken],
+    IntegrationInstallationsTokenServiceConfig,
 ):
-    """Extensions installations service."""
+    """Extensions installations token service."""

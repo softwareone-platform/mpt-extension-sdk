@@ -41,7 +41,7 @@ repos:
         pass_filenames: false
         additional_dependencies:
           - fastapi[standard]==0.131.*
-          - mpt-api-client==6.0.*
+          - mpt-api-client==6.3.*
           - mrok==0.9.6
           - opentelemetry-api==1.40.0
           - opentelemetry-exporter-otlp-proto-http==1.40.0
