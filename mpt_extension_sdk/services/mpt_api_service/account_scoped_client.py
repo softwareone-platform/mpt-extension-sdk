@@ -73,7 +73,7 @@ class AccountTokenProvider:
             base_url=self._runtime_settings.mpt_api_base_url,
             api_token=self._runtime_settings.ext_api_key,
         )
-        return await mpt_api_service.installations.create_token(self._auth.account.id)
+        return await mpt_api_service.account_token.create_token(self._auth.account.id)
 
     def _is_token_valid(self, expires_at: dt.datetime) -> bool:
         expected_time = dt.datetime.now(dt.UTC).timestamp() + self._min_remaining_validity_seconds

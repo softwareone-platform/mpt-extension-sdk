@@ -12,7 +12,7 @@ def test_api_service_composes_expected_services(mocker):  # noqa: WPS218
     assert result.client is client
     assert hasattr(result, "agreements")
     assert hasattr(result, "assets")
-    assert hasattr(result, "installations")
+    assert hasattr(result, "account_token")
     assert hasattr(result, "products")
     assert hasattr(result, "product_items")
     assert hasattr(result, "orders")
