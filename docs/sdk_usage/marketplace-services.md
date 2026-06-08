@@ -35,6 +35,35 @@ mpt_api_service = await MPTAPIService.from_account_id(base_url, account_id)
 so the resulting service refreshes its token per request like any other
 account-scoped service.
 
+## Operations-Authenticated Service Per Handler
+
+For the common case of acting as the Operations account from a Client-account
+event handler, the SDK provides the `with_operations_mpt_api_service` decorator.
+It reads the Operations account id from extension settings, builds the
+account-scoped service, and exposes it as `ctx.ops_mpt_api_service`.
+`ctx.mpt_api_service` keeps the caller-account scope unchanged.
+
+```python
+from mpt_extension_sdk.decorators import with_operations_mpt_api_service
+
+
+@orders_router.task(
+    path="/change",
+    name="orders-change",
+    event="platform.commerce.order.changed",
+)
+@with_operations_mpt_api_service()
+async def process_order_change(event: TaskEvent, ctx: OrderContext):
+    # ctx.mpt_api_service is still scoped to the caller account
+    # ctx.ops_mpt_api_service is scoped to the Operations account
+    await ctx.ops_mpt_api_service.orders.get_by_id(ctx.order_id)
+```
+
+The decorator reads `ctx.ext_settings.mpt_ops_account_id` by default. Override
+the source attribute with `@with_operations_mpt_api_service(settings_attr=...)`
+when the extension exposes the account id under a different field. To use a
+custom `MPTAPIService` subclass, pass `service_type=...`.
+
 ## API Handler Example
 
 ```python
