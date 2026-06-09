@@ -4,7 +4,6 @@ import pytest
 from mpt_api_client.http.async_client import AsyncHTTPClient
 from mpt_api_client.http.types import Response
 
-from mpt_extension_sdk.api.auth import Account, AccountType, AuthContext
 from mpt_extension_sdk.models.account import AccountToken
 from mpt_extension_sdk.services.mpt_api_service.account_scoped_client import (
     AccountScopedAsyncHTTPClient,
@@ -32,12 +31,6 @@ def account_token_factory():
 def token_provider_factory(mocker, account_token_factory, runtime_settings):  # noqa: WPS210
     def factory(account_token: AccountToken | None = None):
         provider_token = account_token_factory() if account_token is None else account_token
-        auth = mocker.Mock(
-            spec=AuthContext,
-            token="request-token",
-            extension_id="EXT-1",
-            account=Account(id="ACC-1", type=AccountType.CLIENT),
-        )
         account_token = mocker.Mock(
             spec=["create_token"], create_token=mocker.AsyncMock(return_value=provider_token)
         )
@@ -46,7 +39,10 @@ def token_provider_factory(mocker, account_token_factory, runtime_settings):  # 
             spec=["account_token"], account_token=account_token
         )
         provider = AccountTokenProvider(
-            runtime_settings=runtime_settings, auth=auth, service_type=service_type
+            runtime_settings=runtime_settings,
+            extension_id="EXT-1",
+            account_id="ACC-1",
+            service_type=service_type,
         )
         return provider, service_type, account_token
 

@@ -20,6 +20,21 @@ The SDK builds the service from the request context:
   Marketplace token
 - the auth context is also carried as `ctx.auth` when the request provides one
 
+When a handler needs to call the MPT API as a different account than the
+caller (for example as the Operations account when reacting to a Client
+agreement event), build the service from the account id directly:
+
+```python
+from mpt_extension_sdk.services.mpt_api_service import MPTAPIService
+
+mpt_api_service = await MPTAPIService.from_account_id(base_url, account_id)
+```
+
+`from_account_id` reuses the same account-scoped token mechanism as
+`from_auth_context` and resolves the extension identity from runtime settings,
+so the resulting service refreshes its token per request like any other
+account-scoped service.
+
 ## API Handler Example
 
 ```python
