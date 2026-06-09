@@ -35,6 +35,24 @@ mpt_api_service = await MPTAPIService.from_account_id(base_url, account_id)
 so the resulting service refreshes its token per request like any other
 account-scoped service.
 
+## Installations
+
+Use `ctx.mpt_api_service.installations` to look up extension installations
+through the integration installations endpoint. To check whether an extension
+is already installed in a given account before deciding to invite it:
+
+```python
+already_installed = await ctx.mpt_api_service.installations.exists_for_account(
+    extension_id="EXT-1234",
+    account_id="ACC-5678",
+)
+```
+
+`exists_for_account` returns ``True`` whenever the API returns at least one
+matching installation regardless of installation status (`Invited`,
+`Installed`, `Expired`, `Uninstalled`). It returns ``False`` only for an empty
+result set. Other API errors are propagated unchanged.
+
 ## Operations-Authenticated Service Per Handler
 
 For the common case of acting as the Operations account from a Client-account
