@@ -89,4 +89,13 @@ MPT_API_BASE_URL=https://api.s1.show
 SDK_LOCAL_PORT=8080
 ```
 
+`BaseExtensionSettings` also inherits shared helpers for custom environment
+variables:
+
+- `bool_env()` parses boolean flags such as `true`, `1`, and `yes`.
+- `int_env()` parses integers and raises `ConfigError` for invalid values.
+- `list_env()` parses comma-separated strings into trimmed lists.
+- `json_env()` parses JSON objects, arrays, and scalar values and raises
+  `ConfigError` for invalid JSON.
+
 See [configuration.md](../configuration.md) for the runtime environment-variable reference.

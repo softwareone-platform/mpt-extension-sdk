@@ -1,13 +1,14 @@
+import json
 import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Self
+from typing import Any, Self
 
 from mpt_extension_sdk.errors.runtime import ConfigError
 
 
 @dataclass(frozen=True)
-class BaseSettings(ABC):
+class BaseSettings(ABC):  # noqa: WPS214
     """Base settings class."""
 
     @property
@@ -47,6 +48,15 @@ class BaseSettings(ABC):
             return []
 
         return [raw_value.strip() for raw_value in raw_values.split(",") if raw_value.strip()]
+
+    @classmethod
+    def json_env(cls, env_key: str, *, default: str = "{}") -> Any:
+        """Parse a JSON environment variable and raise ConfigError on failure."""
+        raw_value = os.getenv(env_key, default)
+        try:
+            return json.loads(raw_value)
+        except json.JSONDecodeError as error:
+            raise ConfigError(f"Invalid JSON in {env_key}: {raw_value}") from error
 
     def validate(self) -> None:
         """Check required environment variables are not missing.
