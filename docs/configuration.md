@@ -24,7 +24,6 @@ The SDK runtime relies on these settings:
 | `SDK_OBSERVABILITY_ENABLED` | `true` | `false` | Enables SDK observability bootstrap |
 | `SDK_APPLICATIONINSIGHTS_CONNECTION_STRING` | - | `InstrumentationKey=...` | Azure Monitor connection string used by the SDK observability bootstrap |
 | `SDK_OTEL_SERVICE_NAME` | - | `my-extension` | Optional OpenTelemetry service name override |
-| `SDK_OTEL_EXPORTERS` | SDK default | `otlp` | Demo/runtime exporter selection for the SDK observability bootstrap |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | exporter default | `http://jaeger:4318` | OTLP collector endpoint used when OTLP export is enabled |
 | `OTEL_EXPORTER_OTLP_PROTOCOL` | exporter default | `http/protobuf` | OTLP protocol for the configured exporter |
 
