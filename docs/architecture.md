@@ -34,7 +34,7 @@ The main package lives under [`mpt_extension_sdk/`](../mpt_extension_sdk).
 - [`pipeline/`](../mpt_extension_sdk/pipeline): execution contexts, context factory helpers, decorators, pipeline base classes, and steps
 - [`runtime/`](../mpt_extension_sdk/runtime): FastAPI app assembly, runtime startup, logging context, and platform bootstrap helpers
 - [`services/mpt_api_service/`](../mpt_extension_sdk/services/mpt_api_service): Marketplace service layer used by handlers, pipelines, and runtime operations
-- [`services/api_client_v2/`](../mpt_extension_sdk/services/api_client_v2): newer async Marketplace API client layer (`mpt_api_client`, `integration/`, `system/`), used alongside `mpt_api_service`
+- [`services/api_client_v2/`](../mpt_extension_sdk/services/api_client_v2): lower-level async Marketplace API client (`mpt_api_client.py` exposes `AsyncMPTClient`, with `integration/` and `system/` subpackages). `MPTAPIService` and its sub-services are constructed with the `AsyncMPTClient` from this layer, so `api_client_v2` is a dependency of `mpt_api_service` rather than a peer
 - [`settings/`](../mpt_extension_sdk/settings): runtime and extension settings discovery
 - [`observability/`](../mpt_extension_sdk/observability): tracing bootstrap, instrumentation, and SDK-level observability hooks
 - [`models/`](../mpt_extension_sdk/models): typed Marketplace domain models used across contexts and services
