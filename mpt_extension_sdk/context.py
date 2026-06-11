@@ -23,7 +23,6 @@ class BaseContext:
     ext_settings: "BaseExtensionSettings"
     runtime_settings: "RuntimeSettings"
     auth: "AuthContext | None" = None
-    ops_mpt_api_service: "MPTAPIService | None" = None
 
 
 class ContextAdapter(ABC):
