@@ -6,6 +6,7 @@ from mpt_api_client.http.async_client import AsyncHTTPClient
 from mpt_api_client.http.query_options import QueryOptions
 from mpt_api_client.http.types import HeaderTypes, QueryParam, RequestFiles, Response
 
+from mpt_extension_sdk.api.auth import AuthContext
 from mpt_extension_sdk.models.account import AccountToken
 from mpt_extension_sdk.services.api_client_v2.mpt_api_client import AsyncMPTClient
 from mpt_extension_sdk.settings.runtime import RuntimeSettings
@@ -30,21 +31,19 @@ class AccountTokenProvider:
         self,
         *,
         runtime_settings: RuntimeSettings,
-        extension_id: str,
-        account_id: str,
+        auth: AuthContext,
         service_type: type["MPTAPIService"],
         min_remaining_validity_seconds: int = TOKEN_EXPIRY_LEEWAY_SECONDS,
     ) -> None:
         self._runtime_settings = runtime_settings
-        self._extension_id = extension_id
-        self._account_id = account_id
+        self._auth = auth
         self._service_type = service_type
         self._min_remaining_validity_seconds = min_remaining_validity_seconds
 
     @property
     def cache_key(self) -> AccountCacheKey:
         """Return the cache key for the current account."""
-        return self._extension_id, self._account_id
+        return self._auth.extension_id, self._auth.account.id
 
     @classmethod
     def clear_cache(cls) -> None:
@@ -74,7 +73,7 @@ class AccountTokenProvider:
             base_url=self._runtime_settings.mpt_api_base_url,
             api_token=self._runtime_settings.ext_api_key,
         )
-        return await mpt_api_service.account_token.create_token(self._account_id)
+        return await mpt_api_service.account_token.create_token(self._auth.account.id)
 
     def _is_token_valid(self, expires_at: dt.datetime) -> bool:
         expected_time = dt.datetime.now(dt.UTC).timestamp() + self._min_remaining_validity_seconds
