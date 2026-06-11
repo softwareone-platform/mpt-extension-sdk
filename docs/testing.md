@@ -48,7 +48,6 @@ Shared make-target knowledge also applies in this repository:
 - `make test`: run the automated test suite
 - `make check-all`: run the full local validation flow expected before merge
 - `make bash`: open a shell in the application container or runtime environment
-- `make shell`: open an application-specific shell
 
 ## Pytest Configuration
 

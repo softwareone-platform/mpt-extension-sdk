@@ -38,7 +38,6 @@ make test
 make build
 make run
 make bash
-make shell
 make format
 make check
 make test
