@@ -1,9 +1,7 @@
 from mock_app.api.schemas import AgreementSchema
-from mock_app.mocks.api_service import ExtMPTAPIService
 from mock_app.sync.agreements import SyncAgreements
 from mpt_extension_sdk import APIRouter
 from mpt_extension_sdk.api import APIContext, APIResponse, NotFoundError, PaginatedResult
-from mpt_extension_sdk.decorators import with_operations_mpt_api_service
 
 api_router = APIRouter()
 
@@ -30,10 +28,9 @@ async def handle_get_agreements(ctx: APIContext) -> APIResponse:
 
 
 @api_router.post("/agreements", name="agreements-create", body_validator=AgreementSchema)
-@with_operations_mpt_api_service(service_type=ExtMPTAPIService)
 async def handle_create_agreement(body: AgreementSchema, ctx: APIContext) -> APIResponse:
     """Create one agreement through the mock service facade."""
-    new_agreement = await ctx.ops_mpt_api_service.agreements.create(body)  # type: ignore[union-attr]
+    new_agreement = await ctx.mpt_api_service.agreements.create(body)  # type: ignore[attr-defined]
     return APIResponse.created(payload=new_agreement)
 
 
