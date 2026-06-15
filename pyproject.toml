@@ -31,14 +31,14 @@ dev = [
     "ipython==9.*",
     "mypy==2.1.*",
     "pre-commit==4.6.*",
-    "pytest==9.0.*",
+    "pytest==9.1.*",
     "pytest-asyncio==1.4.*",
     "pytest-cov==7.1.*",
     "pytest-deadfixtures==3.1.*",
     "pytest-mock==3.15.*",
     "pytest-randomly==4.1.*",
     "pytest-xdist==3.8.*",
-    "ruff==0.15.16", # force ruff version to have same formatting everywhere, also update in pre-commit config
+    "ruff==0.15.17", # force ruff version to have same formatting everywhere, also update in pre-commit config
     "wemake-python-styleguide==1.6.*", # also update pre-commit config
 ]
 
@@ -217,6 +217,7 @@ convention = "google"
   "S607", # partial executable paths
   "PLC2701", # tests may reach private helpers explicitly
   "SLF001", # tests may reach private helpers explicitly
+  "RUF076", # autouse fixtures are an intentional reset pattern in tests
 ]
 
 [tool.ruff.lint.isort]
