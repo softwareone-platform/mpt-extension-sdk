@@ -1,240 +1,277 @@
-# .NET Extension SDK — Design
+# Pure-.NET Extension SDK — Design
 
 **Date:** 2026-06-19
-**Status:** Approved for planning
+**Status:** Draft for review (revised after discovering the existing bridge-based SDK and platform NuGet models)
 **Authors:** MPT team (via Claude Code)
 
 ## Summary
 
-The team is shifting SoftwareONE Marketplace extension development from the Python
-`mpt-extension-sdk` to a pure .NET implementation. This document designs a small set of
-reusable .NET libraries that a C# extension service can reference to get the same
-capabilities the Python SDK provides today: a typed Marketplace API client, an extension
-hosting/runtime model (instance registration, event/API routing, typed contexts,
-pipelines), and OpenZiti-based platform transport.
+The team is moving SoftwareONE Marketplace extension development to a **pure .NET**
+implementation. A bridge-based .NET SDK already exists at `C:\repos\mpt-extension-dotnet-sdk`
+(`Mpt.Extensions.Sdk`): it gives extension authors an attribute-driven model
+(`[EventHandler]`, `[ApiEndpoint]`, `[Plug]`, `[ScheduleHandler]`), typed contexts, a
+manifest source generator, and an `ExtensionHostBuilder` — but it delegates registration,
+OpenZiti transport, `meta.yaml`, and Marketplace API calls to a **Python bridge sidecar**.
 
-The .NET libraries live in a **new, separate repository** (working name
-`mpt-extension-sdk-dotnet`). They target **net8.0 (LTS)** and ship as NuGet packages.
+This design **removes the Python bridge** and reimplements its three responsibilities
+natively in .NET, while keeping the existing C# authoring surface. It also adopts the
+**platform domain models published on the PyraCloud NuGet feed**
+(`Mpt.Models.Platform`, `Mpt.Models.Core`) instead of bespoke/generated models.
+
+The result is a small set of libraries a C# service references to build an extension with
+no Python in the container.
 
 ## Goals
 
-- Provide a typed, ergonomic Marketplace API client for C# services (orders, agreements,
-  subscriptions, assets, products, installations, tasks, templates).
-- Reproduce the two-token auth model: a long-lived extension key for bootstrap, and
-  per-account JWT tokens that are minted, cached, and auto-refreshed.
-- Reproduce instance registration and identity persistence.
-- Provide an ASP.NET Core hosting model so a service can declare event/task handlers and
-  API endpoints, receive typed contexts, and process them through pipelines.
-- Connect to the platform over OpenZiti, matching today's `ziticorn` transport, while
-  keeping local development on plain Kestrel.
+- Keep the existing, good authoring model from `Mpt.Extensions.Sdk` (attributes, contexts,
+  `EventResponse`, source-gen, `ExtensionHostBuilder`).
+- Replace the Python bridge with native .NET:
+  - **Registration + identity persistence** on startup.
+  - **OpenZiti transport** so the host receives platform traffic over the overlay
+    (`OpenZiti.NET`), replacing `mrok`/`ziticorn`.
+  - **Direct, account-scoped Marketplace API access** (mint/cache/refresh account tokens,
+    call the MPT API over Ziti), replacing the bridge `/__egress` proxy.
+  - **Native `meta.yaml` generation** from the manifest, replacing the bridge's `meta.py`.
+- Reuse platform NuGet domain models (`Mpt.Models.Platform` / `Mpt.Models.Core`).
+- Preserve local development without Ziti (plain Kestrel), mirroring today's local mode.
 
 ## Non-Goals
 
-- Porting the Python `Plug` and `Schedule` route families. (`Plug` is declarative
-  metadata + static assets; `Schedule` is modeled but not mounted in the Python runtime.)
-  These can be added later; they are out of scope for the first deliverable.
-- Porting the Typer-based `mpt-ext` CLI. Metadata generation is provided as a library
-  capability and (optionally) a `dotnet` tool later.
-- A drop-in line-by-line port. We map Python concepts onto idiomatic .NET
-  (minimal-API/builder style, `HttpClient`, `IHostedService`, DI) rather than mirroring
-  Python class structure.
+- Rewriting the authoring model. The attribute/context/source-gen surface stays.
+- Implementing `schedule` traffic end-to-end (routes exist but the platform doesn't drive
+  them yet) or expanding `plug` beyond today's static-asset behaviour.
+- A managed-code OpenZiti reimplementation. We wrap `OpenZiti.NET` (which wraps `ziti-sdk-c`).
 
-## Reference: what the Python SDK does today
+## Decisions (made now; flag if any should change)
 
-The behaviours we are reproducing (verified against `mpt_extension_sdk/`):
+1. **Home: new separate repository** (working name `mpt-extension-sdk-dotnet`), per the
+   earlier decision. The reusable parts of `C:\repos\mpt-extension-dotnet-sdk\src\Mpt.Extensions.Sdk`
+   (attributes, contexts, dispatch, discovery, manifest, source-gen) are **lifted into the new
+   repo**; the Python `bridge/` is dropped. *(If you'd rather evolve the existing repo in place
+   and delete `bridge/`, say so — it's less lift-and-shift but mixes old/new history.)*
+2. **Target framework: net10.0**, matching the existing `Mpt.Extensions.Sdk` and the
+   `product-hub-extension` POC. *(This supersedes the earlier net8.0 choice, which was made
+   before we knew the existing SDK and POC are net10.0. The platform models are net8.0 and
+   are consumable from net10.0.)*
+3. **Domain models: reuse `Mpt.Models.Platform` + `Mpt.Models.Core`** from the PyraCloud
+   feed, per direction. See Risk 1 for the serialization-parity work this implies.
 
-- **Registration** (`runtime/bootstrap/registration.py`): builds
-  `{externalId, version, meta}`, adds `channel: {}` when no matching identity exists, then
-  `POST /public/v1/integration/extensions/{extensionId}/instances` with a bearer extension
-  key. The response's `channel.identity` (OpenZiti credentials, keyed under `mrok`) is
-  persisted to an identity file.
-- **Transport** (`runtime/runner.py`): local mode runs `uvicorn`; platform mode calls
-  `register_instance()` then serves the ASGI app through `ziticorn.run(app, identityFile, …)`.
-- **API client** (`services/mpt_api_service/`): `MPTAPIService` wraps an async client and
-  exposes sub-services. Account scoping is done by an account-token provider that injects a
-  fresh per-account JWT on every request (60s refresh leeway, per-account lock).
-- **Routing** (`routing/`): `EventRouter` (event vs task delivery), `ApiRouter` (REST).
-- **Pipeline** (`pipeline/`): `BasePipeline`/`BaseStep` with `pre/process/post` lifecycle
-  and `Defer`/`Skip`/`Stop`/`Fail` control-flow signals; typed `OrderContext` /
-  `AgreementContext` built by a context factory from the inbound event.
-- **Auth** (`api/auth/`, `jwt.py`): extracts `Authorization: Bearer`, decodes (does not
-  verify — the gateway verifies) SoftwareONE claims
-  (`https://claims.softwareone.com/{accountId,accountType,extensionId,modules}`), checks
-  `exp` with a leeway.
+## Existing assets we keep (from `Mpt.Extensions.Sdk`)
+
+Verified by reading the source:
+
+- **Attributes** (`Attributes/`): `EventHandlerAttribute` (`Event`, `Condition`, task flag),
+  `ApiEndpointAttribute`, `PlugAttribute`, `ScheduleHandlerAttribute`.
+- **Contexts** (`Contexts/`): `IExtensionContext`, `EventContext` (carries `Event`,
+  `AuthContext`, `IMarketplaceClient`, `ILogger`, `CancellationToken`), `ApiContext`,
+  `OrderContext`, `ScheduleContext`, `HandlerServices`.
+- **Events** (`Events/`): `Event`, `EventResponse` (`Ok` / `Delay(seconds)` / `Cancel(msg)`).
+- **Discovery + source-gen** (`Discovery/`, `Generated/`, the `SourceGen` project):
+  `GeneratedHandlerRegistry` (reflection-free) with a reflection fallback.
+- **Manifest** (`Manifest/`): `ExtensionManifest`, `RouteDescriptor`, `RouteValidation`,
+  `ManifestJson` — the `/__manifest` contract and route-collision checks.
+- **Dispatch** (`Dispatch/`): `EventDispatcher`, `ApiDispatcher`, `ScheduleDispatcher`,
+  `HandlerInvoker`.
+- **Host endpoints** (`Hosting/ExtensionEndpoints.cs`): `/__health`, `/__manifest`, one route
+  per event/API/schedule with a shared per-request pipeline.
+
+## What the bridge did that we must absorb (verified)
+
+The bridge sits between the platform and the C# host. Removing it means the SDK must take on:
+
+1. **Registration** — `POST {SDK_EXTENSION_URL}/public/v1/integration/extensions/{extensionId}/instances`
+   with `Authorization: Bearer {extensionApiKey}` and body
+   `{externalId, version, meta, [channel:{}]}`; persist the returned `channel.identity`
+   (keyed under `mrok`) to `SDK_IDENTITY_FILE_PATH`; include `channel:{}` only when there is
+   no persisted identity matching the extension id. *(Confirmed against the POC bridge,
+   tested on s1.show 2026-06-18.)*
+2. **OpenZiti transport** — after registration, serve the host over the Ziti overlay using
+   the persisted identity (today: `mrok.agent.ziticorn`).
+3. **Ingress auth** — today the bridge parses auth and forwards it as an `X-Mpt-Auth` JSON
+   header plus `X-Mpt-Egress-Session`, `x-request-id`, `mpt-task-id`. Natively, the host
+   receives the platform's real request: it must **parse `Authorization: Bearer` and decode
+   the SoftwareONE JWT claims itself** (replacing `ParseAuth`'s `X-Mpt-Auth` read), and drop
+   the bridge-token gate.
+4. **Egress** — today `IMarketplaceClient` POSTs `{Method, Path, Body, EgressSessionId}` to
+   the bridge `/__egress`, which resolves the account-scoped token and calls the MPT API.
+   Natively, a new `IMarketplaceClient` implementation must **call the MPT API directly over
+   Ziti and mint/cache/refresh the per-account token itself**.
+
+## meta.yaml (ground truth from the POC)
+
+The registration `meta` block (the basis for `meta.yaml`):
+
+```json
+{
+  "contractVersion": "1",
+  "events": [
+    {
+      "event": "platform.catalog.productItem.created",
+      "path": "/events/platform-catalog-productitem-created",
+      "condition": "eq(product.id,PRD-7811-7846)",
+      "task": false
+    }
+  ],
+  "apiEndpoints": [],
+  "schedules": [],
+  "plugs": []
+}
+```
+
+It is **generated**, not authored: today the bridge calls the host's `GET /__manifest` and
+converts it. Natively, the SDK generates `meta.yaml` directly from `ExtensionManifest` before
+registration — no host round-trip needed.
 
 ## Package architecture
 
-Three NuGet packages, split so the heavy/native Ziti dependency is isolated:
+Three packages, isolating the native Ziti dependency:
 
 ```
-Swo.Mpt.ApiClient          (HttpClient only)
+Swo.Mpt.Extensions.Abstractions   (the authoring surface; lifted from Mpt.Extensions.Sdk)
         ▲
         │
-Swo.Mpt.Extensions.Hosting (ASP.NET Core; depends on ApiClient)
-        ▲
+Swo.Mpt.Extensions.Hosting        (ASP.NET Core host: endpoints, real-JWT auth, registration,
+        ▲                          direct MptApiClient, meta.yaml gen)
         │
-Swo.Mpt.Extensions.Ziti    (depends on Hosting + OpenZiti.NET)
+Swo.Mpt.Extensions.Ziti           (OpenZiti transport; depends on Hosting + OpenZiti.NET)
 ```
 
-A consuming service references:
+> Naming TBD — could keep the `Mpt.Extensions.Sdk*` family from the existing repo. The split
+> matters more than the names.
 
-- `ApiClient` alone for pure outbound API access, **or**
-- `Hosting` to author an extension that runs on plain Kestrel (local dev), **or**
-- `Hosting` + `Ziti` for platform deployment over the Ziti overlay.
+### `Swo.Mpt.Extensions.Abstractions`
 
-### `Swo.Mpt.ApiClient`
+The current `Mpt.Extensions.Sdk` authoring code, lifted with minimal change: attributes,
+`IExtensionContext`/`EventContext`/`ApiContext`/`OrderContext`/`ScheduleContext`, `Event`,
+`EventResponse`, `IMarketplaceClient`, manifest types, dispatch, discovery, source-gen.
+`AuthContext` is enriched to carry the decoded SoftwareONE claims (accountId, accountType,
+extensionId, modules) since the host now decodes the JWT itself.
 
-Mirrors `services/mpt_api_service`, `api/auth`, and `models`.
+### `Swo.Mpt.Extensions.Hosting` (the bulk of the new work)
 
-- **Domain models**: records for Agreement, Order, Subscription, Asset, Product,
-  ProductItem, Installation, Task, Template, plus shared types (Account, Address, Contact,
-  Parameter, Price, Licensee, Authorization, ExternalId, Audit). System.Text.Json with
-  source-generated contexts.
-- **`IMptApiClient`** exposing sub-clients:
-  `Agreements`, `Orders`, `Subscriptions`, `Assets`, `Products`, `ProductItems`,
-  `Installations`, `Tasks`, `Templates`, `AccountTokens`.
-  Operations follow the Python services, e.g. `Orders.GetByIdAsync`, `Orders.CompleteAsync`,
-  `Orders.QueryAsync`, `Orders.FailAsync`, `Orders.UpdateAsync`;
-  `Agreements.GetAllAsync` (paginated), `GetByIdAsync`, `UpdateAsync`;
-  `Assets.CreateAsync` / `CreateOrderAssetAsync`; `Subscriptions.Create*`; etc.
-- **Pagination**: `PaginatedCollection<T> { Limit, Offset, Total, IReadOnlyList<T> Resources }`
-  with an `IAsyncEnumerable<T>` convenience wrapper for auto-paging.
-- **Auth**:
-  - `SoftwareOneJwt.ParseClaims(token)` — decode (not verify) claims; typed accessors for
-    accountId, accountType (`Client`/`Operations`/`Vendor`), extensionId, modules; expiry
-    check with leeway.
-  - `IAccountTokenProvider` — given an account id, returns a valid token, minting via
-    `POST /public/v1/integration/installations/token?account.id={id}` using the extension
-    key, caching per account, refreshing within a leeway window, serialized per-account.
-  - Two factory paths matching Python `from_config` (extension key) and
-    `from_auth_context` (account-scoped). Account scoping is implemented as a
-    `DelegatingHandler` that injects the fresh per-account token.
-- Configured through `IHttpClientFactory` + typed `MptApiOptions` (base URL, extension key,
-  timeouts). No ASP.NET Core dependency.
+ASP.NET Core integration; depends on `Abstractions` + the platform model packages.
 
-### `Swo.Mpt.Extensions.Hosting`
-
-Mirrors `runtime`, `routing`, `pipeline`, `extension_app`. ASP.NET Core integration.
-
-- **Authoring API** (builder style over ASP.NET Core):
-  ```csharp
-  var builder = ExtensionApp.CreateBuilder(args);
-  builder.Events.OnTask("order.created", async (OrderContext ctx) => { ... });
-  builder.Events.OnEvent("agreement.updated", async (AgreementContext ctx) => { ... });
-  builder.Api.MapGet("/things/{id}", (ApiContext ctx, string id) => Results.Ok());
-  var app = builder.Build();
-  await app.RunAsync();
-  ```
-- **Contexts**: `ExtensionContext` (base: logger, `IMptApiClient`, settings, auth),
-  `EventContext` (+ event metadata, mutable state bag), `OrderContext` (+ `Order`,
-  `RefreshOrderAsync`), `AgreementContext` (+ `Agreement`, `RefreshAgreementAsync`),
-  `ApiContext` (+ request, auth). A context factory inspects the inbound event's object
-  type, fetches the Order/Agreement via the account-scoped client, and builds the right
-  typed context.
-- **Pipeline engine**: `IPipelineStep` with `PreAsync`/`ProcessAsync`/`PostAsync`
-  (`post` always runs); `Pipeline` runs steps sequentially; control-flow via exceptions
-  `DeferStepException`, `SkipStepException`, `StopStepException`, `FailException`. The event
-  handler maps these onto task lifecycle calls.
-- **Registration + lifecycle**: an `IHostedService` runs registration on startup
-  (build payload → POST instances → persist identity), then hands off to the configured
-  transport. Plain-Kestrel transport is the default in this package.
-- **Metadata**: generate `meta.yaml` (events and their metadata) before startup, matching
-  the Python `meta_config` contract.
-- **Request handling**: minimal-API endpoints that authenticate the JWT, build the
-  account-scoped client + typed context, invoke the handler/pipeline, and translate results
-  into task lifecycle calls (`Tasks.Start/Complete/Fail/Reschedule`). Correlation-id and
-  task-id headers flow through `Activity`/logging scope.
+- **`ExtensionHostBuilder.Build(builder)`** — unchanged authoring entrypoint; rewires the
+  per-request pipeline to native auth + native Marketplace client and registers the hosted
+  services below.
+- **Ingress auth**: a `SoftwareOneJwt` claims parser + request authenticator replaces the
+  `X-Mpt-Auth` path — extract `Authorization: Bearer`, decode (not verify; the gateway
+  verifies) claims `https://claims.softwareone.com/{accountId,accountType,extensionId,modules}`,
+  check `exp` with leeway, build `AuthContext`. Bridge-token gate removed.
+- **`IMptApiClient` + account tokens**: a direct MPT API client (typed `HttpClient` via
+  `IHttpClientFactory`) that injects a fresh **account-scoped token** per request. An
+  `IAccountTokenProvider` mints tokens via
+  `POST /public/v1/integration/installations/token?account.id={id}` using the extension key,
+  caches per account, and refreshes within a leeway window (serialized per account). This is
+  the native replacement for the bridge's egress + token resolver. The existing
+  `IMarketplaceClient` (generic `GetAsync<T>/PostAsync<T>/PutAsync<T>`) is reimplemented on
+  top of it, so handler code is unchanged.
+- **Registration hosted service**: on startup (platform mode) build the payload, POST
+  instances, persist identity, then signal the transport. Fail fast on non-2xx; never start
+  the Ziti transport without an identity.
+- **`meta.yaml` generation**: serialize `ExtensionManifest` to the `meta` schema above before
+  registration.
+- **Config**: typed options bound from the same env vars the bridge used —
+  `SDK_EXTENSION_ID`, `SDK_EXTENSION_API_KEY`, `SDK_EXTENSION_URL`, `MPT_API_BASE_URL`,
+  `SDK_EXTENSION_EXTERNAL_ID`, `SDK_IDENTITY_FILE_PATH`, plus a local/platform mode switch.
 
 ### `Swo.Mpt.Extensions.Ziti`
 
-Mirrors `mrok`/`ziticorn`. Isolated native dependency (`OpenZiti.NET`).
+Isolated `OpenZiti.NET` dependency.
 
-- Maps the persisted platform identity (`channel.identity`, the `mrok`-keyed JSON) to an
-  OpenZiti identity the SDK can load.
-- Provides the Ziti-bound server transport that replaces Kestrel's default TCP listener,
-  registered via `builder.UseZitiTransport()`.
-- **Target transport (B1):** a custom Kestrel `IConnectionListenerFactory` backed by an
-  `OpenZiti.NET` service binding, so inbound platform connections arrive over the overlay
-  in-process (app-embedded zero trust, single process — matches `ziticorn`).
-- **Documented fallback (B2):** a `ziti-edge-tunnel` sidecar exposes the service on
-  localhost and Kestrel binds localhost. Used only for bring-up if B1 is blocked.
+- Maps the persisted `channel.identity` (the `mrok`-keyed JSON) to an OpenZiti identity.
+- **Target (B1):** a custom Kestrel `IConnectionListenerFactory` backed by an `OpenZiti.NET`
+  service binding, so inbound platform connections arrive over the overlay in-process —
+  app-embedded zero trust, single process, matching `ziticorn`. Enabled via
+  `builder.UseZitiTransport()`.
+- **Fallback (B2):** a `ziti-edge-tunnel` sidecar exposing the service on localhost, Kestrel
+  binds localhost. Bring-up only.
+- Outbound (`IMptApiClient`) also dials the MPT API over the same Ziti context.
 
 ## Data flow
 
 **Startup (platform):**
 ```
 Host start
-  → RegistrationHostedService
-      build {externalId, version, meta} (+ channel:{} if no matching identity)
-      POST /public/v1/integration/extensions/{extensionId}/instances  (Bearer extension key)
-      persist channel.identity → identity file
+  → generate meta.yaml from ExtensionManifest
+  → RegistrationHostedService: POST instances (Bearer extension key) → persist channel.identity
   → Ziti transport binds Kestrel to the Ziti service using that identity
   → ready
 ```
 
-**Inbound event/task:**
+**Inbound event/task (no bridge):**
 ```
-Ziti overlay → Kestrel (Ziti transport) → minimal-API endpoint
-  authenticate JWT (parse claims, check exp)
-  resolve account-scoped IMptApiClient (account token via IAccountTokenProvider)
-  context factory: fetch Order/Agreement → build OrderContext/AgreementContext
-  Tasks.StartAsync(taskId)            (task delivery only)
-  run handler / pipeline
-    Defer  → Tasks.RescheduleAsync
-    Stop   → cancel
-    Fail   → Tasks.FailAsync
-    ok     → Tasks.CompleteAsync
-  return response
+Ziti overlay → Kestrel (Ziti transport) → mapped route (e.g. /events/...)
+  parse Authorization: Bearer → decode SWO claims → AuthContext
+  build HandlerServices { DI scope, IMarketplaceClient(account-scoped), logger }
+  dispatch to [EventHandler] → returns EventResponse (Ok/Delay/Cancel)
+  → JSON response to platform
+```
+
+**Egress (handler → Marketplace, no bridge):**
+```
+ctx.Marketplace.GetAsync<OrderEntity>("/commerce/orders/ORD-...")
+  → IMptApiClient: ensure fresh account token (IAccountTokenProvider) → HTTP over Ziti
+  → MPT API → deserialize into platform model
 ```
 
 ## Error handling
 
-- API client: typed `MptApiException` carrying status code + Marketplace error body;
-  transient-retry policy (e.g. via `Microsoft.Extensions.Http.Resilience`) on idempotent
-  reads and token minting.
-- Hosting: handler exceptions map to HTTP responses for API routes and to task lifecycle
-  outcomes for events; pipeline control-flow exceptions are first-class (not errors).
-- Registration: fail fast with a clear message on non-2xx; never start the transport
-  without an identity in platform mode.
+- Marketplace client: typed exception with status + body; transient retry on idempotent
+  reads and token minting (`Microsoft.Extensions.Http.Resilience`).
+- Event handlers: existing `EventResponse` model (`Delay` → platform retry, `Cancel` → stop);
+  unhandled exceptions return a structured 500 (platform retries), preserving today's
+  semantics now that the host owns the response.
+- Registration: fail fast and do not start the transport without an identity.
 
 ## Testing strategy
 
-- `ApiClient`: unit tests against a mocked `HttpMessageHandler` (request shape, auth header
-  injection, pagination, token caching/refresh/leeway, error mapping). No network.
-- `Hosting`: `WebApplicationFactory`-based tests on plain Kestrel — auth, context building,
-  handler dispatch, pipeline control-flow → task lifecycle mapping, registration payload.
-- `Ziti`: validated first by a **throwaway spike** (see Risks), then a thin integration
-  smoke test; the transport seam lets all `Hosting` tests run without Ziti.
+- Authoring/dispatch: keep the existing unit tests from `Mpt.Extensions.Sdk` (host endpoints,
+  dispatch, discovery, manifest, route validation) on plain Kestrel via `WebApplicationFactory`.
+- Auth: JWT claims parsing, expiry leeway, account scoping.
+- Marketplace client: mocked `HttpMessageHandler` — request shape, token injection,
+  caching/refresh, error mapping, and **platform-model (de)serialization parity** (see Risk 1).
+- Registration: payload shape + identity persistence/reuse, asserted against the captured POC
+  payload.
+- Ziti: validated by a **throwaway spike first** (Risk 2), then a thin integration smoke test.
 
 ## Risks & open questions
 
-1. **Ziti-bound Kestrel transport (highest risk).** Must confirm `OpenZiti.NET` exposes a
-   `Stream`/socket-level server binding consumable by Kestrel's
-   `IConnectionListenerFactory`, rather than only a higher-level HTTP helper. **Mitigation:**
-   the first task in the implementation plan is a throwaway spike that stands up a Ziti
-   service binding feeding Kestrel and serves one request end-to-end. The rest of the design
-   assumes B1 but is gated on the spike; B2 (sidecar) is the fallback. The `Ziti` package
-   boundary makes the choice swappable without touching `Hosting`.
-2. **Native dependency / packaging.** `OpenZiti.NET` carries a native `ziti-sdk-c`
-   component (`OpenZiti.NET.native`); confirm Linux container + Windows dev support and RID
-   handling. Isolating it in one package limits blast radius.
-3. **Identity format mapping.** The platform returns identity under a `mrok` key; confirm
-   the exact JSON maps cleanly to what `OpenZiti.NET` loads (enrollment vs already-enrolled
-   identity).
-4. **`meta.yaml` schema fidelity.** Reproduce the Python `meta_config` output exactly so
-   the platform accepts the registration payload; pin against a captured sample.
-5. **JWT verification boundary.** Python decodes-without-verifying because the gateway
-   verifies. Confirm the same trust boundary holds for the .NET service behind Ziti.
+1. **Platform models vs public-API JSON (decided to reuse models; this is the cost).**
+   `Mpt.Models.Platform` types are server-side RQL entities: PascalCase, `null!` non-nullable
+   defaults, and `Status`-style fields are `Enumeration` objects (`{Name, Id, AlternateNames}`),
+   not JSON strings. The public API JSON is camelCase, string-valued, and RQL-projected
+   (partial). The platform serializes responses through an RQL serializer + custom converters
+   (`Presentation.WebApi/Startup.cs`). So deserializing API responses into these models needs
+   client-side parity: a camelCase policy, an `Enumeration`-from-string `JsonConverterFactory`,
+   optional/omitted-field tolerance, and care with `null!` properties when RQL omits fields.
+   **Mitigation:** an early task builds and unit-tests an `MptJson` options set against captured
+   real responses for the core resources (Order, Agreement, Subscription, Asset, ProductItem);
+   if parity proves expensive for a given resource, fall back to a thin API-shaped DTO for that
+   resource only. The generic `IMarketplaceClient.GetAsync<T>` means this is per-resource, not
+   all-or-nothing.
+2. **Ziti-bound Kestrel transport (highest delivery risk).** Confirm `OpenZiti.NET` exposes a
+   `Stream`/socket-level server binding consumable by Kestrel's `IConnectionListenerFactory`
+   (vs. only a higher-level HTTP helper). **Mitigation:** throwaway spike as the first task;
+   B2 sidecar fallback; the `Ziti` package boundary makes the choice swappable.
+3. **Native dependency / packaging.** `OpenZiti.NET` carries a native `ziti-sdk-c` component;
+   confirm Linux-container + Windows-dev RID handling. Isolated in one package.
+4. **Identity format mapping.** Confirm the platform's `channel.identity` (`mrok`-keyed) maps
+   cleanly to what `OpenZiti.NET` loads (already-enrolled identity vs enrollment JWT).
+5. **Repo strategy + history.** New repo (lift the reusable code) vs evolve the existing repo
+   (delete `bridge/`). Decision 1 above; confirm.
+6. **Auth verification boundary.** The bridge/gateway verified the JWT; confirm the same trust
+   boundary holds when the .NET host terminates Ziti directly (decode-not-verify stays valid).
 
 ## Build sequence (high level — detailed plan follows)
 
-1. Ziti+Kestrel transport spike (resolve Risk 1) — throwaway.
-2. New repo + solution scaffold, CI, net8.0, NuGet metadata.
-3. `Swo.Mpt.ApiClient`: models → auth/JWT → account-token provider → sub-clients →
-   pagination → error handling, with tests.
-4. `Swo.Mpt.Extensions.Hosting`: contexts → builder/authoring API → registration hosted
-   service → event/API dispatch → pipeline engine → meta generation, on plain Kestrel,
-   with tests.
+1. Ziti + Kestrel transport spike (resolve Risk 2) — throwaway.
+2. New repo + solution scaffold, net10.0, PyraCloud feed (`nuget.config`), CI, NuGet metadata.
+3. Lift `Mpt.Extensions.Sdk` authoring code into `Swo.Mpt.Extensions.Abstractions`; keep its tests green.
+4. `Swo.Mpt.Extensions.Hosting`: native JWT auth → account-token provider + `IMptApiClient`
+   (with platform-model serialization parity, Risk 1) → reimplement `IMarketplaceClient` on it
+   → registration hosted service → `meta.yaml` generation. Plain Kestrel; tests.
 5. `Swo.Mpt.Extensions.Ziti`: identity mapping → transport (B1, informed by the spike) →
    integration smoke test.
-6. Sample/reference extension service + consumer docs.
+6. Port `product-hub-extension` to the pure-.NET SDK as the reference/acceptance check (drop
+   the bridge, confirm parity against s1.show).
