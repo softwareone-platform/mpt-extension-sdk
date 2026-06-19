@@ -254,15 +254,24 @@ ctx.Marketplace.GetAsync<TOrder>("/commerce/orders/ORD-...")   // TOrder is the 
 
 ## Risks & open questions
 
-1. **Ziti-bound Kestrel transport (highest delivery risk).** Confirm `OpenZiti.NET` exposes a
-   `Stream`/socket-level server binding consumable by Kestrel's `IConnectionListenerFactory`
-   (vs. only a higher-level HTTP helper). **Mitigation:** throwaway spike as the first task;
-   B2 sidecar fallback; the `Ziti` package boundary makes the choice swappable.
+1. **Ziti-bound Kestrel transport — RESOLVED (spike, 2026-06-19).** `OpenZiti.NET`
+   `1.0.26159.2780` targets **net8.0** with **linux-x64/win-x64** natives, and the repo ships a
+   reference **`ZitiConnectionListenerFactory : IConnectionListenerFactory`** + a
+   `UseZitiTransport(identity, service)` host extension. An accepted `ZitiSocket` converts to a
+   real `System.Net.Sockets.Socket`, fed to Kestrel's own `SocketConnectionContextFactory` — no
+   hand-rolled `IDuplexPipe`. **Decision: B1 (app-embedded), adapting the upstream sample.** B2
+   (sidecar) dropped. The accept API is synchronous, bridged to Kestrel via a background
+   accept-loop + `Channel` (as in the sample).
 2. **Native dependency / packaging.** `OpenZiti.NET` carries a native `ziti-sdk-c` component;
    confirm Linux-container + Windows-dev RID handling, and net8.0 compatibility of the package.
    Isolated in one package.
-3. **Identity format mapping.** Confirm the platform's `channel.identity` (`mrok`-keyed) maps
-   cleanly to what `OpenZiti.NET` loads (already-enrolled identity vs enrollment JWT).
+3. **Identity format mapping — RESOLVED (inspected a real POC identity, 2026-06-19).** The
+   persisted `channel.identity` IS a standard **enrolled** OpenZiti identity JSON
+   (`ztAPI`, `id.{key,cert,ca}` PEM, `enableHa`) plus an extra non-ziti **`mrok`** metadata key
+   (`extension`/`instance`/`domain`/`tags`). So: no enrollment-JWT flow; just write the JSON to a
+   file (optionally strip `mrok`) and load by path. **Open:** confirm the **bind service name**
+   with the platform team — the identity carries `mrok.tags.mrok-service` = the extension id
+   (e.g. `ext-5034-5001`), which is the likely service to bind.
 4. **net10 → net8 retarget.** The existing SDK/POC are net10.0; retargeting may surface
    net10-only API usage to fix. Expected small.
 5. **Auth verification boundary.** The bridge/gateway verified the JWT; confirm the same trust
