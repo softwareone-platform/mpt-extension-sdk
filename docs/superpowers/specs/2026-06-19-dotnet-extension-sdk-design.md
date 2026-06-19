@@ -44,11 +44,13 @@ no Python in the container.
 
 ## Decisions (made now; flag if any should change)
 
-1. **Home: new separate repository** (working name `mpt-extension-sdk-dotnet`), per the
-   earlier decision. The reusable parts of `C:\repos\mpt-extension-dotnet-sdk\src\Mpt.Extensions.Sdk`
-   (attributes, contexts, dispatch, discovery, manifest, source-gen) are **lifted into the new
-   repo**; the Python `bridge/` is dropped. *(If you'd rather evolve the existing repo in place
-   and delete `bridge/`, say so — it's less lift-and-shift but mixes old/new history.)*
+1. **Home: `C:\repos\mpt-extension-sdk-dotnet`** — evolve this directory in place. It already
+   contains the bridge-based SDK (`src/Mpt.Extensions.Sdk`, `bridge/`, `codegen`, `tests`,
+   `tools`). The work: **keep the C# authoring SDK, drop the Python `bridge/`**, and add native
+   registration/Ziti/egress. The separate GitHub-linked repo `C:\repos\mpt-extension-dotnet-sdk`
+   is left untouched for now.
+   - **Open item:** this directory has **no git remote**. A remote must be wired up before
+     publishing/CI (decide whether to push here or reconcile with the GitHub repo later).
 2. **Target framework: net10.0**, matching the existing `Mpt.Extensions.Sdk` and the
    `product-hub-extension` POC. *(This supersedes the earlier net8.0 choice, which was made
    before we knew the existing SDK and POC are net10.0. The platform models are net8.0 and
@@ -266,8 +268,10 @@ ctx.Marketplace.GetAsync<OrderEntity>("/commerce/orders/ORD-...")
 ## Build sequence (high level — detailed plan follows)
 
 1. Ziti + Kestrel transport spike (resolve Risk 2) — throwaway.
-2. New repo + solution scaffold, net10.0, PyraCloud feed (`nuget.config`), CI, NuGet metadata.
-3. Lift `Mpt.Extensions.Sdk` authoring code into `Swo.Mpt.Extensions.Abstractions`; keep its tests green.
+2. In `C:\repos\mpt-extension-sdk-dotnet`: ensure net10.0 + PyraCloud feed (`nuget.config`),
+   then remove the Python `bridge/` and its build wiring; keep the C# solution building.
+3. Restructure the existing `Mpt.Extensions.Sdk` into the package split (Abstractions / Hosting /
+   Ziti); keep its existing tests green throughout.
 4. `Swo.Mpt.Extensions.Hosting`: native JWT auth → account-token provider + `IMptApiClient`
    (with platform-model serialization parity, Risk 1) → reimplement `IMarketplaceClient` on it
    → registration hosted service → `meta.yaml` generation. Plain Kestrel; tests.
