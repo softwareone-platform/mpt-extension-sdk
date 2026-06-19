@@ -54,7 +54,10 @@ no Python in the container.
    before we knew the existing SDK and POC are net10.0. The platform models are net8.0 and
    are consumable from net10.0.)*
 3. **Domain models: reuse `Mpt.Models.Platform` + `Mpt.Models.Core`** from the PyraCloud
-   feed, per direction. See Risk 1 for the serialization-parity work this implies.
+   feed. These are the published **Marketplace standard contracts**, so they are the correct
+   (de)serialization target for API responses — confirmed safe to use directly. The only
+   remaining mechanical step is pointing `MptJson` at the matching serializer options
+   (camelCase + any `Enumeration` converter the contract package ships); see Risk 1.
 
 ## Existing assets we keep (from `Mpt.Extensions.Sdk`)
 
@@ -237,19 +240,16 @@ ctx.Marketplace.GetAsync<OrderEntity>("/commerce/orders/ORD-...")
 
 ## Risks & open questions
 
-1. **Platform models vs public-API JSON (decided to reuse models; this is the cost).**
-   `Mpt.Models.Platform` types are server-side RQL entities: PascalCase, `null!` non-nullable
-   defaults, and `Status`-style fields are `Enumeration` objects (`{Name, Id, AlternateNames}`),
-   not JSON strings. The public API JSON is camelCase, string-valued, and RQL-projected
-   (partial). The platform serializes responses through an RQL serializer + custom converters
-   (`Presentation.WebApi/Startup.cs`). So deserializing API responses into these models needs
-   client-side parity: a camelCase policy, an `Enumeration`-from-string `JsonConverterFactory`,
-   optional/omitted-field tolerance, and care with `null!` properties when RQL omits fields.
-   **Mitigation:** an early task builds and unit-tests an `MptJson` options set against captured
-   real responses for the core resources (Order, Agreement, Subscription, Asset, ProductItem);
-   if parity proves expensive for a given resource, fall back to a thin API-shaped DTO for that
-   resource only. The generic `IMarketplaceClient.GetAsync<T>` means this is per-resource, not
-   all-or-nothing.
+1. **Serializer options for the contract models (low risk — routine confirmation).**
+   The `Mpt.Models.Platform` types are the published Marketplace standard contracts and are
+   safe to deserialize into. The only thing to nail down is the `JsonSerializerOptions` they
+   expect: the types use PascalCase properties and `Enumeration`-typed fields
+   (`{Name, Id, AlternateNames}`), so the SDK's shared `MptJson` options must match the
+   contract's wire format (camelCase policy and an `Enumeration` (de)serialization converter —
+   reuse the one the contract/`Mpt.Models.Core` package ships if available, otherwise a small
+   `JsonConverterFactory` that maps the string name ↔ `Enumeration`). **Mitigation:** an early
+   task round-trips a couple of captured real responses (Order, Agreement) through the models
+   to lock the options in; expected to be a small, one-time configuration.
 2. **Ziti-bound Kestrel transport (highest delivery risk).** Confirm `OpenZiti.NET` exposes a
    `Stream`/socket-level server binding consumable by Kestrel's `IConnectionListenerFactory`
    (vs. only a higher-level HTTP helper). **Mitigation:** throwaway spike as the first task;
