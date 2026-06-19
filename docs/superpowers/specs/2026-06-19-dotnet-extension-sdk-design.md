@@ -1,25 +1,27 @@
 # Pure-.NET Extension SDK — Design
 
 **Date:** 2026-06-19
-**Status:** Draft for review (revised after discovering the existing bridge-based SDK and platform NuGet models)
+**Status:** Draft for review
 **Authors:** MPT team (via Claude Code)
 
 ## Summary
 
 The team is moving SoftwareONE Marketplace extension development to a **pure .NET**
-implementation. A bridge-based .NET SDK already exists at `C:\repos\mpt-extension-dotnet-sdk`
-(`Mpt.Extensions.Sdk`): it gives extension authors an attribute-driven model
-(`[EventHandler]`, `[ApiEndpoint]`, `[Plug]`, `[ScheduleHandler]`), typed contexts, a
-manifest source generator, and an `ExtensionHostBuilder` — but it delegates registration,
-OpenZiti transport, `meta.yaml`, and Marketplace API calls to a **Python bridge sidecar**.
+implementation. A bridge-based .NET SDK already exists in the work directory
+`C:\repos\mpt-extension-sdk-dotnet` (`Mpt.Extensions.Sdk`): it gives extension authors an
+attribute-driven model (`[EventHandler]`, `[ApiEndpoint]`, `[Plug]`, `[ScheduleHandler]`),
+typed contexts, a manifest source generator, and an `ExtensionHostBuilder` — but it delegates
+registration, OpenZiti transport, `meta.yaml`, and Marketplace API calls to a **Python bridge
+sidecar**.
 
-This design **removes the Python bridge** and reimplements its three responsibilities
-natively in .NET, while keeping the existing C# authoring surface. It also adopts the
-**platform domain models published on the PyraCloud NuGet feed**
-(`Mpt.Models.Platform`, `Mpt.Models.Core`) instead of bespoke/generated models.
+This design **removes the Python bridge** and reimplements its responsibilities natively in
+.NET, while keeping the existing C# authoring surface. The SDK stays **model-agnostic**: it
+ships no Marketplace domain models. The concrete extension chooses its own model types (the
+platform NuGet contracts, hand-written DTOs, or anything else) and passes them to the generic
+Marketplace client.
 
-The result is a small set of libraries a C# service references to build an extension with
-no Python in the container.
+The result is a small set of libraries a C# service references to build an extension with no
+Python in the container.
 
 ## Goals
 
@@ -32,12 +34,15 @@ no Python in the container.
   - **Direct, account-scoped Marketplace API access** (mint/cache/refresh account tokens,
     call the MPT API over Ziti), replacing the bridge `/__egress` proxy.
   - **Native `meta.yaml` generation** from the manifest, replacing the bridge's `meta.py`.
-- Reuse platform NuGet domain models (`Mpt.Models.Platform` / `Mpt.Models.Core`).
+- Keep the SDK **generic / model-agnostic** — no dependency on any Marketplace model package.
+  Provide a configurable serialization hook so an extension can deserialize into whatever model
+  types it uses.
 - Preserve local development without Ziti (plain Kestrel), mirroring today's local mode.
 
 ## Non-Goals
 
 - Rewriting the authoring model. The attribute/context/source-gen surface stays.
+- Shipping Marketplace domain models in the SDK. Models are the **extension's** choice.
 - Implementing `schedule` traffic end-to-end (routes exist but the platform doesn't drive
   them yet) or expanding `plug` beyond today's static-asset behaviour.
 - A managed-code OpenZiti reimplementation. We wrap `OpenZiti.NET` (which wraps `ziti-sdk-c`).
@@ -48,29 +53,33 @@ no Python in the container.
    contains the bridge-based SDK (`src/Mpt.Extensions.Sdk`, `bridge/`, `codegen`, `tests`,
    `tools`). The work: **keep the C# authoring SDK, drop the Python `bridge/`**, and add native
    registration/Ziti/egress. The separate GitHub-linked repo `C:\repos\mpt-extension-dotnet-sdk`
-   is left untouched for now.
+   is left untouched.
    - **Open item:** this directory has **no git remote**. A remote must be wired up before
-     publishing/CI (decide whether to push here or reconcile with the GitHub repo later).
-2. **Target framework: net10.0**, matching the existing `Mpt.Extensions.Sdk` and the
-   `product-hub-extension` POC. *(This supersedes the earlier net8.0 choice, which was made
-   before we knew the existing SDK and POC are net10.0. The platform models are net8.0 and
-   are consumable from net10.0.)*
-3. **Domain models: reuse `Mpt.Models.Platform` + `Mpt.Models.Core`** from the PyraCloud
-   feed. These are the published **Marketplace standard contracts**, so they are the correct
-   (de)serialization target for API responses — confirmed safe to use directly. The only
-   remaining mechanical step is pointing `MptJson` at the matching serializer options
-   (camelCase + any `Enumeration` converter the contract package ships); see Risk 1.
+     publishing/CI.
+2. **Target framework: net8.0 (LTS).** The existing `Mpt.Extensions.Sdk` and the
+   `product-hub-extension` POC are currently net10.0, so retargeting down to net8.0 may need
+   minor fixes (a plan task). net8.0 is the broad-compatibility LTS target for consuming
+   services.
+3. **Models: the SDK is model-agnostic.** It depends on **no** Marketplace model package. The
+   Marketplace client is generic (`GetAsync<T>/PostAsync<T>/PutAsync<T>`), and the consuming
+   extension supplies `T` — e.g. the platform NuGet contracts (`Mpt.Models.Platform`) or its own
+   DTOs. The SDK exposes a **configurable `JsonSerializerOptions`** so the extension can register
+   whatever converters its chosen models need (for platform contracts, e.g. a string↔`Enumeration`
+   converter). The SDK's own wire types (event envelope, auth claims, registration payload,
+   manifest) remain SDK-owned and need no external models.
 
 ## Existing assets we keep (from `Mpt.Extensions.Sdk`)
 
-Verified by reading the source:
+Verified by reading the source — all already model-agnostic:
 
 - **Attributes** (`Attributes/`): `EventHandlerAttribute` (`Event`, `Condition`, task flag),
   `ApiEndpointAttribute`, `PlugAttribute`, `ScheduleHandlerAttribute`.
 - **Contexts** (`Contexts/`): `IExtensionContext`, `EventContext` (carries `Event`,
   `AuthContext`, `IMarketplaceClient`, `ILogger`, `CancellationToken`), `ApiContext`,
-  `OrderContext`, `ScheduleContext`, `HandlerServices`.
-- **Events** (`Events/`): `Event`, `EventResponse` (`Ok` / `Delay(seconds)` / `Cancel(msg)`).
+  `OrderContext` (exposes only `OrderId` — a string), `ScheduleContext`, `HandlerServices`.
+- **Events** (`Events/`): `Event`/`EventObject`/`EventDetails`/`EventTask` (generic envelope,
+  ids + `objectType` string), `EventResponse` (`Ok` / `Delay(seconds)` / `Cancel(msg)`).
+- **Marketplace** (`Marketplace/`): generic `IMarketplaceClient`, `MarketplaceApiException`.
 - **Discovery + source-gen** (`Discovery/`, `Generated/`, the `SourceGen` project):
   `GeneratedHandlerRegistry` (reflection-free) with a reflection fallback.
 - **Manifest** (`Manifest/`): `ExtensionManifest`, `RouteDescriptor`, `RouteValidation`,
@@ -82,7 +91,7 @@ Verified by reading the source:
 
 ## What the bridge did that we must absorb (verified)
 
-The bridge sits between the platform and the C# host. Removing it means the SDK must take on:
+Removing the Python bridge means the SDK must take on:
 
 1. **Registration** — `POST {SDK_EXTENSION_URL}/public/v1/integration/extensions/{extensionId}/instances`
    with `Authorization: Bearer {extensionApiKey}` and body
@@ -100,7 +109,8 @@ The bridge sits between the platform and the C# host. Removing it means the SDK 
 4. **Egress** — today `IMarketplaceClient` POSTs `{Method, Path, Body, EgressSessionId}` to
    the bridge `/__egress`, which resolves the account-scoped token and calls the MPT API.
    Natively, a new `IMarketplaceClient` implementation must **call the MPT API directly over
-   Ziti and mint/cache/refresh the per-account token itself**.
+   Ziti and mint/cache/refresh the per-account token itself**, deserializing into the caller's
+   `T` with the configurable options.
 
 ## meta.yaml (ground truth from the POC)
 
@@ -129,14 +139,15 @@ registration — no host round-trip needed.
 
 ## Package architecture
 
-Three packages, isolating the native Ziti dependency:
+Three packages, isolating the native Ziti dependency. **None of them depend on any Marketplace
+model package** — models stay on the extension side.
 
 ```
-Swo.Mpt.Extensions.Abstractions   (the authoring surface; lifted from Mpt.Extensions.Sdk)
+Swo.Mpt.Extensions.Abstractions   (authoring surface; lifted from Mpt.Extensions.Sdk)
         ▲
         │
 Swo.Mpt.Extensions.Hosting        (ASP.NET Core host: endpoints, real-JWT auth, registration,
-        ▲                          direct MptApiClient, meta.yaml gen)
+        ▲                          generic account-scoped Marketplace client, meta.yaml gen)
         │
 Swo.Mpt.Extensions.Ziti           (OpenZiti transport; depends on Hosting + OpenZiti.NET)
 ```
@@ -147,14 +158,13 @@ Swo.Mpt.Extensions.Ziti           (OpenZiti transport; depends on Hosting + Open
 ### `Swo.Mpt.Extensions.Abstractions`
 
 The current `Mpt.Extensions.Sdk` authoring code, lifted with minimal change: attributes,
-`IExtensionContext`/`EventContext`/`ApiContext`/`OrderContext`/`ScheduleContext`, `Event`,
-`EventResponse`, `IMarketplaceClient`, manifest types, dispatch, discovery, source-gen.
-`AuthContext` is enriched to carry the decoded SoftwareONE claims (accountId, accountType,
-extensionId, modules) since the host now decodes the JWT itself.
+contexts, `Event`, `EventResponse`, generic `IMarketplaceClient`, manifest types, dispatch,
+discovery, source-gen. `AuthContext` is enriched to carry the decoded SoftwareONE claims
+(accountId, accountType, extensionId, modules) since the host now decodes the JWT itself.
 
 ### `Swo.Mpt.Extensions.Hosting` (the bulk of the new work)
 
-ASP.NET Core integration; depends on `Abstractions` + the platform model packages.
+ASP.NET Core integration; depends only on `Abstractions` (no model packages).
 
 - **`ExtensionHostBuilder.Build(builder)`** — unchanged authoring entrypoint; rewires the
   per-request pipeline to native auth + native Marketplace client and registers the hosted
@@ -163,14 +173,15 @@ ASP.NET Core integration; depends on `Abstractions` + the platform model package
   `X-Mpt-Auth` path — extract `Authorization: Bearer`, decode (not verify; the gateway
   verifies) claims `https://claims.softwareone.com/{accountId,accountType,extensionId,modules}`,
   check `exp` with leeway, build `AuthContext`. Bridge-token gate removed.
-- **`IMptApiClient` + account tokens**: a direct MPT API client (typed `HttpClient` via
-  `IHttpClientFactory`) that injects a fresh **account-scoped token** per request. An
+- **Generic Marketplace client + account tokens**: a direct MPT API client (typed `HttpClient`
+  via `IHttpClientFactory`) that injects a fresh **account-scoped token** per request. An
   `IAccountTokenProvider` mints tokens via
   `POST /public/v1/integration/installations/token?account.id={id}` using the extension key,
-  caches per account, and refreshes within a leeway window (serialized per account). This is
-  the native replacement for the bridge's egress + token resolver. The existing
-  `IMarketplaceClient` (generic `GetAsync<T>/PostAsync<T>/PutAsync<T>`) is reimplemented on
-  top of it, so handler code is unchanged.
+  caches per account, and refreshes within a leeway window (serialized per account). The existing
+  generic `IMarketplaceClient` (`GetAsync<T>/PostAsync<T>/PutAsync<T>`) is reimplemented on top
+  of it, so handler code is unchanged. Deserialization uses an **injectable `JsonSerializerOptions`**
+  (default: camelCase, case-insensitive); an extension using platform contracts registers any
+  needed converters (e.g. `Enumeration`) there.
 - **Registration hosted service**: on startup (platform mode) build the payload, POST
   instances, persist identity, then signal the transport. Fail fast on non-2xx; never start
   the Ziti transport without an identity.
@@ -191,7 +202,7 @@ Isolated `OpenZiti.NET` dependency.
   `builder.UseZitiTransport()`.
 - **Fallback (B2):** a `ziti-edge-tunnel` sidecar exposing the service on localhost, Kestrel
   binds localhost. Bring-up only.
-- Outbound (`IMptApiClient`) also dials the MPT API over the same Ziti context.
+- Outbound (the Marketplace client) also dials the MPT API over the same Ziti context.
 
 ## Data flow
 
@@ -215,9 +226,9 @@ Ziti overlay → Kestrel (Ziti transport) → mapped route (e.g. /events/...)
 
 **Egress (handler → Marketplace, no bridge):**
 ```
-ctx.Marketplace.GetAsync<OrderEntity>("/commerce/orders/ORD-...")
+ctx.Marketplace.GetAsync<TOrder>("/commerce/orders/ORD-...")   // TOrder is the EXTENSION's type
   → IMptApiClient: ensure fresh account token (IAccountTokenProvider) → HTTP over Ziti
-  → MPT API → deserialize into platform model
+  → MPT API → deserialize into TOrder using the configured JsonSerializerOptions
 ```
 
 ## Error handling
@@ -235,47 +246,44 @@ ctx.Marketplace.GetAsync<OrderEntity>("/commerce/orders/ORD-...")
   dispatch, discovery, manifest, route validation) on plain Kestrel via `WebApplicationFactory`.
 - Auth: JWT claims parsing, expiry leeway, account scoping.
 - Marketplace client: mocked `HttpMessageHandler` — request shape, token injection,
-  caching/refresh, error mapping, and **platform-model (de)serialization parity** (see Risk 1).
+  caching/refresh, error mapping, and correct deserialization into a caller-supplied `T` with a
+  custom converter (proving the serialization hook).
 - Registration: payload shape + identity persistence/reuse, asserted against the captured POC
   payload.
-- Ziti: validated by a **throwaway spike first** (Risk 2), then a thin integration smoke test.
+- Ziti: validated by a **throwaway spike first** (Risk 1), then a thin integration smoke test.
 
 ## Risks & open questions
 
-1. **Serializer options for the contract models (low risk — routine confirmation).**
-   The `Mpt.Models.Platform` types are the published Marketplace standard contracts and are
-   safe to deserialize into. The only thing to nail down is the `JsonSerializerOptions` they
-   expect: the types use PascalCase properties and `Enumeration`-typed fields
-   (`{Name, Id, AlternateNames}`), so the SDK's shared `MptJson` options must match the
-   contract's wire format (camelCase policy and an `Enumeration` (de)serialization converter —
-   reuse the one the contract/`Mpt.Models.Core` package ships if available, otherwise a small
-   `JsonConverterFactory` that maps the string name ↔ `Enumeration`). **Mitigation:** an early
-   task round-trips a couple of captured real responses (Order, Agreement) through the models
-   to lock the options in; expected to be a small, one-time configuration.
-2. **Ziti-bound Kestrel transport (highest delivery risk).** Confirm `OpenZiti.NET` exposes a
+1. **Ziti-bound Kestrel transport (highest delivery risk).** Confirm `OpenZiti.NET` exposes a
    `Stream`/socket-level server binding consumable by Kestrel's `IConnectionListenerFactory`
    (vs. only a higher-level HTTP helper). **Mitigation:** throwaway spike as the first task;
    B2 sidecar fallback; the `Ziti` package boundary makes the choice swappable.
-3. **Native dependency / packaging.** `OpenZiti.NET` carries a native `ziti-sdk-c` component;
-   confirm Linux-container + Windows-dev RID handling. Isolated in one package.
-4. **Identity format mapping.** Confirm the platform's `channel.identity` (`mrok`-keyed) maps
+2. **Native dependency / packaging.** `OpenZiti.NET` carries a native `ziti-sdk-c` component;
+   confirm Linux-container + Windows-dev RID handling, and net8.0 compatibility of the package.
+   Isolated in one package.
+3. **Identity format mapping.** Confirm the platform's `channel.identity` (`mrok`-keyed) maps
    cleanly to what `OpenZiti.NET` loads (already-enrolled identity vs enrollment JWT).
-5. **Repo strategy + history.** New repo (lift the reusable code) vs evolve the existing repo
-   (delete `bridge/`). Decision 1 above; confirm.
-6. **Auth verification boundary.** The bridge/gateway verified the JWT; confirm the same trust
+4. **net10 → net8 retarget.** The existing SDK/POC are net10.0; retargeting may surface
+   net10-only API usage to fix. Expected small.
+5. **Auth verification boundary.** The bridge/gateway verified the JWT; confirm the same trust
    boundary holds when the .NET host terminates Ziti directly (decode-not-verify stays valid).
+6. **Serialization ergonomics (extension-side, not SDK).** Extensions that use the platform
+   contracts need a string↔`Enumeration` converter + camelCase. Not an SDK dependency, but we
+   should document the recommended options and consider an **optional** tiny helper package
+   (e.g. `Swo.Mpt.Extensions.Contracts`) that ships those converters for convenience. YAGNI for
+   the first cut.
 
 ## Build sequence (high level — detailed plan follows)
 
-1. Ziti + Kestrel transport spike (resolve Risk 2) — throwaway.
-2. In `C:\repos\mpt-extension-sdk-dotnet`: ensure net10.0 + PyraCloud feed (`nuget.config`),
-   then remove the Python `bridge/` and its build wiring; keep the C# solution building.
+1. Ziti + Kestrel transport spike (resolve Risk 1) — throwaway.
+2. In `C:\repos\mpt-extension-sdk-dotnet`: retarget to net8.0, then remove the Python `bridge/`
+   and its build wiring; keep the C# solution building.
 3. Restructure the existing `Mpt.Extensions.Sdk` into the package split (Abstractions / Hosting /
    Ziti); keep its existing tests green throughout.
-4. `Swo.Mpt.Extensions.Hosting`: native JWT auth → account-token provider + `IMptApiClient`
-   (with platform-model serialization parity, Risk 1) → reimplement `IMarketplaceClient` on it
-   → registration hosted service → `meta.yaml` generation. Plain Kestrel; tests.
+4. `Swo.Mpt.Extensions.Hosting`: native JWT auth → account-token provider + account-scoped
+   Marketplace client (generic, injectable serializer options) → reimplement `IMarketplaceClient`
+   on it → registration hosted service → `meta.yaml` generation. Plain Kestrel; tests.
 5. `Swo.Mpt.Extensions.Ziti`: identity mapping → transport (B1, informed by the spike) →
    integration smoke test.
 6. Port `product-hub-extension` to the pure-.NET SDK as the reference/acceptance check (drop
-   the bridge, confirm parity against s1.show).
+   the bridge, supply its own models, confirm parity against s1.show).
