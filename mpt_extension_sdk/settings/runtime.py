@@ -41,7 +41,7 @@ class RuntimeSettings(BaseSettings):
 
     @property
     def extension_package(self) -> str:
-        """Return the extension package name."""
+        """The extension package name."""
         return self.app_module.split(".")[0]
 
     @override

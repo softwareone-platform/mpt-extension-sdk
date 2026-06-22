@@ -29,7 +29,7 @@ class ExtensionApp:
 
     @property
     def routes(self) -> list[BaseRouteDefinition]:
-        """Return the registered route definitions."""
+        """The registered route definitions."""
         return list(self._routes)
 
     def build_context(self, route: EventRouteDefinition, context: Any) -> Any:
