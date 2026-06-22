@@ -15,7 +15,13 @@
 
 **Working directory:** `C:\repos\mpt-extension-sdk-dotnet` (`$DST`). Source-of-truth for the SDK sample to adapt: the openziti GitHub repo (fetch raw files). 69 tests currently pass; solution `Mpt.Extensions.Sdk.sln`.
 
-**OPEN QUESTION to resolve before/at Task 4 (ask the platform/Ziti team):** the exact **bind service name** the extension must bind. Evidence: the identity's `mrok.tags.mrok-service` equals the extension id (e.g. `ext-5034-5001`). Default assumption in this plan: bind service name = `SDK_EXTENSION_ID` (lowercased), overridable via `SDK_ZITI_SERVICE`. Confirm and adjust Task 4 if different.
+**Bind service name — RESOLVED from the Python `mrok` source (v0.9.7, `mrok/proxy/ziticorn.py`).** The Python agent does, verbatim:
+```python
+ctx, err = openziti.load(str(identity_file), timeout=...)   # load the identity file as-is (mrok key included)
+sock = ctx.bind(identity.mrok.extension)                    # bind service = identity.mrok.extension
+sock.listen(backlog)                                        # then listen; uvicorn serves on this socket
+```
+So the **bind service name = the `mrok.extension` field inside the identity file** (e.g. `ext-5034-5001`) — read it from the loaded identity, not from a separate config value. `SDK_ZITI_SERVICE` remains an optional override. Also: `openziti.load` is given the **whole identity file unmodified** (the `mrok` key is ignored by ziti-sdk-c), and `ctx.bind` uses the **default terminator** (none passed) — mirror both in .NET (the `mrok`-strip step is optional safety; pass an empty/null terminator to `API.Bind`).
 
 **Testing reality:** A true end-to-end bind requires a live Ziti controller + a valid enrolled identity (the POC identity points at the real `api.ziti.s1.show` — do NOT bind against production from CI). Automated tests therefore cover the **identity mapper**, **DI/options wiring**, and the **TCP-fallback path** of the listener factory. The live overlay bind is validated by a **manual/deployment smoke** (documented), not CI.
 
@@ -144,8 +150,9 @@ public class ZitiIdentityTests
     }
 
     [Fact]
-    public void ServiceNameFromMrok_returns_mrok_service_tag()
+    public void ServiceNameFromMrok_returns_mrok_extension()
     {
+        // The Python mrok agent binds `identity.mrok.extension` — mirror that exactly.
         Assert.Equal("ext-1", ZitiIdentity.ServiceNameFromMrok(Persisted));
     }
 
@@ -192,15 +199,17 @@ public static class ZitiIdentity
         File.WriteAllText(outPath, node.ToJsonString());
     }
 
-    /// <summary>The bind service name carried in <c>mrok.tags.mrok-service</c>, or null if absent.</summary>
+    /// <summary>
+    /// The bind service name, taken from <c>mrok.extension</c> — exactly what the Python
+    /// mrok agent binds (<c>ctx.bind(identity.mrok.extension)</c>). Null if absent.
+    /// </summary>
     public static string? ServiceNameFromMrok(string persistedIdentityJson)
     {
         using var doc = JsonDocument.Parse(persistedIdentityJson);
         if (doc.RootElement.TryGetProperty("mrok", out var mrok) &&
-            mrok.TryGetProperty("tags", out var tags) &&
-            tags.TryGetProperty("mrok-service", out var svc))
+            mrok.TryGetProperty("extension", out var ext))
         {
-            return svc.GetString();
+            return ext.GetString();
         }
         return null;
     }
@@ -281,7 +290,7 @@ public sealed class ZitiOptions
     }
 }
 ```
-(Confirm the service-name source against the platform team — see the OPEN QUESTION. If the service is NOT the extension id, change the default here only.)
+Service-name resolution priority (authoritative source confirmed from `mrok`): `SDK_ZITI_SERVICE` override → **`ZitiIdentity.ServiceNameFromMrok(identity)` = `mrok.extension`** (what `mrok` binds) → `SDK_EXTENSION_ID` lowercased as a last-resort fallback. `ZitiOptions` here covers the config-only paths; `UseZiti` (Task 5) prefers the identity's `mrok.extension` once the identity file is read. The config default to the lowercased extension id matches the observed `mrok.extension` value, so the two agree.
 
 - [ ] **Step 4: Run, expect PASS. Step 5: Commit** `git add -A && git commit -m "feat(ziti): ZitiOptions from configuration"`
 
@@ -324,7 +333,7 @@ Expected: Build succeeded. Resolve any API drift between the sample (which may t
 - [ ] **Step 1: Implement `UseZiti()`** in `src/Mpt.Extensions.Sdk.Ziti/ZitiHostExtensions.cs`:
   - An extension `public static WebApplicationBuilder UseZiti(this WebApplicationBuilder builder)` (or `IWebHostBuilder`) that:
     1. resolves `ZitiOptions.FromConfiguration(builder.Configuration)`,
-    2. on startup (or inline before Kestrel binds), reads the persisted identity at `IdentityFilePath`, calls `ZitiIdentity.WriteZitiIdentityFile(...)` to a sibling `ziti-identity.json`, and uses `ZitiIdentity.ServiceNameFromMrok(...)` as a fallback service name if config didn't set one,
+    2. on startup (or inline before Kestrel binds), reads the persisted identity at `IdentityFilePath`, calls `ZitiIdentity.WriteZitiIdentityFile(...)` to a sibling `ziti-identity.json`, and resolves the bind service name as `SDK_ZITI_SERVICE` (if set) else `ZitiIdentity.ServiceNameFromMrok(identity)` (= `mrok.extension`, exactly what the Python `mrok` agent binds via `ctx.bind(identity.mrok.extension)`),
     3. registers the `ZitiConnectionListenerFactory` as `IConnectionListenerFactory` and configures Kestrel to listen on a `ZitiEndPoint(serviceName)` (model the `UseZitiTransport` wiring from the sample's `ServiceCollectionExtensions.cs`).
   - This must compose with the core SDK: the consumer writes `ExtensionHostBuilder.Build(builder)` and, for platform deployment, also calls `builder.UseZiti()` (order per what the wiring requires — document it).
   - IMPORTANT ordering vs registration: the identity file must exist before Ziti binds. The core SDK's `RegistrationHostedService` writes it on startup in platform mode. Ensure `UseZiti` reads the identity at the right time (e.g. resolve/transform lazily at first bind, or document that registration must complete first). If a startup-ordering conflict exists, have `UseZiti` perform registration-or-wait, or expose an explicit `await app.RegisterAsync()` the consumer calls before `RunAsync()`. Choose the simplest correct ordering and document it in `docs/ziti-deployment-smoke.md`.
