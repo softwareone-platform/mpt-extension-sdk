@@ -44,7 +44,7 @@ dev = [
 
 [project.optional-dependencies]
 azure-monitor = [
-  "azure-monitor-opentelemetry-exporter==1.0.0b51",
+  "azure-monitor-opentelemetry-exporter==1.0.0b53",
 ]
 
 [project.scripts]
