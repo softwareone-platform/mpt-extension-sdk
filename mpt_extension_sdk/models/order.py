@@ -56,27 +56,27 @@ class Order(BaseModel):  # noqa: WPS214
 
     @property
     def agreement_id(self) -> str:
-        """Return the agreement identifier."""
+        """The agreement identifier."""
         return self.agreement.id
 
     @property
     def authorization_id(self) -> str:
-        """Return the authorization identifier."""
+        """The authorization identifier."""
         return self.authorization.id
 
     @property
     def customer_id(self) -> str | None:
-        """Return the customer identifier from the agreement."""
+        """The customer identifier from the agreement."""
         return self.agreement.external_ids.vendor
 
     @property
     def product_id(self) -> str:
-        """Return the product identifier."""
+        """The product identifier."""
         return self.product.id
 
     @property
     def seller_id(self) -> str | None:
-        """Return the seller identifier when available."""
+        """The seller identifier when available."""
         return None if self.seller is None else self.seller.id
 
     @property

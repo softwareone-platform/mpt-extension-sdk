@@ -35,7 +35,7 @@ class AuthenticatedRequestContext:
 
     @property
     def pagination(self) -> Pagination:
-        """Return lazily parsed pagination parameters from the query string."""
+        """Lazily parsed pagination parameters from the query string."""
         return Pagination.from_query(self.query)
 
     @classmethod

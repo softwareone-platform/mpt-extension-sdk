@@ -42,7 +42,7 @@ class AccountTokenProvider:
 
     @property
     def cache_key(self) -> AccountCacheKey:
-        """Return the cache key for the current account."""
+        """The cache key for the current account."""
         return self._auth.extension_id, self._auth.account.id
 
     @classmethod

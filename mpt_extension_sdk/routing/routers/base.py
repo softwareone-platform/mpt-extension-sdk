@@ -13,7 +13,7 @@ class BaseExtensionRouter:
 
     @property
     def routes(self) -> list[BaseRouteDefinition]:
-        """Return the registered route definitions."""
+        """The registered route definitions."""
         return list(self._routes)
 
     def prefixed_routes(self, prefix: str) -> list[BaseRouteDefinition]:
