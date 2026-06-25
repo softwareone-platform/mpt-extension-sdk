@@ -9,6 +9,13 @@ updates:
       timezone: "UTC"
     versioning-strategy: "increase"
     groups:
+      mrok-stack:
+        # mrok pins fastapi and typer in lockstep, so a single-dependency bump
+        # of any of them is unresolvable. Group them to bump together in one PR.
+        patterns:
+          - "mrok"
+          - "fastapi"
+          - "typer"
       python-production:
         dependency-type: "production"
       python-development:
@@ -24,6 +31,15 @@ updates:
         versions: ["*"]
       - dependency-name: "opentelemetry-instrumentation-*"
         versions: ["*"]
+      - dependency-name: "opentelemetry-exporter-otlp-proto-*"
+        versions: ["*"]
+      # mrok caps fastapi <0.137 (0.137 reworked router.routes and breaks
+      # fastapi-pagination) and typer <0.27; ignore newer versions until mrok
+      # lifts these caps, otherwise the grouped update is unresolvable again.
+      - dependency-name: "fastapi"
+        versions: [">=0.137"]
+      - dependency-name: "typer"
+        versions: [">=0.27"]
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
