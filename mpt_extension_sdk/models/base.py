@@ -31,4 +31,11 @@ class BaseModel(PydanticBaseModel):
     @classmethod
     def from_payload(cls, payload: Any) -> Self:
         """Build a model from an API payload."""
+        # mpt_api_client returns ModelBase objects (dicts exposed as dynamic attributes),
+        # whose nested values are also ModelBase. to_dict() turns them into plain nested
+        # dicts so fields typed as dict (e.g. ``module.settings``) validate as expected.
+        to_dict = getattr(payload, "to_dict", None)
+        if callable(to_dict):
+            payload = to_dict()
+
         return cls.model_validate(payload, by_alias=True)
