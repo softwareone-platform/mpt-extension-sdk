@@ -2,6 +2,7 @@ from mpt_extension_sdk.models.account import Account, AccountToken, BuyerAccount
 from mpt_extension_sdk.models.agreement import Agreement, AgreementLine
 from mpt_extension_sdk.models.asset import Asset, AssetLine
 from mpt_extension_sdk.models.authorization import Authorization
+from mpt_extension_sdk.models.extension import Extension
 from mpt_extension_sdk.models.external_id import ExternalIds
 from mpt_extension_sdk.models.installation import (
     Installation,
@@ -25,6 +26,7 @@ __all__ = [  # noqa: WPS410
     "AssetLine",
     "Authorization",
     "BuyerAccount",
+    "Extension",
     "ExternalIds",
     "Installation",
     "InstallationReference",

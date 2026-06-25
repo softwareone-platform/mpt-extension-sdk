@@ -37,6 +37,26 @@ already_installed = await ctx.mpt_api_service.installations.exists_for_account(
 matching installation regardless of installation status (`Invited`,
 `Installed`, `Expired`, `Uninstalled`). It returns ``False`` only for an empty
 result set. Other API errors are propagated unchanged.
+
+To create a new installation, build the payload as an `Installation` model (or
+a plain mapping) and call `create`:
+
+```python
+from mpt_extension_sdk.models import Installation, InstallationReference
+
+installation = await ctx.mpt_api_service.installations.create(
+    Installation(
+        account=InstallationReference(id="ACC-5678"),
+        extension=InstallationReference(id="EXT-1234"),
+        modules=[InstallationReference(id="MOD-1"), InstallationReference(id="MOD-2")],
+    )
+)
+```
+
+`create` accepts either an `Installation` SDK model or a plain mapping that
+matches the Marketplace installation schema, and returns the `Installation`
+parsed from the API response.
+
 ## API Handler Example
 
 ```python
