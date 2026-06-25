@@ -9,14 +9,27 @@ This guide is the entry point for building an extension package on top of
 - [Application setup](sdk_usage/application.md): install the SDK, shape an
   extension package, create `ExtensionApp`, include routers, and configure the
   runtime.
-- [Event routes](sdk_usage/events.md): register task and non-task event handlers.
+- [Event routes](sdk_usage/events.md): register task and non-task event handlers
+  (and the status of schedule routes).
 - [Authenticated API routes](sdk_usage/api.md): expose authenticated endpoints,
   validate bodies, read request/auth context, return API responses, and use
   pagination.
 - [UI plugs](sdk_usage/plugs.md): register `PlugRouter` providers and reference
   static assets.
 - [Contexts and pipelines](sdk_usage/contexts-and-pipelines.md): adapt execution
-  contexts and compose processing pipelines.
+  contexts, compose pipelines, drive the step lifecycle and flow control, use
+  pipeline hooks, and declare status transitions.
+- [Immutable snapshots](sdk_usage/immutable-snapshots.md): treat MPT models as
+  immutable, update parameters with the `with_*` helpers, and refresh after a
+  write.
+- [Error handling](sdk_usage/error-handling.md): raise typed step/pipeline
+  errors and let the SDK map them to event responses.
+- [Settings](sdk_usage/settings.md): the runtime, extension, and account
+  settings layers and the environment-variable helpers.
+- [Observability](sdk_usage/observability.md): SDK tracing, the
+  `azure-monitor` extra, and extension-defined spans with `trace_span`.
+- [CLI and metadata](sdk_usage/cli.md): the `mpt-ext` commands and `meta.yaml`
+  generation/validation.
 - [Marketplace services](sdk_usage/marketplace-services.md): use
   `ctx.mpt_api_service` from handlers and pipeline steps.
 
