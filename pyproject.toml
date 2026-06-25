@@ -21,7 +21,7 @@ dependencies = [
     "opentelemetry-instrumentation-requests==0.60.*",
     "opentelemetry-sdk==1.39.0",
     "pyfiglet==1.0.*",
-    "pyjwt==2.12.*",
+    "pyjwt==2.13.*",
     "requests==2.33.*",
     "rich==15.0.*",
     "typing-extensions==4.15.*",
