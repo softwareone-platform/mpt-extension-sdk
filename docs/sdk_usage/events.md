@@ -53,3 +53,11 @@ received payload:
 This means a single extension app can register routes that receive either
 orders or agreements, and the SDK resolves the correct context family for each
 request at runtime.
+
+## Schedule Routes
+
+`ScheduleRouter` exists in the SDK contract and exposes a `schedule(path, name)`
+decorator, but scheduled routes are out of scope for the current phase: they are
+not yet mounted by the runtime nor emitted into the generated metadata. Treat
+`ScheduleRouter` as a forward-looking placeholder and do not rely on it for
+production flows yet.
