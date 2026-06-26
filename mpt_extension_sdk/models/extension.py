@@ -12,6 +12,7 @@ class ExtensionStatusEnum(StrEnum):
     """Extension status enum."""
 
     DELETED = "Deleted"
+    DRAFT = "Draft"
     PRIVATE = "Private"
     PUBLIC = "Public"
 
