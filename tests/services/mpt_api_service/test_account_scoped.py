@@ -3,6 +3,7 @@ import datetime as dt
 import pytest
 from mpt_api_client.http.async_client import AsyncHTTPClient
 from mpt_api_client.http.types import Response
+from mpt_api_client.resources.integration.installations_token import InstallationsToken
 
 from mpt_extension_sdk.api.auth import Account, AccountType, AuthContext
 from mpt_extension_sdk.models.account import AccountToken
@@ -68,28 +69,17 @@ def clear_account_token_cache():
     AccountTokenProvider.clear_cache()
 
 
-async def test_create_token_query_params(mocker, async_mpt_client, jwt_token_factory):
+async def test_create_token(mocker, async_mpt_client, jwt_token_factory):
+    service = async_mpt_client.integration.installations_token.return_value
     token = jwt_token_factory({"exp": 4102444800})
-    response = mocker.Mock(spec=Response)
-    response.json.return_value = {"token": token}
-    http_client = mocker.Mock(spec=["request"], request=mocker.AsyncMock(return_value=response))
-    installations = mocker.Mock(
-        spec=["path", "http_client"],
-        path="/public/v1/integration/installations/-/token",
-        http_client=http_client,
-    )
-    async_mpt_client.integration.installations_token.return_value = installations
+    service.token = mocker.AsyncMock(return_value=InstallationsToken(token=token))
 
     result = await AccountTokenService(async_mpt_client).create_token("ACC-1")
 
     assert result.token == token
     assert result.exp == 4102444800
     assert result.expires_at == dt.datetime.fromtimestamp(4102444800, tz=dt.UTC)
-    installations.http_client.request.assert_awaited_once_with(
-        "post",
-        "/public/v1/integration/installations/-/token",
-        query_params={"account.id": "ACC-1"},
-    )
+    service.token.assert_awaited_once_with("ACC-1")
 
 
 async def test_provider_caches_token(
