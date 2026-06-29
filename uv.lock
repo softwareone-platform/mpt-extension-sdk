@@ -279,7 +279,7 @@ wheels = [
 
 [[package]]
 name = "azure-monitor-opentelemetry-exporter"
-version = "1.0.0b51"
+version = "1.0.0b53"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "azure-core" },
@@ -289,9 +289,9 @@ dependencies = [
     { name = "opentelemetry-sdk" },
     { name = "psutil" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/bc/a4/a6cd2d389bc1009300bcd57c9e2ace4b7e7ae1e5dc0bda415ee803629cf2/azure_monitor_opentelemetry_exporter-1.0.0b51.tar.gz", hash = "sha256:a6171c34326bcd6216938bb40d715c15f1f22984ac1986fc97231336d8ac4c3c", size = 319837, upload-time = "2026-04-06T21:45:46.378Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/05/64/875f13849fe2e3832ceda6a218fa5422a25e72c1b86623a8514f541a8c60/azure_monitor_opentelemetry_exporter-1.0.0b53.tar.gz", hash = "sha256:1274e9008909414a25c6287185a6c5a884209705b6e651a1ffddfbdab3b76e52", size = 335614, upload-time = "2026-06-08T15:54:22.683Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ea/1a/6b0b7a6181b42709103a65a676c89fd5055cb1d1b281ebe10c49254a170f/azure_monitor_opentelemetry_exporter-1.0.0b51-py2.py3-none-any.whl", hash = "sha256:6572cac11f96e3b18ae1187cb35cf3b40d0004655dae8048896c41c765bea530", size = 242104, upload-time = "2026-04-06T21:45:47.856Z" },
+    { url = "https://files.pythonhosted.org/packages/5f/dc/6dbff881ac739999bc31f166504ed31a2e0fef45cc59a3c1b2386a4b4abe/azure_monitor_opentelemetry_exporter-1.0.0b53-py2.py3-none-any.whl", hash = "sha256:e2faadaf203369f25cb96df2a75017bd7f11655b033200c5867151f8fb2a6ba7", size = 249226, upload-time = "2026-06-08T15:54:24.413Z" },
 ]
 
 [[package]]
@@ -1401,15 +1401,15 @@ wheels = [
 
 [[package]]
 name = "mpt-api-client"
-version = "6.3.0"
+version = "6.3.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx" },
     { name = "httpx-retries" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/1f/6f/3a398fdff0374ef4d4a9f1eb07ec89b5d74f9e3c30642d55673754738758/mpt_api_client-6.3.0.tar.gz", hash = "sha256:5e1633a4efa7c167982887d4774df1544df8237f85e49f6912dab10a6cc3a89a", size = 62779, upload-time = "2026-06-02T15:44:09.685Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a6/f0/6d77d6235801223cfa6a82d13e208469cf12960f4777b841616f64238462/mpt_api_client-6.3.1.tar.gz", hash = "sha256:642f5088c4b2f9608fb70fa9078856423a9096fa118eeede60c6ae9bbb7200f1", size = 65853, upload-time = "2026-06-25T16:05:35.595Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/15/91/5733e8086d14addd456d5a73e5d93ca9e544949edcf5b382aa252554dd27/mpt_api_client-6.3.0-py3-none-any.whl", hash = "sha256:2fe338c0f867055d9f2738ebb82c66b6bd88c69418fd7ea72ea8dd9909d913f6", size = 143352, upload-time = "2026-06-02T15:44:08.545Z" },
+    { url = "https://files.pythonhosted.org/packages/9c/8d/a3ae1ad7836584e4caacae27816666c55858415f2a80390cefa4264be679/mpt_api_client-6.3.1-py3-none-any.whl", hash = "sha256:87cef1feb7d272dcda619818124605381861a633e442334316181ebb36ba18f7", size = 148484, upload-time = "2026-06-25T16:05:34.462Z" },
 ]
 
 [[package]]
@@ -1459,7 +1459,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "azure-monitor-opentelemetry-exporter", marker = "extra == 'azure-monitor'", specifier = "==1.0.0b51" },
+    { name = "azure-monitor-opentelemetry-exporter", marker = "extra == 'azure-monitor'", specifier = "==1.0.0b53" },
     { name = "fastapi", extras = ["standard"], specifier = "==0.136.*" },
     { name = "mpt-api-client", specifier = "==6.3.*" },
     { name = "mrok", specifier = "==0.10.0" },
