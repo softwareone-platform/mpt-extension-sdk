@@ -2,6 +2,7 @@ import asyncio
 import datetime as dt
 from typing import TYPE_CHECKING, Any, ClassVar, Self, override
 
+from mpt_api_client.auth import BearerTokenAuthentication
 from mpt_api_client.http.async_client import AsyncHTTPClient
 from mpt_api_client.http.query_options import QueryOptions
 from mpt_api_client.http.types import HeaderTypes, QueryParam, RequestFiles, Response
@@ -101,7 +102,11 @@ class AccountScopedAsyncHTTPClient(AsyncHTTPClient):
         token_provider: AccountTokenProvider,
         timeout: float = 60.0,
     ) -> None:
-        super().__init__(base_url=base_url, api_token=bootstrap_api_token, timeout=timeout)
+        super().__init__(
+            base_url=base_url,
+            authentication=BearerTokenAuthentication(bootstrap_api_token),
+            timeout=timeout,
+        )
         self._token_provider = token_provider
 
     @override
