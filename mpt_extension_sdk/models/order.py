@@ -1,3 +1,5 @@
+from enum import StrEnum
+
 from pydantic import Field
 
 from mpt_extension_sdk.models.account import SellerAccount
@@ -11,6 +13,18 @@ from mpt_extension_sdk.models.price import Price
 from mpt_extension_sdk.models.product import Product, ProductItem
 from mpt_extension_sdk.models.subscription import Subscription
 from mpt_extension_sdk.models.template import Template
+
+
+class OrderStatus(StrEnum):
+    """Marketplace order status."""
+
+    DRAFT = "Draft"
+    QUOTED = "Quoted"
+    PROCESSING = "Processing"
+    QUERYING = "Querying"
+    COMPLETED = "Completed"
+    FAILED = "Failed"
+    DELETED = "Deleted"
 
 
 class OrderLine(BaseModel):
@@ -36,7 +50,7 @@ class Order(BaseModel):  # noqa: WPS214
 
     id: str
     revision: int | None = None
-    status: str  # TODO: add enum
+    status: OrderStatus
     type: str
 
     agreement: Agreement

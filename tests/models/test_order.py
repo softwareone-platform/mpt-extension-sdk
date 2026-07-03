@@ -7,7 +7,7 @@ from mpt_extension_sdk.models.agreement import Agreement
 from mpt_extension_sdk.models.authorization import Authorization
 from mpt_extension_sdk.models.external_id import ExternalIds
 from mpt_extension_sdk.models.licensee import Licensee
-from mpt_extension_sdk.models.order import Order, OrderLine
+from mpt_extension_sdk.models.order import Order, OrderLine, OrderStatus
 from mpt_extension_sdk.models.parameter import ParameterBag
 from mpt_extension_sdk.models.price import Price
 from mpt_extension_sdk.models.product import ExternalIds as ProductExternalIds
@@ -37,7 +37,7 @@ def full_order_factory(order_line_factory):
     def factory():
         return Order.model_construct(
             id="ORD-1",
-            status="Open",
+            status=OrderStatus.PROCESSING,
             type="Order",
             agreement=Agreement.model_construct(
                 id="AGR-1",
@@ -64,6 +64,28 @@ def full_order_factory(order_line_factory):
         )
 
     return factory
+
+
+def test_order_status_members_match_mpt_statuses():
+    result = [status.value for status in OrderStatus]
+
+    assert result == [
+        "Draft",
+        "Quoted",
+        "Processing",
+        "Querying",
+        "Completed",
+        "Failed",
+        "Deleted",
+    ]
+
+
+def test_order_validates_status_string_into_enum(full_order_factory):
+    source_order = full_order_factory()
+
+    result = Order.model_validate(source_order.model_dump(by_alias=True) | {"status": "Completed"})
+
+    assert result.status is OrderStatus.COMPLETED
 
 
 def test_order_properties_expose_related_ids(full_order_factory):

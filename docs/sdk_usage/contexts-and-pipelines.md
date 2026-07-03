@@ -185,6 +185,19 @@ hook owns the actual transition.
 can apply the transition exactly once. (`AgreementStatusAction` and
 `agreement_state` mirror this, with `FAIL` as the only transition type.)
 
+`OrderStatusActionType` only lists the transitions a step may declare. To read
+or compare the current order status, use `OrderStatus`
+(`mpt_extension_sdk.models.OrderStatus`), the `StrEnum` of all Marketplace
+order statuses (`Draft`, `Quoted`, `Processing`, `Querying`, `Completed`,
+`Failed`, `Deleted`) that also types `Order.status`:
+
+```python
+from mpt_extension_sdk.models import OrderStatus
+
+if ctx.order.status == OrderStatus.COMPLETED:
+    ...
+```
+
 ```python
 from typing import override
 
