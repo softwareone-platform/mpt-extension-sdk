@@ -1,0 +1,279 @@
+{
+  "info": {
+    "name": "mpt-extension-sdk mock_app",
+    "description": "Sample requests for the SDK mock_app running locally on `{{base_url}}` (default `http://localhost:8080`).\n\nAuth is wired automatically:\n\n- A collection-level pre-request script builds a non-prod HS256 JWT from the `extension_id`, `account_id` and `account_type` variables and stores it in `auth_token`.\n- Every authenticated request sends `Authorization: Bearer {{auth_token}}` via collection-level Bearer auth (the `ops` requests opt out).\n\nThe runtime (mpt-extension-sdk) decodes claims without verifying the signature, so the HS256 dummy secret is only there to produce a structurally valid token. Override `extension_id`, `account_id` or `account_type` in the collection variables to test other identities.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{auth_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Build a non-prod HS256 JWT for the local runtime and store it in `auth_token`.",
+          "// The runtime decodes claims without verifying the signature, so the dummy",
+          "// secret below is fine for local testing only.",
+          "const CryptoJS = require('crypto-js');",
+          "",
+          "const b64url = (wordArray) => CryptoJS.enc.Base64.stringify(wordArray)",
+          "    .replace(/=+$/, '').replace(/\\+/g, '-').replace(/\\//g, '_');",
+          "const b64urlStr = (s) => b64url(CryptoJS.enc.Utf8.parse(s));",
+          "",
+          "const header = b64urlStr(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));",
+          "const payload = b64urlStr(JSON.stringify({",
+          "    'https://claims.softwareone.com/extensionId': pm.collectionVariables.get('extension_id'),",
+          "    'https://claims.softwareone.com/accountId': pm.collectionVariables.get('account_id'),",
+          "    'https://claims.softwareone.com/accountType': pm.collectionVariables.get('account_type'),",
+          "    exp: Math.floor(Date.now() / 1000) + 10 * 365 * 24 * 60 * 60",
+          "}));",
+          "const signature = b64url(CryptoJS.HmacSHA256(header + '.' + payload, 'non-prod-dummy-secret'));",
+          "",
+          "pm.collectionVariables.set('auth_token', header + '.' + payload + '.' + signature);"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "extension_id",
+      "value": "EXT-2345-3554",
+      "type": "string"
+    },
+    {
+      "key": "account_id",
+      "value": "ACC-0000-3453",
+      "type": "string"
+    },
+    {
+      "key": "account_type",
+      "value": "Client",
+      "type": "string"
+    },
+    {
+      "key": "auth_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "ops / health",
+      "request": {
+        "method": "GET",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": ["{{base_url}}"],
+          "path": ["health"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "ops / live — liveness probe (expected 200 OK)",
+      "request": {
+        "method": "GET",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/live",
+          "host": ["{{base_url}}"],
+          "path": ["live"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "ops / ready — readiness probe (200 OK when started, 503 otherwise)",
+      "request": {
+        "method": "GET",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/ready",
+          "host": ["{{base_url}}"],
+          "path": ["ready"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "event / purchase — supported purchase order (expected OK)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "mpt-task-id", "value": "TSK-0014-3792-0694-1776" },
+          { "key": "x-request-id", "value": "10147b5c-d430-482c-8c42-d17c5df5e207" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"id\": \"7f3b5127-2f6c-4801-af8f-c4825ce7f9d2\",\n  \"object\": {\n    \"id\": \"ORD-7707-5631-5150\",\n    \"name\": \"order\",\n    \"objectType\": \"Order\"\n  },\n  \"details\": {\n    \"eventType\": \"created\",\n    \"enqueueTime\": \"2026-03-06T12:00:00Z\",\n    \"deliveryTime\": \"2026-03-06T12:01:00Z\"\n  },\n  \"task\": {\n    \"id\": \"TSK-0014-3792-0694-1776\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v2/events/orders/purchase",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v2", "events", "orders", "purchase"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "API / agreements-retrieve (expected 200 OK)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v2/agreements/AGR-1234-1234-1234",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v2", "agreements", "AGR-1234-1234-1234"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "API / agreements-retrieve (expected 404 Not Found)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v2/agreements/not-found",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v2", "agreements", "not-found"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "API / agreements-list (expected 200 OK — paginated)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v2/agreements?offset=2&limit=3",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v2", "agreements"],
+          "query": [
+            { "key": "offset", "value": "2" },
+            { "key": "limit", "value": "3" }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "API / agreements-list (expected 200 OK — count-based pagination)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v2/agreements?limit=0",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v2", "agreements"],
+          "query": [
+            { "key": "limit", "value": "0" }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "API / agreements-sync (expected 204 No Content)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v2/agreements/sync",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v2", "agreements", "sync"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "API / agreements-create (expected 201 Created)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"id\": \"AGR-111\",\n  \"name\": \"Test Agreement\",\n  \"client\": {\"id\": \"CLT-111\", \"name\": \"Test Client\"},\n  \"licensee\": {\"id\": \"LIC-111\", \"name\": \"Test Licensee\", \"status\": \"Active\"},\n  \"parameters\": {},\n  \"product\": {\"id\": \"PROD-111\", \"name\": \"Test Product\"}\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v2/agreements",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v2", "agreements"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "API / agreements-create (expected 422 Unprocessable Entity)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"id\": \"AGR-111\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v2/agreements",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v2", "agreements"]
+        }
+      },
+      "response": []
+    }
+  ]
+}
