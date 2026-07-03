@@ -1,3 +1,4 @@
+import asyncio
 from types import ModuleType
 
 import pytest
@@ -160,6 +161,19 @@ def test_ready_returns_unavailable_before_startup(runtime_settings, runtime_app_
     response = TestClient(result).get("/ready")
     assert response.status_code == 503
     assert response.json() == {"status": "unavailable"}
+
+
+async def _run_lifespan_with_wrapper(app: FastAPI) -> bool:
+    # mrok's proxy passes its own ASGIAppWrapper (without `state`) here
+    async with app.router.lifespan_context(object()):
+        return app.state.ready
+
+
+def test_lifespan_with_wrapper_argument():
+    result = runtime_app._create_fastapi_app(ExtensionApp())
+
+    assert asyncio.run(_run_lifespan_with_wrapper(result)) is True
+    assert result.state.ready is False
 
 
 def test_ready_follows_app_lifespan(runtime_settings, runtime_app_patches):
