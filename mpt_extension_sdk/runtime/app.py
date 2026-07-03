@@ -1,9 +1,11 @@
 import logging
-from collections.abc import Awaitable, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable
+from contextlib import asynccontextmanager
 from importlib import import_module
 from pathlib import Path
 
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Request, Response, status
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from mpt_extension_sdk.api.builders.api import create_api_route
@@ -99,14 +101,27 @@ def register_extension_routes(app: FastAPI, extension_app: ExtensionApp) -> None
 
 def _create_fastapi_app(extension_app: ExtensionApp) -> FastAPI:
     """Create the base FastAPI application for the extension runtime."""
-    return FastAPI(
+
+    @asynccontextmanager
+    async def runtime_lifespan(app: FastAPI) -> AsyncIterator[None]:  # noqa: WPS430
+        """Mark the app as ready while the server is accepting traffic."""
+        app.state.ready = True
+        try:
+            yield
+        finally:
+            app.state.ready = False
+
+    app = FastAPI(
         title="MPT Extension API",
         description="MPT Extension API",
         version=extension_app.version,
         openapi_url=extension_app.openapi,
         docs_url="/bypass/docs",
         redoc_url="/bypass/redoc",
+        lifespan=runtime_lifespan,
     )
+    app.state.ready = False
+    return app
 
 
 def _configure_observability(app: FastAPI, observability_config: ObservabilityConfig) -> None:
@@ -144,3 +159,15 @@ def _register_builtin_routes(app: FastAPI) -> None:
     @app.get("/health", tags=["ops"])
     async def health() -> dict[str, str]:  # noqa: WPS430
         return {"status": "ok", "version": app.version}
+
+    @app.get("/live", tags=["ops"])
+    async def live() -> dict[str, str]:  # noqa: WPS430
+        return {"status": "ok"}
+
+    @app.get("/ready", tags=["ops"])
+    async def ready() -> JSONResponse:  # noqa: WPS430
+        if app.state.ready:
+            return JSONResponse({"status": "ok"})
+        return JSONResponse(
+            {"status": "unavailable"}, status_code=status.HTTP_503_SERVICE_UNAVAILABLE
+        )

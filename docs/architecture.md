@@ -62,6 +62,9 @@ The SDK runtime has two main execution surfaces:
 persists the returned identity when present, and starts the exported ASGI app through Ziticorn.
 `runtime/app.py` assembles the FastAPI app, configures middleware and observability,
 loads the extension's exported `ext_app`, and mounts every registered route.
+It also registers built-in operational endpoints: `/health` (status plus extension
+version), `/live` (liveness probe), and `/ready` (readiness probe, returning `503`
+until application startup completes and after shutdown begins).
 
 At the moment, `event` and `api` route families are implemented end-to-end in
 runtime request handling. Event routes are also emitted into `meta.yaml`. The
