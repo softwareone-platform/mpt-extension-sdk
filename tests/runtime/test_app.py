@@ -146,6 +146,34 @@ def test_create_runtime_app_registers_health(runtime_settings, runtime_app_patch
     assert response.json() == {"status": "ok", "version": extension_app.version}
 
 
+def test_create_runtime_app_registers_live(runtime_settings, runtime_app_patches):
+    result = runtime_app.create_runtime_app(runtime_settings)
+
+    response = TestClient(result).get("/live")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
+
+def test_ready_returns_unavailable_before_startup(runtime_settings, runtime_app_patches):
+    result = runtime_app.create_runtime_app(runtime_settings)
+
+    response = TestClient(result).get("/ready")
+    assert response.status_code == 503
+    assert response.json() == {"status": "unavailable"}
+
+
+def test_ready_follows_app_lifespan(runtime_settings, runtime_app_patches):
+    result = runtime_app.create_runtime_app(runtime_settings)
+
+    with TestClient(result) as client:
+        started_response = client.get("/ready")
+    stopped_response = TestClient(result).get("/ready")
+    assert started_response.status_code == 200
+    assert started_response.json() == {"status": "ok"}
+    assert stopped_response.status_code == 503
+    assert stopped_response.json() == {"status": "unavailable"}
+
+
 def test_create_runtime_app_registers_ext_routes(runtime_settings, runtime_app_patches):
     result = runtime_app.create_runtime_app(runtime_settings)
 
