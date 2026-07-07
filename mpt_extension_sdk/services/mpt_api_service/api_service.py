@@ -3,8 +3,8 @@ from typing import Self
 from mpt_extension_sdk.api.auth import AuthContext
 from mpt_extension_sdk.services.api_client_v2.mpt_api_client import AsyncMPTClient
 from mpt_extension_sdk.services.mpt_api_service.account_scoped_client import (
-    AccountScopedAsyncMPTClient,
     AccountTokenProvider,
+    build_account_scoped_mpt_client,
 )
 from mpt_extension_sdk.services.mpt_api_service.account_token import AccountTokenService
 from mpt_extension_sdk.services.mpt_api_service.agreement import AgreementService
@@ -49,13 +49,10 @@ class MPTAPIService:  # noqa: WPS215, WPS230
     async def from_auth_context(cls, base_url: str, auth: AuthContext) -> Self:
         """Create the service from the request authentication context."""
         runtime_settings = get_runtime_settings()
-        client = AccountScopedAsyncMPTClient.from_token_provider(
+        client = build_account_scoped_mpt_client(
             base_url=base_url,
-            bootstrap_api_token=runtime_settings.ext_api_key,
             token_provider=AccountTokenProvider(
-                runtime_settings=runtime_settings,
-                auth=auth,
-                service_type=cls,
+                runtime_settings=runtime_settings, auth=auth, service_type=cls
             ),
         )
         return cls(client)

@@ -1,16 +1,18 @@
 import datetime as dt
+from collections.abc import AsyncIterator
+from contextlib import aclosing
+from functools import partial
 
 import pytest
-from mpt_api_client.http.async_client import AsyncHTTPClient
-from mpt_api_client.http.types import Response
+from httpx import AsyncClient, MockTransport, Request, Response, codes
 from mpt_api_client.resources.integration.installations_token import InstallationsToken
 
 from mpt_extension_sdk.api.auth import Account, AccountType, AuthContext
 from mpt_extension_sdk.models.account import AccountToken
 from mpt_extension_sdk.services.mpt_api_service.account_scoped_client import (
-    AccountScopedAsyncHTTPClient,
-    AccountScopedAsyncMPTClient,
+    AccountScopedAuthentication,
     AccountTokenProvider,
+    build_account_scoped_mpt_client,
 )
 from mpt_extension_sdk.services.mpt_api_service.account_token import AccountTokenService
 
@@ -96,46 +98,136 @@ async def test_provider_caches_token(
     installations.create_token.assert_awaited_once_with("ACC-1")
 
 
-def test_mpt_client_uses_refreshing_http_client(mocker):
+async def test_provider_invalidate_forces_refresh(
+    clear_account_token_cache, token_provider_factory
+):
+    provider, _, installations = token_provider_factory()
+    first_token = await provider.get_token()
+
+    provider.invalidate(first_token)
+
+    await provider.get_token()
+    assert installations.create_token.await_count == 2
+
+
+async def test_provider_invalidate_ignores_stale_token(
+    clear_account_token_cache, token_provider_factory
+):
+    provider, _, installations = token_provider_factory()
+    await provider.get_token()
+
+    provider.invalidate("already-replaced-token")
+
+    await provider.get_token()
+    installations.create_token.assert_awaited_once()
+
+
+def test_build_client_sets_account_authentication(mocker):
     token_provider = mocker.Mock(
         spec=["get_token"], get_token=mocker.AsyncMock(return_value="account-token")
     )
 
-    result = AccountScopedAsyncMPTClient.from_token_provider(
+    result = build_account_scoped_mpt_client(
         base_url="https://api.example.com",
-        bootstrap_api_token="extension-api-key",
         token_provider=token_provider,
     )
 
-    assert isinstance(result.http_client, AccountScopedAsyncHTTPClient)
+    assert isinstance(result.http_client.httpx_client.auth, AccountScopedAuthentication)
+    token_provider.get_token.assert_not_awaited()
 
 
-async def test_http_client_refreshes_each_request(mocker):
+async def test_authentication_refreshes_each_request(mocker):
     token_provider = mocker.Mock(
         spec=["get_token"],
         get_token=mocker.AsyncMock(side_effect=["account-token-1", "account-token-2"]),
     )
-    response = mocker.Mock(spec=Response)
-    request = mocker.patch.object(AsyncHTTPClient, "request", autospec=True, return_value=response)
-    client = AccountScopedAsyncHTTPClient(
-        base_url="https://api.example.com",
-        bootstrap_api_token="extension-api-key",
-        token_provider=token_provider,
-    )
+    authentication = AccountScopedAuthentication(token_provider)
 
     result = [
-        await client.request("get", "/orders/ORD-1", headers={"x-test": "1"}),
-        await client.request("get", "/orders/ORD-1", headers={"x-test": "1"}),
+        await _apply_authentication(
+            authentication,
+            Request("GET", "https://api.example.com/orders/ORD-1", headers={"x-test": "1"}),
+        ),
+        await _apply_authentication(
+            authentication,
+            Request("GET", "https://api.example.com/orders/ORD-1", headers={"x-test": "1"}),
+        ),
     ]
 
-    assert result == [response, response]
     assert token_provider.get_token.await_count == 2
-    assert request.await_count == 2
-    assert request.await_args_list[0].kwargs["headers"] == {
-        "x-test": "1",
-        "Authorization": "Bearer account-token-1",
-    }
-    assert request.await_args_list[1].kwargs["headers"] == {
-        "x-test": "1",
-        "Authorization": "Bearer account-token-2",
-    }
+    assert result[0].headers["Authorization"] == "Bearer account-token-1"
+    assert result[1].headers["Authorization"] == "Bearer account-token-2"
+    assert result[0].headers["x-test"] == "1"
+
+
+async def test_auth_flow_retries_once_on_unauthorized(mocker):
+    token_provider = mocker.Mock(
+        spec=["get_token", "invalidate"],
+        get_token=mocker.AsyncMock(side_effect=["revoked-token", "fresh-token"]),
+    )
+    authentication = AccountScopedAuthentication(token_provider)
+    auth_flow = authentication.async_auth_flow(
+        Request("GET", "https://api.example.com/orders/ORD-1")
+    )
+
+    first_authorization = (await anext(auth_flow)).headers["Authorization"]
+    retried_request = await auth_flow.asend(Response(codes.UNAUTHORIZED))
+
+    assert first_authorization == "Bearer revoked-token"
+    assert retried_request.headers["Authorization"] == "Bearer fresh-token"
+    token_provider.invalidate.assert_called_once_with("revoked-token")
+    with pytest.raises(StopAsyncIteration):
+        await auth_flow.asend(Response(codes.OK))
+
+
+async def test_auth_flow_retry_resends_streamed_body(mocker):
+    token_provider = mocker.Mock(
+        spec=["get_token", "invalidate"],
+        get_token=mocker.AsyncMock(side_effect=["revoked-token", "fresh-token"]),
+    )
+    received = []
+
+    async with AsyncClient(
+        transport=MockTransport(partial(_record_request, received)),
+        auth=AccountScopedAuthentication(token_provider),
+    ) as client:
+        response = await client.post("https://api.example.com/files", content=_stream_chunks())
+
+    assert response.status_code == codes.OK
+    assert received == [
+        ("Bearer revoked-token", b"chunk"),
+        ("Bearer fresh-token", b"chunk"),
+    ]
+
+
+async def test_auth_flow_does_not_retry_on_success(mocker):
+    token_provider = mocker.Mock(
+        spec=["get_token", "invalidate"],
+        get_token=mocker.AsyncMock(return_value="account-token"),
+    )
+    authentication = AccountScopedAuthentication(token_provider)
+    auth_flow = authentication.async_auth_flow(
+        Request("GET", "https://api.example.com/orders/ORD-1")
+    )
+
+    await anext(auth_flow)
+
+    with pytest.raises(StopAsyncIteration):
+        await auth_flow.asend(Response(codes.OK))
+    token_provider.invalidate.assert_not_called()
+
+
+async def _stream_chunks() -> AsyncIterator[bytes]:  # noqa: RUF029
+    yield b"chunk"
+
+
+def _record_request(received: list, request: Request) -> Response:
+    received.append((request.headers["Authorization"], request.content))
+    return Response(codes.UNAUTHORIZED if len(received) == 1 else codes.OK)
+
+
+async def _apply_authentication(
+    authentication: AccountScopedAuthentication, request: Request
+) -> Request:
+    async with aclosing(authentication.async_auth_flow(request)) as auth_flow:
+        return await anext(auth_flow)
