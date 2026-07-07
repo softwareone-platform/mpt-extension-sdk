@@ -1,11 +1,11 @@
 import asyncio
 import datetime as dt
-from typing import TYPE_CHECKING, Any, ClassVar, Self, override
+from collections.abc import AsyncGenerator
+from typing import TYPE_CHECKING, ClassVar, override
 
-from mpt_api_client.auth import BearerTokenAuthentication
+from httpx import Request, Response, codes
+from mpt_api_client.auth import Authentication
 from mpt_api_client.http.async_client import AsyncHTTPClient
-from mpt_api_client.http.query_options import QueryOptions
-from mpt_api_client.http.types import HeaderTypes, QueryParam, RequestFiles, Response
 
 from mpt_extension_sdk.api.auth import AuthContext
 from mpt_extension_sdk.models.account import AccountToken
@@ -22,7 +22,7 @@ AccountLockCache = dict[AccountCacheKey, asyncio.Lock]
 TOKEN_EXPIRY_LEEWAY_SECONDS = 60
 
 
-class AccountTokenProvider:
+class AccountTokenProvider:  # noqa: WPS214
     """Account-scoped token cache with serialized refreshes per account."""
 
     _account_token_cache: ClassVar[AccountTokenCache] = {}
@@ -69,6 +69,20 @@ class AccountTokenProvider:
             self._store_token(cache_key, account_token)
             return account_token.token
 
+    def invalidate(self, token: str) -> None:
+        """Drop the cached account token when it matches a rejected one.
+
+        Only evicts the cache entry if it still holds the rejected token, so a fresh
+        token stored by a concurrent refresh is never discarded.
+
+        Args:
+            token: The bearer token rejected by the platform.
+        """
+        cache_key = self.cache_key
+        cached_token = self._account_token_cache.get(cache_key)
+        if cached_token is not None and cached_token.token == token:
+            self._account_token_cache.pop(cache_key, None)
+
     async def _fetch_account_token(self) -> AccountToken:
         mpt_api_service = self._service_type.from_config(
             base_url=self._runtime_settings.mpt_api_base_url,
@@ -91,78 +105,44 @@ class AccountTokenProvider:
             self._account_token_locks.pop(key, None)
 
 
-class AccountScopedAsyncHTTPClient(AsyncHTTPClient):
-    """HTTP client that injects a fresh account-scoped token before every request."""
+class AccountScopedAuthentication(Authentication):
+    """Authentication provider that signs requests with an account-scoped token."""
 
-    def __init__(
-        self,
-        *,
-        base_url: str,
-        bootstrap_api_token: str,
-        token_provider: AccountTokenProvider,
-        timeout: float = 60.0,
-    ) -> None:
-        super().__init__(
-            base_url=base_url,
-            authentication=BearerTokenAuthentication(bootstrap_api_token),
-            timeout=timeout,
-        )
+    # Buffer streamed request bodies before the auth flow so the 401 retry can
+    # resend them; one-shot streams would otherwise go out consumed or truncated.
+    requires_request_body = True
+
+    def __init__(self, token_provider: AccountTokenProvider) -> None:
         self._token_provider = token_provider
 
     @override
-    async def request(  # noqa: WPS211
-        self,
-        method: str,
-        url: str,
-        *,
-        files: RequestFiles | None = None,
-        json: Any | None = None,
-        query_params: QueryParam | None = None,
-        headers: HeaderTypes | None = None,
-        json_file_key: str = "_attachment_data",
-        force_multipart: bool = False,
-        options: QueryOptions | None = None,
-    ) -> Response:
-        """Perform a request using the current account-scoped token."""
-        request_headers = self._get_no_auth_headers(headers)
+    async def async_auth_flow(self, request: Request) -> AsyncGenerator[Request, Response]:
+        """Attach the current account-scoped bearer token, retrying once on 401.
+
+        A 401 response means the token was revoked before its expiry, so the cached
+        token is invalidated and the request is retried once with a fresh one.
+        """
         token = await self._token_provider.get_token()
-        request_headers["Authorization"] = f"Bearer {token}"
-        return await super().request(
-            method,
-            url,
-            files=files,
-            json=json,
-            query_params=query_params,
-            headers=request_headers,
-            json_file_key=json_file_key,
-            force_multipart=force_multipart,
-            options=options,
+        request.headers["Authorization"] = f"Bearer {token}"
+        response = yield request
+        if response.status_code == codes.UNAUTHORIZED:
+            self._token_provider.invalidate(token)
+            token = await self._token_provider.get_token()
+            request.headers["Authorization"] = f"Bearer {token}"
+            yield request
+
+
+def build_account_scoped_mpt_client(
+    *,
+    base_url: str,
+    token_provider: AccountTokenProvider,
+    timeout: float = 60.0,
+) -> AsyncMPTClient:
+    """Build an MPT client that authenticates requests with account-scoped tokens."""
+    return AsyncMPTClient(
+        AsyncHTTPClient(
+            base_url=base_url,
+            authentication=AccountScopedAuthentication(token_provider),
+            timeout=timeout,
         )
-
-    def _get_no_auth_headers(self, headers: HeaderTypes | None) -> HeaderTypes:
-        return {
-            key: header_value
-            for key, header_value in dict(headers or {}).items()
-            if key.lower() != "authorization"
-        }
-
-
-class AccountScopedAsyncMPTClient(AsyncMPTClient):
-    """MPT client that refreshes account-scoped tokens in the HTTP layer."""
-
-    @classmethod
-    def from_token_provider(
-        cls,
-        *,
-        base_url: str,
-        bootstrap_api_token: str,
-        token_provider: AccountTokenProvider,
-    ) -> Self:
-        """Create an account-scoped MPT client."""
-        return cls(
-            AccountScopedAsyncHTTPClient(
-                base_url=base_url,
-                bootstrap_api_token=bootstrap_api_token,
-                token_provider=token_provider,
-            )
-        )
+    )

@@ -49,9 +49,8 @@ async def test_from_auth_context_uses_account_client(mocker, runtime_settings): 
         "mpt_extension_sdk.services.mpt_api_service.api_service.AccountTokenProvider",
         autospec=True,
     )
-    from_token_provider = mocker.patch(
-        "mpt_extension_sdk.services.mpt_api_service.api_service."
-        "AccountScopedAsyncMPTClient.from_token_provider",
+    build_account_scoped_mpt_client = mocker.patch(
+        "mpt_extension_sdk.services.mpt_api_service.api_service.build_account_scoped_mpt_client",
         autospec=True,
         return_value=client,
     )
@@ -64,8 +63,7 @@ async def test_from_auth_context_uses_account_client(mocker, runtime_settings): 
     token_provider.assert_called_once_with(
         runtime_settings=runtime_settings, auth=auth, service_type=MPTAPIService
     )
-    from_token_provider.assert_called_once_with(
+    build_account_scoped_mpt_client.assert_called_once_with(
         base_url="https://api.example.com",
-        bootstrap_api_token=runtime_settings.ext_api_key,
         token_provider=token_provider.return_value,
     )
