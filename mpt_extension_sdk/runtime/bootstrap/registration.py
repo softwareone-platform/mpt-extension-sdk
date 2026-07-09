@@ -21,7 +21,7 @@ def register_instance(settings: RuntimeSettings) -> RegistrationResult:
     payload: dict[str, Any] = {
         "externalId": settings.external_id,
         "version": settings.meta_config.version,
-        "meta": settings.meta_config.model_dump(by_alias=True),
+        "meta": settings.meta_config.model_dump(exclude_none=True, by_alias=True),
     }
     logger.info(
         "Registering extension instance extension_id=%s external_id=%s \n events: %s",

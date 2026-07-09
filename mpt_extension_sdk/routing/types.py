@@ -1,10 +1,10 @@
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Sequence
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from mpt_extension_sdk.routing.plugs import Plug
+    from mpt_extension_sdk.routing.plugs import NavigationPlug, Plug
 
 RouteCallback = Callable[..., Awaitable[Any] | Any]
 EventRouteCallback = Callable[..., Awaitable[None] | None]
 APIRouteCallback = Callable[..., Awaitable[object] | object]
-PlugRouteCallback = Callable[[], list["Plug"]]
+PlugRouteCallback = Callable[[], Sequence["Plug | NavigationPlug"]]

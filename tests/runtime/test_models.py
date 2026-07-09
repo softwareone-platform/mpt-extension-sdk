@@ -91,3 +91,48 @@ def test_meta_config_supports_plugs(tmp_path):
             href="/static/main-menu.js",
         )
     ]
+
+
+def test_meta_config_supports_container_plugs(tmp_path):
+    metadata_path = tmp_path / "meta.yaml"
+    metadata_path.write_text(
+        yaml.safe_dump(
+            {
+                "openapi": "/bypass/openapi.json",
+                "version": "1.0.0",
+                "events": [],
+                "plugs": [
+                    {
+                        "id": "learn-extensions",
+                        "name": "Learn Extensions",
+                        "socket": "portal",
+                    }
+                ],
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+
+    result = MetaConfig.from_file(metadata_path)
+
+    assert result.plugs == [
+        MetaPlug(id="learn-extensions", name="Learn Extensions", socket="portal")
+    ]
+
+
+def test_to_file_omits_container_plug_href(tmp_path):
+    metadata_path = tmp_path / "meta.yaml"
+    meta_config = MetaConfig(
+        openapi="/bypass/openapi.json",
+        version="1.0.0",
+        events=[],
+        plugs=[MetaPlug(id="learn-extensions", name="Learn Extensions", socket="portal")],
+    )
+
+    meta_config.to_file(metadata_path)  # act
+
+    written_payload = yaml.safe_load(metadata_path.read_text(encoding="utf-8"))
+    assert written_payload["plugs"] == [
+        {"id": "learn-extensions", "name": "Learn Extensions", "socket": "portal"}
+    ]
