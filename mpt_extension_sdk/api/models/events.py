@@ -11,7 +11,7 @@ class ResponseEnum(StrEnum):
     """Valid outcome values for event response."""
 
     CANCEL = "Cancel"
-    DEFER = "Defer"
+    DEFER = "Delay"
     OK = "OK"
 
 
@@ -67,7 +67,7 @@ class EventResponse(APIBaseModel):
         str | None, Field(serialization_alias="cancelReason", validation_alias="cancelReason")
     ] = None
     defer_delay: Annotated[
-        str | None, Field(serialization_alias="deferDelay", validation_alias="deferDelay")
+        int | None, Field(serialization_alias="delay", validation_alias="delay")
     ] = None
 
     @classmethod
@@ -97,4 +97,4 @@ class EventResponse(APIBaseModel):
         Returns:
             A Defer EventResponse.
         """
-        return cls(response=ResponseEnum.DEFER, defer_delay=f"PT{seconds}S")
+        return cls(response=ResponseEnum.DEFER, defer_delay=seconds)
