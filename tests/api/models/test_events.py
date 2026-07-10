@@ -18,4 +18,10 @@ def test_event_response_reschedule():
     result = EventResponse.reschedule(seconds=0)
 
     assert result.response == ResponseEnum.DEFER
-    assert result.defer_delay == "PT0S"
+    assert result.defer_delay == 0
+
+
+def test_event_response_reschedule_to_dict():
+    result = EventResponse.reschedule(seconds=120)
+
+    assert result.to_dict() == {"response": "Delay", "delay": 120}

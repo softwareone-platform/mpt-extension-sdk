@@ -105,6 +105,11 @@ For event and task routes, the SDK maps the final exception to an
 | `ExtRuntimeError` | `cancel(reason="Runtime error")` |
 | any other exception | `cancel(reason="Unexpected error")` |
 
+On the wire, the rescheduled response serializes as
+`{"response": "Delay", "delay": <seconds>}`, where `delay` is an integer number
+of seconds, and the canceled response as
+`{"response": "Cancel", "cancelReason": "<reason>"}`.
+
 Because `StopStepError` becomes `CancelError` and `DeferStepError` becomes
 `DeferError`, raising step errors is enough to drive the event outcome. You
 rarely need to construct `CancelError` or `DeferError` directly.
