@@ -80,9 +80,9 @@
         },
         "header": [],
         "url": {
-          "raw": "{{base_url}}/health",
+          "raw": "{{base_url}}/bypass/health",
           "host": ["{{base_url}}"],
-          "path": ["health"]
+          "path": ["bypass", "health"]
         }
       },
       "response": []
@@ -96,9 +96,9 @@
         },
         "header": [],
         "url": {
-          "raw": "{{base_url}}/live",
+          "raw": "{{base_url}}/bypass/live",
           "host": ["{{base_url}}"],
-          "path": ["live"]
+          "path": ["bypass", "live"]
         }
       },
       "response": []
@@ -112,9 +112,9 @@
         },
         "header": [],
         "url": {
-          "raw": "{{base_url}}/ready",
+          "raw": "{{base_url}}/bypass/ready",
           "host": ["{{base_url}}"],
-          "path": ["ready"]
+          "path": ["bypass", "ready"]
         }
       },
       "response": []

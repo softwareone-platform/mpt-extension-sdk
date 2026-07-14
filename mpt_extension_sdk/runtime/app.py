@@ -161,15 +161,15 @@ def _configure_middlewares(app: FastAPI) -> None:
 def _register_builtin_routes(app: FastAPI) -> None:
     """Register built-in operational routes exposed by the runtime."""
 
-    @app.get("/health", tags=["ops"])
+    @app.get("/bypass/health", tags=["ops"])
     async def health() -> dict[str, str]:  # noqa: WPS430
         return {"status": "ok", "version": app.version}
 
-    @app.get("/live", tags=["ops"])
+    @app.get("/bypass/live", tags=["ops"])
     async def live() -> dict[str, str]:  # noqa: WPS430
         return {"status": "ok"}
 
-    @app.get("/ready", tags=["ops"])
+    @app.get("/bypass/ready", tags=["ops"])
     async def ready() -> JSONResponse:  # noqa: WPS430
         if app.state.ready:
             return JSONResponse({"status": "ok"})
