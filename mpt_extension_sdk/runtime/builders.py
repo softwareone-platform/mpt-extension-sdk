@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 
 from mpt_extension_sdk.routing.models import BaseRouteDefinition, PlugRouteDefinition
-from mpt_extension_sdk.routing.plugs import Plug
+from mpt_extension_sdk.routing.plugs import NavigationPlug, Plug
 from mpt_extension_sdk.runtime.models import MetaPlug
 
 
@@ -21,8 +21,19 @@ class PlugMetadataBuilder:
             meta_plugs.append(self._create_meta_plug(plug))
         return meta_plugs
 
-    def _create_meta_plug(self, plug: Plug) -> MetaPlug:
-        """Create a runtime metadata plug from a declared plug."""
+    def _create_meta_plug(self, plug: Plug | NavigationPlug) -> MetaPlug:
+        """Create a runtime metadata plug from a declared plug.
+
+        Navigation-container plugs carry no bundle, so their metadata has no `href`.
+        """
+        if isinstance(plug, NavigationPlug):
+            return MetaPlug(
+                id=plug.id,
+                name=plug.name,
+                description=plug.description,
+                icon=plug.icon,
+                socket=plug.socket,
+            )
         return MetaPlug(
             id=plug.id,
             name=plug.name,
@@ -41,14 +52,14 @@ class PlugMetadataBuilder:
                 plugs.extend(route.callback())
         return plugs
 
-    def _validate_plug(self, plug: object) -> Plug:
+    def _validate_plug(self, plug: object) -> Plug | NavigationPlug:
         """Validate plug provider output."""
-        if not isinstance(plug, Plug):
-            raise TypeError("Plug providers must return Plug instances")
+        if not isinstance(plug, Plug | NavigationPlug):
+            raise TypeError("Plug providers must return Plug or NavigationPlug instances")
         self._validate_unique_plug_id(plug)
         return plug
 
-    def _validate_unique_plug_id(self, plug: Plug) -> None:
+    def _validate_unique_plug_id(self, plug: Plug | NavigationPlug) -> None:
         """Validate that a plug id has not already been declared."""
         if plug.id in self._plug_ids:
             raise ValueError(f"Plug id '{plug.id}' is already registered")

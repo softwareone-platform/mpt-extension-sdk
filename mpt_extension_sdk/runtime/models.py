@@ -20,16 +20,20 @@ class MetaEvent(BaseModel):
 
 
 class MetaPlug(BaseModel):
-    """MetaPlug model for loading metadata."""
+    """MetaPlug model for loading metadata.
+
+    Navigation-container plugs ship no bundle, so `href` always stays unset;
+    `description` is optional and may be populated when the container declares one.
+    """
 
     # Keep the order of fields in the model consistent with the order in the metadata file
     id: str = Field(min_length=1)
     name: str = Field(min_length=1)
-    description: str = Field(min_length=1)
+    description: str | None = Field(default=None, min_length=1)
     icon: str | None = Field(default=None, min_length=1)
     socket: str = Field(min_length=1)
     condition: str | None = Field(default=None, min_length=1)
-    href: str = Field(min_length=1)
+    href: str | None = Field(default=None, min_length=1)
 
     model_config = ConfigDict(extra="forbid")
 

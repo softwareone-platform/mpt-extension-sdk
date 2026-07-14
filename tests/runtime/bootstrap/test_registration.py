@@ -37,7 +37,9 @@ def test_register_instance_adds_channel(runtime_settings, registration_patches, 
     payload = register_extension_instance.call_args.args[3]
     assert payload["externalId"] == runtime_settings.external_id
     assert payload["version"] == runtime_settings.meta_config.version
-    assert payload["meta"] == runtime_settings.meta_config.model_dump(by_alias=True)
+    assert payload["meta"] == runtime_settings.meta_config.model_dump(
+        exclude_none=True, by_alias=True
+    )
     assert payload["channel"] == {}
     save_identity.assert_not_called()
 

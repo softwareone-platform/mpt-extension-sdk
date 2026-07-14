@@ -2,7 +2,23 @@ from collections.abc import Callable
 
 import pytest
 
-from mpt_extension_sdk.routing import Plug, PlugRouter, RouteType
+from mpt_extension_sdk.routing import NavigationPlug, Plug, PlugRouter, RouteType
+
+
+@pytest.fixture
+def list_plug_provider() -> Callable[[], list[Plug]]:
+    def factory() -> list[Plug]:
+        return [
+            Plug(
+                id="adobe",
+                name="Adobe",
+                description="Adobe widget",
+                socket="commerce.agreements.agreement",
+                href="main-menu.js",
+            )
+        ]
+
+    return factory
 
 
 def test_plug_normalizes_static_asset_paths():
@@ -44,6 +60,63 @@ def test_plug_rejects_static_root_path(href):
         )
 
 
+def test_navigation_plug_normalizes_icon_path():
+    result = NavigationPlug(
+        id="learn-extensions",
+        name="Learn Extensions",
+        socket="portal",
+        description="Learning resources",
+        icon="assets/learn.png",
+    )
+
+    assert result.icon == "/static/assets/learn.png"
+    assert result.description == "Learning resources"
+
+
+def test_navigation_plug_derives_nested_socket():
+    result = NavigationPlug(id="learn-extensions", name="Learn Extensions", socket="portal")
+
+    assert result.nested_socket == "portal.learn-extensions"
+
+
+def test_navigation_plug_strips_id_and_socket():
+    result = NavigationPlug(id=" learn-extensions ", name="Learn Extensions", socket=" portal ")
+
+    assert (result.id, result.socket) == ("learn-extensions", "portal")
+    assert result.nested_socket == "portal.learn-extensions"
+
+
+@pytest.mark.parametrize("field_name", ["id", "name", "socket"])
+def test_navigation_plug_rejects_empty_fields(field_name):
+    plug_fields = {"id": "learn-extensions", "name": "Learn Extensions", "socket": "portal"}
+    plug_fields[field_name] = "  "
+
+    with pytest.raises(ValueError, match=f"Navigation plug {field_name} cannot be empty"):
+        NavigationPlug(**plug_fields)
+
+
+def test_navigation_plug_blank_description_fails():
+    with pytest.raises(ValueError, match="Navigation plug description cannot be empty"):
+        NavigationPlug(
+            id="learn-extensions",
+            name="Learn Extensions",
+            socket="portal",
+            description=" ",
+        )
+
+
+def test_navigation_plug_rejects_href():
+    plug_fields = {
+        "id": "learn-extensions",
+        "name": "Learn Extensions",
+        "socket": "portal",
+        "href": "main-menu.js",
+    }
+
+    with pytest.raises(TypeError, match="unexpected keyword argument 'href'"):
+        NavigationPlug(**plug_fields)
+
+
 def test_plug_router_registers_provider(mocker):
     router = PlugRouter(prefix="/plug")
     plug_provider = mocker.Mock(
@@ -69,3 +142,12 @@ def test_plug_router_registers_provider(mocker):
         RouteType.PLUG,
     )
     assert route.callback() == plug_provider()
+
+
+def test_plug_router_accepts_list_plug_provider(list_plug_provider: Callable[[], list[Plug]]):
+    router = PlugRouter(prefix="/plug")
+
+    result = router.register()(list_plug_provider)  # act
+
+    assert result is list_plug_provider
+    assert router.routes[0].callback() == list_plug_provider()

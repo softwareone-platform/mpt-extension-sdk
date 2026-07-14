@@ -161,6 +161,48 @@ def test_validate_plug_assets_rejects_traversal(plug_meta, tmp_path):
         validate_plug_static_assets(plug_meta, tmp_path / "static")
 
 
+def test_validate_assets_skips_container_href(tmp_path):
+    static_dir = tmp_path / "static"
+    static_dir.mkdir()
+    (static_dir / "learn.png").write_text("icon", encoding="utf-8")
+    container_meta = MetaConfig(
+        version="1.0.0",
+        openapi="/bypass/openapi.json",
+        events=[],
+        plugs=[
+            MetaPlug(
+                id="learn-extensions",
+                name="Learn Extensions",
+                icon="/static/learn.png",
+                socket="portal",
+            )
+        ],
+    )
+
+    validate_plug_static_assets(container_meta, static_dir)  # act
+
+
+def test_validate_assets_checks_container_icon(tmp_path):
+    static_dir = tmp_path / "static"
+    static_dir.mkdir()
+    container_meta = MetaConfig(
+        version="1.0.0",
+        openapi="/bypass/openapi.json",
+        events=[],
+        plugs=[
+            MetaPlug(
+                id="learn-extensions",
+                name="Learn Extensions",
+                icon="/static/missing.png",
+                socket="portal",
+            )
+        ],
+    )
+
+    with pytest.raises(ConfigError, match="Plug asset file was not found"):
+        validate_plug_static_assets(container_meta, static_dir)
+
+
 def test_validate_generates_missing_meta_file(
     runtime_settings_factory, cli_runner, mocker, tmp_path
 ):

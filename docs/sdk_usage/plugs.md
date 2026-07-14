@@ -38,3 +38,47 @@ under `/static/` in generated metadata, so `href="main-menu.js"` becomes
 `/static/main-menu.js` and `icon="images/icon.png"` becomes
 `/static/images/icon.png`. The `mpt-ext meta validate` command checks that every
 referenced file exists locally.
+
+## Nested navigation
+
+Use `NavigationPlug` to declare a pure navigation grouping node. A navigation
+container ships no bundle, so it has no `href`, and generated metadata omits the
+`href` key for it. Its `id` derives a nested socket (`<socket>.<id>`), exposed
+as `nested_socket`, under which child plugs mount:
+
+```python
+from mpt_extension_sdk import NavigationPlug, Plug, PlugRouter
+
+plug_router = PlugRouter()
+
+
+@plug_router.register()
+def register_plugs() -> list[Plug | NavigationPlug]:
+    learn_extensions = NavigationPlug(
+        id="learn-extensions",
+        name="Learn Extensions",
+        socket="portal",
+    )
+    return [
+        learn_extensions,
+        Plug(
+            id="guide",
+            name="Guide",
+            description="Extension guide",
+            socket=learn_extensions.nested_socket,  # portal.learn-extensions
+            href="guide.js",
+        ),
+        Plug(
+            id="examples",
+            name="Examples",
+            description="Extension examples",
+            socket=learn_extensions.nested_socket,
+            href="examples.js",
+        ),
+    ]
+```
+
+`NavigationPlug` accepts an optional `description` and `icon`; the icon is
+normalized under `/static/` like bundle plug assets. Passing an `href` to a
+navigation container raises an error — declare a `Plug` instead when the entry
+renders a bundle.

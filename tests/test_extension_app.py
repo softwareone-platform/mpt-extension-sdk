@@ -15,6 +15,7 @@ from mpt_extension_sdk.routing import (
     EventDeliveryMode,
     EventRouteDefinition,
     EventRouter,
+    NavigationPlug,
     Plug,
     PlugRouter,
     RouteType,
@@ -199,8 +200,50 @@ def test_meta_config_rejects_invalid_plug(mocker):
     )
     app.include_router(plug_router)
 
-    with pytest.raises(TypeError, match="Plug providers must return Plug instances"):
+    with pytest.raises(TypeError, match="Plug providers must return Plug or NavigationPlug"):
         app.to_meta_config()
+
+
+def test_meta_config_includes_navigation_plug(mocker):
+    plug_router = PlugRouter()
+    app = ExtensionApp()
+    container = NavigationPlug(
+        id="learn-extensions",
+        name="Learn Extensions",
+        socket="portal",
+        description="Learning resources",
+        icon="learn.png",
+    )
+    plug_router.register()(
+        mocker.MagicMock(
+            return_value=[
+                container,
+                Plug(
+                    id="guide",
+                    name="Guide",
+                    description="Extension guide",
+                    socket=container.nested_socket,
+                    href="guide.js",
+                ),
+            ],
+            spec=Callable,
+            __name__="plug_provider",
+        )
+    )
+    app.include_router(plug_router)
+
+    result = app.to_meta_config()
+
+    assert result.plugs is not None
+    assert result.plugs[0].model_dump(exclude_none=True) == {
+        "id": "learn-extensions",
+        "name": "Learn Extensions",
+        "description": "Learning resources",
+        "icon": "/static/learn.png",
+        "socket": "portal",
+    }
+    assert result.plugs[1].socket == "portal.learn-extensions"
+    assert result.plugs[1].href == "/static/guide.js"
 
 
 def test_ext_app_rejects_api_event_path_collision(dummy_handler):

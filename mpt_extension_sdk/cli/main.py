@@ -74,7 +74,8 @@ def validate_plug_static_assets(meta_config: MetaConfig, static_root: Path | Non
     """Validate local static assets referenced by registered plugs."""
     asset_root = static_root or Path.cwd() / "static"
     for plug in getattr(meta_config, "plugs", None) or []:
-        _validate_static_asset(plug.href, asset_root)
+        if plug.href is not None:
+            _validate_static_asset(plug.href, asset_root)
         if plug.icon is not None:
             _validate_static_asset(plug.icon, asset_root)
 
