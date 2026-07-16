@@ -24,8 +24,12 @@ The SDK runtime relies on these settings:
 | `SDK_OBSERVABILITY_ENABLED` | `true` | `false` | Enables SDK observability bootstrap |
 | `SDK_APPLICATIONINSIGHTS_CONNECTION_STRING` | - | `InstrumentationKey=...` | Azure Monitor connection string used by the SDK observability bootstrap |
 | `SDK_OTEL_SERVICE_NAME` | - | `my-extension` | Optional OpenTelemetry service name override |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | exporter default | `http://jaeger:4318` | OTLP collector endpoint used when OTLP export is enabled |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | - | `http://jaeger:4318` | OTLP collector endpoint; setting it enables the OTLP exporter |
 | `OTEL_EXPORTER_OTLP_PROTOCOL` | exporter default | `http/protobuf` | OTLP protocol for the configured exporter |
+
+The standard traces-specific variable `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`
+can be used instead; when set, it also enables the OTLP exporter and takes
+precedence over `OTEL_EXPORTER_OTLP_ENDPOINT`.
 
 The demo environment files may also include integration-specific variables such
 as `MPT_PORTAL_BASE_URL`. Those are example application settings for the
@@ -95,12 +99,14 @@ When observability is enabled, the SDK bootstraps:
 - FastAPI instrumentation
 - HTTPX client instrumentation
 - logging correlation through OpenTelemetry logging instrumentation
-- OTLP exporting by default
+- OTLP exporting when `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` or
+  `OTEL_EXPORTER_OTLP_ENDPOINT` is set
 - Azure Monitor exporting when `SDK_APPLICATIONINSIGHTS_CONNECTION_STRING` is set
 
-OpenTelemetry exporter-specific variables such as
-`OTEL_EXPORTER_OTLP_ENDPOINT` are read by the underlying OpenTelemetry
-exporter, not by `RuntimeSettings` directly.
+The SDK reads the OTLP endpoint variables only to decide whether the OTLP
+exporter is enabled. Their values, together with other exporter-specific
+variables such as `OTEL_EXPORTER_OTLP_PROTOCOL`, are consumed by the
+underlying OpenTelemetry exporter, not by `RuntimeSettings` directly.
 
 Document additional repository-specific configuration here when SDK runtime
 requirements expand.

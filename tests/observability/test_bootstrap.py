@@ -1,3 +1,4 @@
+import dataclasses
 from collections.abc import Callable
 
 import pytest
@@ -79,6 +80,43 @@ def test_observability_config_uses_service_name(runtime_settings):
     result = ObservabilityConfig.from_runtime_settings(runtime_settings)
 
     assert result.service_name == runtime_settings.otel_service_name
+
+
+def test_config_without_exporter_destinations(runtime_settings):
+    result = ObservabilityConfig.from_runtime_settings(runtime_settings)
+
+    assert result.exporters == ()
+
+
+def test_config_enables_otlp_when_endpoint_set(runtime_settings):
+    settings = dataclasses.replace(runtime_settings, otel_otlp_endpoint="http://jaeger:4318")
+
+    result = ObservabilityConfig.from_runtime_settings(settings)
+
+    assert result.exporters == ("otlp",)
+
+
+def test_config_enables_azure_when_conn_str_set(runtime_settings):
+    settings = dataclasses.replace(
+        runtime_settings,
+        applicationinsights_connection_string="InstrumentationKey=test",
+    )
+
+    result = ObservabilityConfig.from_runtime_settings(settings)
+
+    assert result.exporters == ("azure_monitor",)
+
+
+def test_config_combines_configured_exporters(runtime_settings):
+    settings = dataclasses.replace(
+        runtime_settings,
+        otel_otlp_endpoint="http://jaeger:4318",
+        applicationinsights_connection_string="InstrumentationKey=test",
+    )
+
+    result = ObservabilityConfig.from_runtime_settings(settings)
+
+    assert result.exporters == ("otlp", "azure_monitor")
 
 
 def test_bootstrap_skips_disabled(mocker):

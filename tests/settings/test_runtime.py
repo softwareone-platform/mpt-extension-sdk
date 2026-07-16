@@ -106,6 +106,7 @@ def test_load_reads_runtime_env(
         result.observability_enabled,
         result.applicationinsights_connection_string,
         result.otel_service_name,
+        result.otel_otlp_endpoint,
         result.local_host,
         result.local_port,
         result.local_reload,
@@ -116,6 +117,7 @@ def test_load_reads_runtime_env(
         Path.cwd() / "meta.yaml",
         "INFO",
         True,
+        "",
         "",
         "",
         "0.0.0.0",
@@ -139,6 +141,7 @@ def test_load_uses_explicit_runtime_overrides(
             "SDK_OBSERVABILITY_ENABLED": "false",
             "SDK_APPLICATIONINSIGHTS_CONNECTION_STRING": "InstrumentationKey=test",
             "SDK_OTEL_SERVICE_NAME": "svc",
+            "OTEL_EXPORTER_OTLP_ENDPOINT": "http://jaeger:4318",
             "SDK_LOCAL_HOST": "127.0.0.1",
             "SDK_LOCAL_PORT": "9000",
             "SDK_LOCAL_RELOAD": "false",
@@ -162,6 +165,7 @@ def test_load_uses_explicit_runtime_overrides(
         result.observability_enabled,
         result.applicationinsights_connection_string,
         result.otel_service_name,
+        result.otel_otlp_endpoint,
         result.local_host,
         result.local_port,
         result.local_reload,
@@ -175,6 +179,7 @@ def test_load_uses_explicit_runtime_overrides(
         False,
         "InstrumentationKey=test",
         "svc",
+        "http://jaeger:4318",
         "127.0.0.1",
         9000,
         False,
@@ -182,6 +187,27 @@ def test_load_uses_explicit_runtime_overrides(
         8,
         True,
     )
+
+
+def test_load_prefers_traces_otlp_endpoint(
+    mocker, runtime_env, settings_loader_state, fake_package, meta_config
+):
+    mocker.patch.dict(
+        "os.environ",
+        {
+            "OTEL_EXPORTER_OTLP_ENDPOINT": "http://generic:4318",
+            "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": "http://traces:4318",
+        },
+    )
+    mocker.patch(
+        "mpt_extension_sdk.settings.runtime.import_module",
+        autospec=True,
+        return_value=mocker.Mock(ext_app=FakeExtensionApp(meta_config)),
+    )
+
+    result = RuntimeSettings.load()
+
+    assert result.otel_otlp_endpoint == "http://traces:4318"
 
 
 def test_load_uses_uuid_when_hostname_blank(

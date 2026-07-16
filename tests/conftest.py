@@ -137,6 +137,7 @@ def runtime_settings(meta_config):
         observability_enabled=False,
         applicationinsights_connection_string="",
         otel_service_name="tests",
+        otel_otlp_endpoint="",
         ziti_workers=4,
         ziti_reload=False,
     )

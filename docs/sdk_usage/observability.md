@@ -35,10 +35,15 @@ Observability is controlled through runtime environment variables (see
 - `SDK_OTEL_SERVICE_NAME` overrides the reported service name.
 - `SDK_APPLICATIONINSIGHTS_CONNECTION_STRING` enables the Azure Monitor exporter
   when set.
+- `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` or `OTEL_EXPORTER_OTLP_ENDPOINT` enables
+  the OTLP exporter when set.
 
-The SDK always configures the OTLP exporter. When the Application Insights
-connection string is set, it additionally configures the Azure Monitor
-exporter. That exporter requires the optional dependency:
+Each exporter is activated only when its destination configuration is present:
+the OTLP exporter when an OTLP endpoint variable is set, and the Azure Monitor
+exporter when the Application Insights connection string is set. When neither
+is configured, the tracer provider runs without exporters, so instrumentation
+stays active without export noise. The Azure Monitor exporter requires the
+optional dependency:
 
 ```bash
 pip install "mpt-extension-sdk[azure-monitor]"

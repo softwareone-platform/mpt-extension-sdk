@@ -16,7 +16,9 @@ class ObservabilityConfig:
     @classmethod
     def from_runtime_settings(cls, runtime_settings: RuntimeSettings) -> Self:
         """Build observability settings from the runtime configuration."""
-        configured_exporters = ["otlp"]
+        configured_exporters = []
+        if runtime_settings.otel_otlp_endpoint:
+            configured_exporters.append("otlp")
         if runtime_settings.applicationinsights_connection_string:
             configured_exporters.append("azure_monitor")
 
