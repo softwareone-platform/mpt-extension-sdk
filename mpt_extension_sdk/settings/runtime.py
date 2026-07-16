@@ -36,6 +36,7 @@ class RuntimeSettings(BaseSettings):
     observability_enabled: bool
     applicationinsights_connection_string: str
     otel_service_name: str
+    otel_otlp_endpoint: str
     ziti_workers: int
     ziti_reload: bool
 
@@ -76,6 +77,10 @@ class RuntimeSettings(BaseSettings):
                 "SDK_APPLICATIONINSIGHTS_CONNECTION_STRING", ""
             ),
             otel_service_name=os.getenv("SDK_OTEL_SERVICE_NAME", ""),
+            otel_otlp_endpoint=(
+                os.getenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", "")
+                or os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")
+            ),
             local_host=os.getenv("SDK_LOCAL_HOST", "0.0.0.0"),  # noqa: S104
             local_port=cls.int_env("SDK_LOCAL_PORT", default=DEFAULT_LOCAL_PORT),
             local_reload=cls.bool_env("SDK_LOCAL_RELOAD", default=True),
