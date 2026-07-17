@@ -15,6 +15,7 @@ from mpt_extension_sdk.models.parameter import ParameterBag
 from mpt_extension_sdk.models.price import Price
 from mpt_extension_sdk.models.product import Product, ProductItem
 from mpt_extension_sdk.models.subscription import Subscription, SubscriptionLine
+from mpt_extension_sdk.models.task import Task
 from mpt_extension_sdk.models.template import Template
 
 __all__ = [  # noqa: WPS410
@@ -41,5 +42,6 @@ __all__ = [  # noqa: WPS410
     "SellerAccount",
     "Subscription",
     "SubscriptionLine",
+    "Task",
     "Template",
 ]

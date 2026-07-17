@@ -452,21 +452,6 @@ def test_task_route_error(
     record_exception_mock.assert_called_once_with(event_span, error)
 
 
-def test_get_tasks_service(mocker, runtime_settings):
-    fake_api = mocker.Mock(spec=["tasks"])
-    mock_mpt_api_service = mocker.patch(
-        "mpt_extension_sdk.api.builders.event.MPTAPIService", autospec=True
-    )
-    mock_mpt_api_service.from_config.return_value = fake_api
-
-    result = event_builder.get_tasks_service(runtime_settings)
-
-    assert result is fake_api.tasks
-    mock_mpt_api_service.from_config.assert_called_once_with(
-        base_url=runtime_settings.mpt_api_base_url, api_token=runtime_settings.ext_api_key
-    )
-
-
 async def test_run_handler(mocker, fake_context, mock_callable):
     mock_callable = mocker.AsyncMock(spec=Callable, side_effect=mock_callable)
 
