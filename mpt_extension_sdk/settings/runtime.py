@@ -81,7 +81,7 @@ class RuntimeSettings(BaseSettings):
                 os.getenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", "")
                 or os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")
             ),
-            local_host=os.getenv("SDK_LOCAL_HOST", "0.0.0.0"),  # noqa: S104
+            local_host=os.getenv("SDK_LOCAL_HOST", "0.0.0.0"),  # ruff:ignore[hardcoded-bind-all-interfaces]
             local_port=cls.int_env("SDK_LOCAL_PORT", default=DEFAULT_LOCAL_PORT),
             local_reload=cls.bool_env("SDK_LOCAL_RELOAD", default=True),
             local_workers=cls.int_env("SDK_LOCAL_WORKERS", default=1),
