@@ -6,7 +6,7 @@ from mpt_extension_sdk.routing.models import (
     PlugRouteDefinition,
     ScheduleRouteDefinition,
 )
-from mpt_extension_sdk.routing.plugs import STATIC_PATH_PREFIX, NavigationPlug, Plug
+from mpt_extension_sdk.routing.plugs import STATIC_PATH_PREFIX, ModalPlug, NavigationPlug, Plug
 from mpt_extension_sdk.routing.routers.api import APIRouter
 from mpt_extension_sdk.routing.routers.base import BaseExtensionRouter
 from mpt_extension_sdk.routing.routers.event import EventRouter
@@ -26,6 +26,7 @@ __all__ = [  # noqa: WPS410
     "EventRouteDefinition",
     "EventRouter",
     "HTTPMethod",
+    "ModalPlug",
     "NavigationPlug",
     "Plug",
     "PlugRouteCallback",

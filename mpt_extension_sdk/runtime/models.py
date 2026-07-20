@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Any, Self
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from mpt_extension_sdk.errors.runtime import ConfigError
 
@@ -24,6 +24,8 @@ class MetaPlug(BaseModel):
 
     Navigation-container plugs ship no bundle, so `href` always stays unset;
     `description` is optional and may be populated when the container declares one.
+    Modal (open-by-id) plugs are never mounted on a socket, so `socket` stays unset
+    for them.
     """
 
     # Keep the order of fields in the model consistent with the order in the metadata file
@@ -31,11 +33,18 @@ class MetaPlug(BaseModel):
     name: str = Field(min_length=1)
     description: str | None = Field(default=None, min_length=1)
     icon: str | None = Field(default=None, min_length=1)
-    socket: str = Field(min_length=1)
+    socket: str | None = Field(default=None, min_length=1)
     condition: str | None = Field(default=None, min_length=1)
     href: str | None = Field(default=None, min_length=1)
 
     model_config = ConfigDict(extra="forbid")
+
+    @model_validator(mode="after")
+    def _validate_socket_or_href(self) -> Self:
+        """Reject plug entries that declare neither a socket nor an href."""
+        if self.socket is None and self.href is None:
+            raise ValueError("Plug metadata must declare a socket, an href, or both")
+        return self
 
 
 class MetaConfig(BaseModel):

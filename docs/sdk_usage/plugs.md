@@ -82,3 +82,35 @@ def register_plugs() -> list[Plug | NavigationPlug]:
 normalized under `/static/` like bundle plug assets. Passing an `href` to a
 navigation container raises an error — declare a `Plug` instead when the entry
 renders a bundle.
+
+## Modal plugs (open-by-id)
+
+Use `ModalPlug` for plugs that are never mounted on a socket and are opened
+programmatically by id instead — confirmation dialogs, multi-step wizards, and
+other ad-hoc modals resolved on the frontend with
+`useMPTModal().open('<plug-id>')`:
+
+```python
+from mpt_extension_sdk import ModalPlug, PlugRouter
+
+plug_router = PlugRouter()
+
+
+@plug_router.register()
+def register_plugs() -> list[ModalPlug]:
+    return [
+        ModalPlug(
+            id="confirm-unsubscribe",
+            name="Confirm Unsubscribe",
+            description="Unsubscribe confirmation dialog",
+            href="dialogs/confirm-unsubscribe.js",
+        )
+    ]
+```
+
+A modal plug declares no `socket`, and generated metadata omits the `socket`
+key for it, so the plug never renders as a page action. `href` is required and
+`description` / `icon` are optional; asset paths are normalized under
+`/static/` like bundle plug assets. Passing a `socket` to a modal plug raises
+an error — declare a `Plug` instead when the entry should mount on a platform
+socket.

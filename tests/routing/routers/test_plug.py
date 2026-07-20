@@ -2,7 +2,7 @@ from collections.abc import Callable
 
 import pytest
 
-from mpt_extension_sdk.routing import NavigationPlug, Plug, PlugRouter, RouteType
+from mpt_extension_sdk.routing import ModalPlug, NavigationPlug, Plug, PlugRouter, RouteType
 
 
 @pytest.fixture
@@ -115,6 +115,59 @@ def test_navigation_plug_rejects_href():
 
     with pytest.raises(TypeError, match="unexpected keyword argument 'href'"):
         NavigationPlug(**plug_fields)
+
+
+def test_modal_plug_normalizes_static_asset_paths():
+    result = ModalPlug(
+        id="confirm-dialog",
+        name="Confirm Dialog",
+        href="dialogs/confirm.js",
+        icon="assets/confirm.png",
+    )
+
+    assert (result.href, result.icon) == (
+        "/static/dialogs/confirm.js",
+        "/static/assets/confirm.png",
+    )
+
+
+def test_modal_plug_strips_id():
+    result = ModalPlug(id=" confirm-dialog ", name="Confirm Dialog", href="confirm.js")
+
+    assert result.id == "confirm-dialog"
+
+
+@pytest.mark.parametrize("field_name", ["id", "name", "href"])
+def test_modal_plug_rejects_empty_fields(field_name):
+    plug_fields = {"id": "confirm-dialog", "name": "Confirm Dialog", "href": "confirm.js"}
+    plug_fields[field_name] = "  "
+
+    with pytest.raises(ValueError, match=f"Modal plug {field_name} cannot be empty"):
+        ModalPlug(**plug_fields)
+
+
+def test_modal_plug_blank_description_fails():
+    with pytest.raises(ValueError, match="Modal plug description cannot be empty"):
+        ModalPlug(id="confirm-dialog", name="Confirm Dialog", href="confirm.js", description=" ")
+
+
+def test_modal_plug_rejects_socket():
+    plug_fields = {
+        "id": "confirm-dialog",
+        "name": "Confirm Dialog",
+        "href": "confirm.js",
+        "socket": "commerce.agreements.agreement",
+    }
+
+    with pytest.raises(TypeError, match="unexpected keyword argument 'socket'"):
+        ModalPlug(**plug_fields)
+
+
+def test_modal_plug_rejects_path_traversal():
+    with pytest.raises(
+        ValueError, match="Plug static asset path must stay under the static folder"
+    ):
+        ModalPlug(id="confirm-dialog", name="Confirm Dialog", href="../confirm.js")
 
 
 def test_plug_router_registers_provider(mocker):
