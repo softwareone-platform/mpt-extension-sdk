@@ -67,6 +67,42 @@ class Plug:
 
 
 @dataclass(frozen=True)
+class ModalPlug:
+    """Modal plug opened programmatically by id, never mounted on a socket.
+
+    The frontend resolves modal plugs with ``useMPTModal().open('<plug-id>')``,
+    so a modal plug declares no ``socket`` and never renders as a page action.
+    """
+
+    id: str
+    name: str
+    href: str
+    description: str | None = None
+    icon: str | None = None
+
+    def __post_init__(self) -> None:
+        """Validate fields and normalize static asset references."""
+        self._validate_fields()
+        object.__setattr__(self, "id", self.id.strip())
+        object.__setattr__(self, "href", _normalize_static_path(self.href))
+        if self.icon is not None:
+            object.__setattr__(self, "icon", _normalize_static_path(self.icon))
+
+    def _validate_fields(self) -> None:
+        """Validate modal plug fields."""
+        required_fields = {
+            "id": self.id,
+            "name": self.name,
+            "href": self.href,
+        }
+        for field_name, field_value in required_fields.items():
+            if not field_value.strip():
+                raise ValueError(f"Modal plug {field_name} cannot be empty")
+        if self.description is not None and not self.description.strip():
+            raise ValueError("Modal plug description cannot be empty")
+
+
+@dataclass(frozen=True)
 class NavigationPlug:
     """Navigation-container plug that groups child plugs under a nested socket.
 

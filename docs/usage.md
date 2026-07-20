@@ -15,7 +15,8 @@ This guide is the entry point for building an extension package on top of
   validate bodies, read request/auth context, return API responses, and use
   pagination.
 - [UI plugs](sdk_usage/plugs.md): register `PlugRouter` providers, group plugs
-  under nested navigation containers, and reference static assets.
+  under nested navigation containers, declare modal (open-by-id) plugs, and
+  reference static assets.
 - [Contexts and pipelines](sdk_usage/contexts-and-pipelines.md): adapt execution
   contexts, compose pipelines, drive the step lifecycle and flow control, use
   pipeline hooks, and declare status transitions.

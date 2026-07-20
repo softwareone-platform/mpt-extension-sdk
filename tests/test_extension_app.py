@@ -200,7 +200,9 @@ def test_meta_config_rejects_invalid_plug(mocker):
     )
     app.include_router(plug_router)
 
-    with pytest.raises(TypeError, match="Plug providers must return Plug or NavigationPlug"):
+    with pytest.raises(
+        TypeError, match="Plug providers must return Plug, NavigationPlug, or ModalPlug"
+    ):
         app.to_meta_config()
 
 
