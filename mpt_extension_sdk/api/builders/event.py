@@ -37,7 +37,7 @@ def create_event_route(route: EventRouteDefinition, extension_app: ExtensionApp)
 
 
 # TODO: Refactor event route builders in a separate PR.
-def create_task_event_route(  # noqa: C901, WPS213, WPS217
+def create_task_event_route(  # ruff:ignore[complex-structure]  # noqa: WPS213, WPS217
     route: EventRouteDefinition, extension_app: ExtensionApp
 ) -> APIRouter:
     """Create a router for a task-based event handler."""
@@ -100,7 +100,7 @@ def create_task_event_route(  # noqa: C901, WPS213, WPS217
 
 
 # TODO: Refactor event route builders in a separate PR.
-def create_non_task_event_route(  # noqa: C901, WPS213
+def create_non_task_event_route(  # ruff:ignore[complex-structure]  # noqa: WPS213
     route: EventRouteDefinition, extension_app: ExtensionApp
 ) -> APIRouter:
     """Create a FastAPI router for a non-task event handler."""

@@ -217,7 +217,7 @@ async def test_auth_flow_does_not_retry_on_success(mocker):
     token_provider.invalidate.assert_not_called()
 
 
-async def _stream_chunks() -> AsyncIterator[bytes]:  # noqa: RUF029
+async def _stream_chunks() -> AsyncIterator[bytes]:  # ruff:ignore[unused-async]
     yield b"chunk"
 
 

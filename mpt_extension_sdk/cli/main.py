@@ -14,7 +14,7 @@ app = typer.Typer(no_args_is_help=True, invoke_without_command=True)
 
 @app.command()
 def run(
-    local: Annotated[  # noqa: FBT002
+    local: Annotated[  # ruff:ignore[boolean-default-value-positional-argument]
         bool,
         typer.Option("--local", help="Run with Uvicorn (local development mode)"),
     ] = False,

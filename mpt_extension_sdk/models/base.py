@@ -5,7 +5,7 @@ from typing import Annotated, Any, Self
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import ConfigDict, PlainSerializer
 
-FloatDecimal = Annotated[Decimal, PlainSerializer(lambda el: float(el), return_type=float)]  # noqa: PLW0108, WPS506, WPS221
+FloatDecimal = Annotated[Decimal, PlainSerializer(lambda el: float(el), return_type=float)]  # ruff:ignore[unnecessary-lambda]  # noqa: WPS506, WPS221
 ISODatetime = Annotated[
     dt.datetime,
     PlainSerializer(lambda el: el.isoformat(), return_type=str, when_used="json-unless-none"),
