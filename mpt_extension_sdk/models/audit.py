@@ -1,3 +1,5 @@
+import datetime as dt
+
 from mpt_extension_sdk.models.base import BaseModel
 
 
@@ -14,7 +16,18 @@ class AuditData(BaseModel):
 
     at: str
 
-    by: User
+    by: User | None = None
+
+    @property
+    def timestamp(self) -> dt.datetime | None:
+        """The audit time as an aware datetime, tolerating malformed values."""
+        try:
+            parsed = dt.datetime.fromisoformat(self.at)
+        except ValueError:
+            return None
+        if parsed.tzinfo is None:
+            return parsed.replace(tzinfo=dt.UTC)
+        return parsed
 
 
 class Audit(BaseModel):
@@ -22,3 +35,4 @@ class Audit(BaseModel):
 
     created: AuditData | None = None
     updated: AuditData | None = None
+    started: AuditData | None = None

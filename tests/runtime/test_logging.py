@@ -3,6 +3,7 @@ import logging
 import pytest
 
 from mpt_extension_sdk.errors.runtime import ConfigError
+from mpt_extension_sdk.models.task import UnknownTaskStatusWarning
 from mpt_extension_sdk.runtime import logging as runtime_logging
 
 
@@ -245,6 +246,26 @@ def test_setup_logging_attaches_azure_handler(mocker):
     get_azure_handler.assert_called_once_with()
     azure_handler.addFilter.assert_called_once()
     assert attach_handler_once.call_count == 3
+
+
+def test_setup_logging_captures_warnings(mocker):
+    mocker.patch("mpt_extension_sdk.runtime.logging.config.dictConfig", autospec=True)
+    mocker.patch(
+        "mpt_extension_sdk.runtime.logging.get_azure_monitor_handler",
+        autospec=True,
+        return_value=None,
+    )
+    capture_warnings = mocker.patch(
+        "mpt_extension_sdk.runtime.logging.logging.captureWarnings", autospec=True
+    )
+    filter_warnings = mocker.patch(
+        "mpt_extension_sdk.runtime.logging.warnings.filterwarnings", autospec=True
+    )
+
+    runtime_logging.setup_logging(log_level="INFO", ext_package="mock_extension")  # act
+
+    capture_warnings.assert_called_once_with(True)  # ruff:ignore[boolean-positional-value-in-call]
+    filter_warnings.assert_called_once_with("always", category=UnknownTaskStatusWarning)
 
 
 def test_setup_logging_skips_azure_attach(mocker):

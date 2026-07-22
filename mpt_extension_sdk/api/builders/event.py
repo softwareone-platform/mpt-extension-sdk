@@ -6,6 +6,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, Request, status
 
 from mpt_extension_sdk.api.auth import AuthenticationError, RequestAuthenticationService
+from mpt_extension_sdk.api.builders.dependencies import get_tasks_service
 from mpt_extension_sdk.api.models.events import Event, EventResponse, TaskEvent
 from mpt_extension_sdk.errors.mapping import map_exception_to_event_response
 from mpt_extension_sdk.errors.pipeline import CancelError, DeferError, FailError
@@ -19,9 +20,7 @@ from mpt_extension_sdk.observability.tracing import (
 from mpt_extension_sdk.pipeline import EventBaseContext, build_context
 from mpt_extension_sdk.routing import EventDeliveryMode, EventRouteCallback, EventRouteDefinition
 from mpt_extension_sdk.runtime.logging import set_event_context
-from mpt_extension_sdk.services.mpt_api_service.api_service import MPTAPIService
 from mpt_extension_sdk.services.mpt_api_service.task import TaskService
-from mpt_extension_sdk.settings.runtime import RuntimeSettings, get_runtime_settings
 
 TaskHandler = Callable[[TaskEvent, EventBaseContext], Awaitable[None] | None]
 EventHandler = Callable[[Event, EventBaseContext], Awaitable[None] | None]
@@ -150,15 +149,6 @@ def create_non_task_event_route(  # ruff:ignore[complex-structure]  # noqa: WPS2
             return EventResponse.ok()
 
     return router
-
-
-def get_tasks_service(
-    runtime_settings: Annotated[RuntimeSettings, Depends(get_runtime_settings)],
-) -> TaskService:
-    """Return the task service authenticated with the extension token."""
-    return MPTAPIService.from_config(
-        base_url=runtime_settings.mpt_api_base_url, api_token=runtime_settings.ext_api_key
-    ).tasks
 
 
 async def build_authenticated_context(
