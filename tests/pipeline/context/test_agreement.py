@@ -6,7 +6,7 @@ from mpt_extension_sdk.settings.extension import BaseExtensionSettings
 
 
 def test_agreement_context_exposes_agreement_id(
-    mocker, logger, runtime_settings, agreement_factory
+    mocker, logger, runtime_settings, agreement_factory, auth_context
 ):
     context = AgreementContext(
         logger=logger,
@@ -19,6 +19,7 @@ def test_agreement_context_exposes_agreement_id(
         mpt_api_service=mocker.AsyncMock(spec=MPTAPIService),
         ext_settings=mocker.AsyncMock(spec=BaseExtensionSettings),
         runtime_settings=runtime_settings,
+        auth=auth_context,
         agreement=agreement_factory("AGR-99"),
     )
 
@@ -28,7 +29,7 @@ def test_agreement_context_exposes_agreement_id(
 
 
 async def test_agreement_context_refreshes_agreement(
-    mocker, logger, runtime_settings, agreement_factory
+    mocker, logger, runtime_settings, agreement_factory, auth_context
 ):
     service = mocker.AsyncMock(
         spec=MPTAPIService, agreements=mocker.AsyncMock(spec=AgreementService)
@@ -45,6 +46,7 @@ async def test_agreement_context_refreshes_agreement(
         mpt_api_service=service,
         ext_settings=mocker.AsyncMock(spec=BaseExtensionSettings),
         runtime_settings=runtime_settings,
+        auth=auth_context,
         agreement=agreement_factory("AGR-1"),
     )
 

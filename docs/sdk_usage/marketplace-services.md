@@ -18,7 +18,7 @@ The SDK builds the service from the request context:
   `Authorization` header
 - authenticated API routes use `ctx.auth.account` to obtain an account-scoped
   Marketplace token
-- the auth context is also carried as `ctx.auth` when the request provides one
+- the authenticated context is always carried as `ctx.auth`
 
 ## Installations
 

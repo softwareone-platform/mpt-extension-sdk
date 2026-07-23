@@ -23,7 +23,7 @@ class SampleStep(BaseStep):
         return ctx
 
 
-async def test_refresh_order(mocker, logger, runtime_settings, order_factory):
+async def test_refresh_order(mocker, logger, runtime_settings, order_factory, auth_context):
     context = OrderContext(
         logger=logger,
         meta=EventMetadata(
@@ -35,6 +35,7 @@ async def test_refresh_order(mocker, logger, runtime_settings, order_factory):
         mpt_api_service=mocker.AsyncMock(spec=MPTAPIService),
         ext_settings=mocker.AsyncMock(spec=BaseExtensionSettings),
         runtime_settings=runtime_settings,
+        auth=auth_context,
         order=order_factory(),
     )
     context.refresh_order = mocker.AsyncMock(spec=Callable)
@@ -45,7 +46,9 @@ async def test_refresh_order(mocker, logger, runtime_settings, order_factory):
     context.refresh_order.assert_awaited_once_with()
 
 
-async def test_refresh_order_on_failure(mocker, logger, runtime_settings, order_factory):
+async def test_refresh_order_on_failure(
+    mocker, logger, runtime_settings, order_factory, auth_context
+):
     context = OrderContext(
         logger=logger,
         meta=EventMetadata(
@@ -57,6 +60,7 @@ async def test_refresh_order_on_failure(mocker, logger, runtime_settings, order_
         mpt_api_service=mocker.AsyncMock(spec=MPTAPIService),
         ext_settings=mocker.AsyncMock(spec=BaseExtensionSettings),
         runtime_settings=runtime_settings,
+        auth=auth_context,
         order=order_factory(),
     )
     context.refresh_order = mocker.AsyncMock(spec=Callable)
