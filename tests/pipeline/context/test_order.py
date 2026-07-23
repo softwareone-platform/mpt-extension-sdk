@@ -5,7 +5,9 @@ from mpt_extension_sdk.services.mpt_api_service.order import OrderService
 from mpt_extension_sdk.settings.extension import BaseExtensionSettings
 
 
-def test_order_context_exposes_order_id(mocker, logger, runtime_settings, order_factory):
+def test_order_context_exposes_order_id(
+    mocker, logger, runtime_settings, order_factory, auth_context
+):
     context = OrderContext(
         logger=logger,
         meta=EventMetadata(
@@ -17,6 +19,7 @@ def test_order_context_exposes_order_id(mocker, logger, runtime_settings, order_
         mpt_api_service=mocker.AsyncMock(spec=MPTAPIService),
         ext_settings=mocker.AsyncMock(spec=BaseExtensionSettings),
         runtime_settings=runtime_settings,
+        auth=auth_context,
         order=order_factory("ORD-99"),
     )
 
@@ -25,7 +28,9 @@ def test_order_context_exposes_order_id(mocker, logger, runtime_settings, order_
     assert result == "ORD-99"
 
 
-async def test_order_context_refreshes_order(mocker, logger, runtime_settings, order_factory):
+async def test_order_context_refreshes_order(
+    mocker, logger, runtime_settings, order_factory, auth_context
+):
     service = mocker.AsyncMock(spec=MPTAPIService, orders=mocker.AsyncMock(spec=OrderService))
     service.orders.get_by_id = mocker.AsyncMock(return_value=order_factory("ORD-2"))
     context = OrderContext(
@@ -39,6 +44,7 @@ async def test_order_context_refreshes_order(mocker, logger, runtime_settings, o
         mpt_api_service=service,
         ext_settings=mocker.AsyncMock(spec=BaseExtensionSettings),
         runtime_settings=runtime_settings,
+        auth=auth_context,
         order=order_factory("ORD-1"),
     )
 

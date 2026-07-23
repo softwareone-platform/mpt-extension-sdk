@@ -22,7 +22,7 @@ class BaseContext:
     account_settings: AccountSettings = field(default_factory=AccountSettings)
     ext_settings: "BaseExtensionSettings"
     runtime_settings: "RuntimeSettings"
-    auth: "AuthContext | None" = None
+    auth: "AuthContext"
 
 
 class ContextAdapter(ABC):

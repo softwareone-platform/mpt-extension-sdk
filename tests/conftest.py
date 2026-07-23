@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+from mpt_extension_sdk.api.auth import AuthContext
 from mpt_extension_sdk.api.auth.constants import (
     CLAIM_ACCOUNT_ID,
     CLAIM_ACCOUNT_TYPE,
@@ -62,6 +63,11 @@ def jwt_token_factory():
 @pytest.fixture
 def logger():
     return logging.getLogger("tests")
+
+
+@pytest.fixture
+def auth_context(mocker):
+    return mocker.Mock(spec=AuthContext)
 
 
 @pytest.fixture
