@@ -10,10 +10,11 @@ from mpt_extension_sdk.models.installation import (
     InstallationStatus,
 )
 from mpt_extension_sdk.models.licensee import Licensee
-from mpt_extension_sdk.models.order import Order, OrderLine
+from mpt_extension_sdk.models.order import Order, OrderLine, OrderStatus
 from mpt_extension_sdk.models.parameter import ParameterBag
 from mpt_extension_sdk.models.price import Price
 from mpt_extension_sdk.models.product import Product, ProductItem
+from mpt_extension_sdk.models.status import CaseInsensitiveStrEnum, UnknownStatusWarning
 from mpt_extension_sdk.models.subscription import Subscription, SubscriptionLine
 from mpt_extension_sdk.models.task import Task
 from mpt_extension_sdk.models.template import Template
@@ -27,6 +28,7 @@ __all__ = [  # noqa: WPS410
     "AssetLine",
     "Authorization",
     "BuyerAccount",
+    "CaseInsensitiveStrEnum",
     "Extension",
     "ExternalIds",
     "Installation",
@@ -35,6 +37,7 @@ __all__ = [  # noqa: WPS410
     "Licensee",
     "Order",
     "OrderLine",
+    "OrderStatus",
     "ParameterBag",
     "Price",
     "Product",
@@ -44,4 +47,5 @@ __all__ = [  # noqa: WPS410
     "SubscriptionLine",
     "Task",
     "Template",
+    "UnknownStatusWarning",
 ]

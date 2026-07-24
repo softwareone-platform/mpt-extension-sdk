@@ -86,6 +86,7 @@ omit = [
 [tool.flake8]
 allowed-domain-names = ["result"]
 allowed-module-metadata = ["__all__"]
+known-enum-bases = ["CaseInsensitiveStrEnum"]
 aaa_act_block_style = "large"
 doctests = true
 extend-ignore = ["WPS226"]

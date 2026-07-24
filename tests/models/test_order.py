@@ -2,12 +2,13 @@ from decimal import Decimal
 
 import pytest
 
+from mpt_extension_sdk.models import OrderStatus
 from mpt_extension_sdk.models.account import Account, SellerAccount
 from mpt_extension_sdk.models.agreement import Agreement
 from mpt_extension_sdk.models.authorization import Authorization
 from mpt_extension_sdk.models.external_id import ExternalIds
 from mpt_extension_sdk.models.licensee import Licensee
-from mpt_extension_sdk.models.order import Order, OrderLine
+from mpt_extension_sdk.models.order import Order, OrderLine, UnknownOrderStatusWarning
 from mpt_extension_sdk.models.parameter import ParameterBag
 from mpt_extension_sdk.models.price import Price
 from mpt_extension_sdk.models.product import ExternalIds as ProductExternalIds
@@ -37,7 +38,7 @@ def full_order_factory(order_line_factory):
     def factory():
         return Order.model_construct(
             id="ORD-1",
-            status="Open",
+            status=OrderStatus.PROCESSING,
             type="Order",
             agreement=Agreement.model_construct(
                 id="AGR-1",
@@ -64,6 +65,34 @@ def full_order_factory(order_line_factory):
         )
 
     return factory
+
+
+@pytest.fixture
+def order_payload(full_order_factory):
+    return full_order_factory().model_dump(by_alias=True)
+
+
+@pytest.mark.parametrize("status", ["Completed", "completed"])
+def test_order_parses_known_status_into_enum(order_payload, status):
+    result = Order.model_validate(order_payload | {"status": status})
+
+    assert result.status is OrderStatus.COMPLETED
+    assert result.status == "Completed"
+    assert result.model_dump(mode="json")["status"] == "Completed"
+
+
+def test_order_keeps_unknown_status_as_string(order_payload):
+    with pytest.warns(UnknownOrderStatusWarning, match="ORD-1"):
+        result = Order.model_validate(order_payload | {"status": "UnknownStatus"})
+
+    assert result.status == "UnknownStatus"
+    assert not isinstance(result.status, OrderStatus)
+    assert result.model_dump(mode="json")["status"] == "UnknownStatus"
+
+
+def test_order_status_rejects_non_string_lookup():
+    with pytest.raises(ValueError, match="not a valid OrderStatus"):
+        OrderStatus(0)
 
 
 def test_order_properties_expose_related_ids(full_order_factory):

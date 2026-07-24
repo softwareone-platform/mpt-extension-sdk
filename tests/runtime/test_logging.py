@@ -3,7 +3,7 @@ import logging
 import pytest
 
 from mpt_extension_sdk.errors.runtime import ConfigError
-from mpt_extension_sdk.models.task import UnknownTaskStatusWarning
+from mpt_extension_sdk.models.status import UnknownStatusWarning
 from mpt_extension_sdk.runtime import logging as runtime_logging
 
 
@@ -265,7 +265,7 @@ def test_setup_logging_captures_warnings(mocker):
     runtime_logging.setup_logging(log_level="INFO", ext_package="mock_extension")  # act
 
     capture_warnings.assert_called_once_with(True)  # ruff:ignore[boolean-positional-value-in-call]
-    filter_warnings.assert_called_once_with("always", category=UnknownTaskStatusWarning)
+    filter_warnings.assert_called_once_with("always", category=UnknownStatusWarning)
 
 
 def test_setup_logging_skips_azure_attach(mocker):
