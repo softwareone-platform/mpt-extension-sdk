@@ -26,6 +26,22 @@ Consumer action: deployments that relied on the implicit default OTLP endpoint
 `OTEL_EXPORTER_OTLP_ENDPOINT` explicitly. Setups that already declare the
 endpoint (for example a local Jaeger collector) keep working unchanged.
 
+### `Order.status` is now typed as `OrderStatus | str`
+
+`mpt_extension_sdk.models.Order.status` changed from a plain `str` to
+`OrderStatus | str`, where `OrderStatus` is a new `StrEnum` covering the
+documented Marketplace order statuses (`Draft`, `Quoted`, `Processing`,
+`Querying`, `Completed`, `Failed`, `Deleted`).
+
+- A known status (case-insensitive) is parsed into an `OrderStatus` member;
+  because `OrderStatus` is a `StrEnum`, comparisons against status strings keep
+  working. Prefer `OrderStatus` members over raw literals in new code.
+- An unknown status is **not** rejected: it is kept as a plain `str` and a
+  `mpt_extension_sdk.models.order.UnknownOrderStatusWarning` is emitted, so
+  payloads with new or unexpected statuses stay backward compatible.
+
+Consumer action: none required. Code that reads `Order.status` as a string keeps
+working; opt into `OrderStatus` where typed comparisons are useful.
 
 Add a section here only when this repository introduces a consumer-facing
 compatibility change that requires upgrade guidance.

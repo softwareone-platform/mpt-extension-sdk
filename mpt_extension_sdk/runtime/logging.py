@@ -9,7 +9,7 @@ from types import ModuleType
 from typing import Any, cast, override
 
 from mpt_extension_sdk.errors.runtime import ConfigError
-from mpt_extension_sdk.models.task import UnknownTaskStatusWarning
+from mpt_extension_sdk.models.status import UnknownStatusWarning
 
 correlation_id_ctx: contextvars.ContextVar[str] = contextvars.ContextVar(
     "correlation_id", default=""
@@ -152,7 +152,7 @@ def setup_logging(log_level: str = "INFO", ext_package: str | None = None) -> No
     """
     config.dictConfig(get_logging_config(log_level=log_level, ext_package=ext_package))
     logging.captureWarnings(True)  # ruff:ignore[boolean-positional-value-in-call]
-    warnings.filterwarnings("always", category=UnknownTaskStatusWarning)
+    warnings.filterwarnings("always", category=UnknownStatusWarning)
     azure_handler = get_azure_monitor_handler()
     if azure_handler is None:
         return

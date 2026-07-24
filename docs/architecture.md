@@ -88,6 +88,33 @@ contract but is not yet mounted by the runtime or emitted into `meta.yaml`.
   examples under [`docs/sdk_usage/`](sdk_usage/). Repository source documentation
   belongs in `README.md` and `docs/`.
 
+## Model Status Typing
+
+Status fields in [`models/`](../mpt_extension_sdk/models) follow one of two enum
+styles, chosen by how tightly the model is coupled to the Platform SDK framework:
+
+- **Extension-framework models** — models that are part of the SDK's own contract
+  with the platform runtime and are versioned in lockstep with it (for example
+  `Extension`, `Installation`, `InstallationInvitation`). Their status fields use a
+  **strict** `StrEnum` (`ExtensionStatusEnum`, `InstallationStatus`,
+  `InstallationInvitationStatus`, `InvitationValidityPeriod`). An unknown value is a
+  contract mismatch and **must fail validation**, because the SDK and the framework
+  are developed and released together.
+
+- **Marketplace domain models** — models that mirror Marketplace data which evolves
+  independently of the SDK (for example `Order`, `Task`, `Agreement`,
+  `Subscription`, `Asset`, `Account`, `Licensee`). Their status fields use a
+  **lenient** enum built on [`models/status.py`](../mpt_extension_sdk/models/status.py)
+  (`CaseInsensitiveStrEnum` + `UnknownStatusWarning` + `warn_on_unknown_status`),
+  typed as `SomeStatus | str`. A known value is parsed into the enum; an unknown
+  value is **kept as a plain string and emits `UnknownStatusWarning`** instead of
+  failing, so a newly introduced platform status never breaks a deployed extension.
+
+Rationale: the SDK must stay strictly bounded to the Platform SDK framework and
+evolve in sync with it, while remaining tolerant of the Marketplace data domain,
+which can gain new statuses at any time. When adding or typing a status field,
+pick the style from which family the model belongs to.
+
 ## Tests And Tooling
 
 - [`tests/`](../tests) is the location for repository pytest coverage grouped by SDK domain.
