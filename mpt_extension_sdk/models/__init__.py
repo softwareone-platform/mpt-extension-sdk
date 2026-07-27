@@ -6,7 +6,7 @@ from mpt_extension_sdk.models.account import (
     SellerAccount,
 )
 from mpt_extension_sdk.models.agreement import Agreement, AgreementLine
-from mpt_extension_sdk.models.asset import Asset, AssetLine
+from mpt_extension_sdk.models.asset import Asset, AssetLine, AssetStatus
 from mpt_extension_sdk.models.authorization import Authorization
 from mpt_extension_sdk.models.extension import Extension
 from mpt_extension_sdk.models.external_id import ExternalIds
@@ -33,6 +33,7 @@ __all__ = [  # noqa: WPS410
     "AgreementLine",
     "Asset",
     "AssetLine",
+    "AssetStatus",
     "Authorization",
     "BuyerAccount",
     "CaseInsensitiveStrEnum",
