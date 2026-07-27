@@ -1,9 +1,60 @@
 import datetime as dt
+import warnings
 
 import pytest
 from pydantic import ValidationError
 
-from mpt_extension_sdk.models.account import AccountToken
+from mpt_extension_sdk.models.account import (
+    AccountStatus,
+    AccountToken,
+    BuyerAccount,
+    UnknownAccountStatusWarning,
+)
+
+
+@pytest.fixture
+def buyer_account_payload():
+    return {"id": "BUY-1234-1234", "name": "Buyer"}
+
+
+@pytest.mark.parametrize(
+    ("status", "expected"),
+    [
+        ("Enabled", AccountStatus.ENABLED),
+        ("Active", AccountStatus.ACTIVE),
+        ("Disabled", AccountStatus.DISABLED),
+        ("Deleted", AccountStatus.DELETED),
+        ("active", AccountStatus.ACTIVE),
+    ],
+)
+def test_account_parses_known_status_into_enum(buyer_account_payload, status, expected):
+    result = BuyerAccount.model_validate(buyer_account_payload | {"status": status})
+
+    assert result.status is expected
+    assert result.model_dump(mode="json")["status"] == expected.value
+
+
+def test_account_keeps_unknown_status_as_string(buyer_account_payload):
+    with pytest.warns(UnknownAccountStatusWarning, match="BUY-1234-1234"):
+        result = BuyerAccount.model_validate(buyer_account_payload | {"status": "UnknownStatus"})
+
+    assert result.status == "UnknownStatus"
+    assert not isinstance(result.status, AccountStatus)
+    assert result.model_dump(mode="json")["status"] == "UnknownStatus"
+
+
+def test_account_defaults_missing_status(buyer_account_payload):
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", UnknownAccountStatusWarning)
+
+        result = BuyerAccount.model_validate(buyer_account_payload)
+
+    assert result.status is None
+
+
+def test_account_status_rejects_non_string_lookup():
+    with pytest.raises(ValueError, match="not a valid AccountStatus"):
+        AccountStatus(0)
 
 
 def test_validate_overrides_provided_expires_at():

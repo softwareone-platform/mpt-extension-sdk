@@ -90,30 +90,30 @@ contract but is not yet mounted by the runtime or emitted into `meta.yaml`.
 
 ## Model Status Typing
 
-Status fields in [`models/`](../mpt_extension_sdk/models) follow one of two enum
-styles, chosen by how tightly the model is coupled to the Platform SDK framework:
+Status fields in [`models/`](../mpt_extension_sdk/models) all follow a single enum
+style.
 
-- **Extension-framework models** — models that are part of the SDK's own contract
-  with the platform runtime and are versioned in lockstep with it (for example
-  `Extension`, `Installation`, `InstallationInvitation`). Their status fields use a
-  **strict** `StrEnum` (`ExtensionStatusEnum`, `InstallationStatus`,
-  `InstallationInvitationStatus`, `InvitationValidityPeriod`). An unknown value is a
-  contract mismatch and **must fail validation**, because the SDK and the framework
-  are developed and released together.
+**Decision: every model status is lenient. The SDK has no strict status enums.**
+A status field is typed as `SomeStatus | str` (`union_mode="left_to_right"`) on the
+shared base in [`models/status.py`](../mpt_extension_sdk/models/status.py)
+(`CaseInsensitiveStrEnum` + `UnknownStatusWarning` + `warn_on_unknown_status`). A
+known value is parsed into the enum case-insensitively; an unknown value is **kept
+as a plain string and emits an `UnknownStatusWarning`** instead of failing
+validation.
 
-- **Marketplace domain models** — models that mirror Marketplace data which evolves
-  independently of the SDK (for example `Order`, `Task`, `Agreement`,
-  `Subscription`, `Asset`, `Account`, `Licensee`). Their status fields use a
-  **lenient** enum built on [`models/status.py`](../mpt_extension_sdk/models/status.py)
-  (`CaseInsensitiveStrEnum` + `UnknownStatusWarning` + `warn_on_unknown_status`),
-  typed as `SomeStatus | str`. A known value is parsed into the enum; an unknown
-  value is **kept as a plain string and emits `UnknownStatusWarning`** instead of
-  failing, so a newly introduced platform status never breaks a deployed extension.
+The rule covers both families of models that carry a status:
 
-Rationale: the SDK must stay strictly bounded to the Platform SDK framework and
-evolve in sync with it, while remaining tolerant of the Marketplace data domain,
-which can gain new statuses at any time. When adding or typing a status field,
-pick the style from which family the model belongs to.
+- **Marketplace domain models** that mirror Marketplace data (`Order`, `Agreement`,
+  `Subscription`, `Asset`, `Account`, `Licensee`).
+- **Extension-framework models** that are part of the SDK's own contract with the
+  platform runtime (`Extension`, `Installation`, `InstallationInvitation`, and
+  `Task` for schedule execution).
+
+Rationale: statuses are owned by the platform, not by the SDK, and new members can
+appear at any time in either family. A status the SDK has not been taught about yet
+must never break a deployed extension, so the SDK keeps the raw value and warns
+instead of rejecting the payload. When adding or typing a status field, use the
+lenient style; do not introduce a strict `StrEnum` status.
 
 ## Tests And Tooling
 

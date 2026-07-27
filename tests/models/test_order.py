@@ -72,13 +72,24 @@ def order_payload(full_order_factory):
     return full_order_factory().model_dump(by_alias=True)
 
 
-@pytest.mark.parametrize("status", ["Completed", "completed"])
-def test_order_parses_known_status_into_enum(order_payload, status):
+@pytest.mark.parametrize(
+    ("status", "expected"),
+    [
+        ("Draft", OrderStatus.DRAFT),
+        ("Quoted", OrderStatus.QUOTED),
+        ("Processing", OrderStatus.PROCESSING),
+        ("Querying", OrderStatus.QUERYING),
+        ("Completed", OrderStatus.COMPLETED),
+        ("Failed", OrderStatus.FAILED),
+        ("Deleted", OrderStatus.DELETED),
+        ("completed", OrderStatus.COMPLETED),
+    ],
+)
+def test_order_parses_known_status_into_enum(order_payload, status, expected):
     result = Order.model_validate(order_payload | {"status": status})
 
-    assert result.status is OrderStatus.COMPLETED
-    assert result.status == "Completed"
-    assert result.model_dump(mode="json")["status"] == "Completed"
+    assert result.status is expected
+    assert result.model_dump(mode="json")["status"] == expected.value
 
 
 def test_order_keeps_unknown_status_as_string(order_payload):
