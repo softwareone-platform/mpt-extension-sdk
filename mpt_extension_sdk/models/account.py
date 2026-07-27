@@ -1,9 +1,27 @@
 import datetime as dt
-from typing import Any
+from typing import Any, Self
 
 from pydantic import Field, model_validator
 
 from mpt_extension_sdk.models.base import BaseModel
+from mpt_extension_sdk.models.status import (
+    CaseInsensitiveStrEnum,
+    UnknownStatusWarning,
+    warn_on_unknown_status,
+)
+
+
+class UnknownAccountStatusWarning(UnknownStatusWarning):
+    """Signals that a platform account reported a status outside the known set."""
+
+
+class AccountStatus(CaseInsensitiveStrEnum):
+    """Marketplace account status."""
+
+    ENABLED = "Enabled"
+    ACTIVE = "Active"
+    DISABLED = "Disabled"
+    DELETED = "Deleted"
 
 
 class Account(BaseModel):
@@ -34,7 +52,16 @@ class BuyerAccount(Account):
     external_ids: BuyerExternalId | None = Field(
         default=None, serialization_alias="externalIds", validation_alias="externalIds"
     )
-    status: str | None = None
+    status: AccountStatus | str | None = Field(default=None, union_mode="left_to_right")
+
+    @model_validator(mode="after")
+    def _warn_on_unknown_status(self) -> Self:
+        """Emit a warning when the status is not a known AccountStatus."""
+        if self.status is not None:
+            warn_on_unknown_status(
+                "Account", self.id, self.status, AccountStatus, UnknownAccountStatusWarning
+            )
+        return self
 
 
 class SellerAccount(Account):
