@@ -5,7 +5,7 @@ from mpt_extension_sdk.models.account import (
     BuyerAccount,
     SellerAccount,
 )
-from mpt_extension_sdk.models.agreement import Agreement, AgreementLine
+from mpt_extension_sdk.models.agreement import Agreement, AgreementLine, AgreementStatus
 from mpt_extension_sdk.models.asset import Asset, AssetLine
 from mpt_extension_sdk.models.authorization import Authorization
 from mpt_extension_sdk.models.extension import Extension
@@ -31,6 +31,7 @@ __all__ = [  # noqa: WPS410
     "AccountToken",
     "Agreement",
     "AgreementLine",
+    "AgreementStatus",
     "Asset",
     "AssetLine",
     "Authorization",
