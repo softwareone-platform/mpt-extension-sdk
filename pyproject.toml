@@ -103,6 +103,7 @@ extend-exclude = [
 format = "wemake"
 max-imports = 17
 max-line-length = 100
+max-module-members = 9
 select = ["AAA", "E999", "WPS"]
 show-source = true
 statistics = false
