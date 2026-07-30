@@ -22,6 +22,9 @@ class AccountStatus(CaseInsensitiveStrEnum):
     ACTIVE = "Active"
     DISABLED = "Disabled"
     DELETED = "Deleted"
+    UNASSIGNED = "Unassigned"
+    CONFLICT = "Conflict"
+    MISMATCH = "Mismatch"
 
 
 class Account(BaseModel):

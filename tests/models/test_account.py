@@ -24,6 +24,9 @@ def buyer_account_payload():
         ("Active", AccountStatus.ACTIVE),
         ("Disabled", AccountStatus.DISABLED),
         ("Deleted", AccountStatus.DELETED),
+        ("Unassigned", AccountStatus.UNASSIGNED),
+        ("Conflict", AccountStatus.CONFLICT),
+        ("Mismatch", AccountStatus.MISMATCH),
         ("active", AccountStatus.ACTIVE),
     ],
 )
