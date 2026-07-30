@@ -15,7 +15,7 @@ from mpt_extension_sdk.models.installation import (
     InstallationReference,
     InstallationStatus,
 )
-from mpt_extension_sdk.models.licensee import Licensee
+from mpt_extension_sdk.models.licensee import Licensee, LicenseeStatus
 from mpt_extension_sdk.models.order import Order, OrderLine, OrderStatus
 from mpt_extension_sdk.models.parameter import ParameterBag
 from mpt_extension_sdk.models.price import Price
@@ -44,6 +44,7 @@ __all__ = [  # noqa: WPS410
     "InstallationReference",
     "InstallationStatus",
     "Licensee",
+    "LicenseeStatus",
     "Order",
     "OrderLine",
     "OrderStatus",
