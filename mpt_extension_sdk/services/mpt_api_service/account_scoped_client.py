@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, ClassVar, override
 
 from httpx import Request, Response, codes
 from mpt_api_client.auth import Authentication
+from mpt_api_client.http import TransportSettings
 from mpt_api_client.http.async_client import AsyncHTTPClient
 
 from mpt_extension_sdk.api.auth import AuthContext
@@ -141,8 +142,7 @@ def build_account_scoped_mpt_client(
     """Build an MPT client that authenticates requests with account-scoped tokens."""
     return AsyncMPTClient(
         AsyncHTTPClient(
-            base_url=base_url,
+            TransportSettings(base_url=base_url, timeout=timeout),
             authentication=AccountScopedAuthentication(token_provider),
-            timeout=timeout,
         )
     )
