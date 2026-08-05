@@ -8,8 +8,7 @@ from fastapi import FastAPI, Request, Response, status
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from mpt_extension_sdk.api.builders.api import create_api_route
-from mpt_extension_sdk.api.builders.event import create_event_route
+from mpt_extension_sdk.api.builders import create_api_route, create_event_route
 from mpt_extension_sdk.errors.runtime import ConfigError
 from mpt_extension_sdk.extension_app import ExtensionApp
 from mpt_extension_sdk.observability.bootstrap import ObservabilityBootstrap
@@ -19,6 +18,7 @@ from mpt_extension_sdk.routing.models import (
     EventRouteDefinition,
     PlugRouteDefinition,
 )
+from mpt_extension_sdk.runtime.async_tasks import AsyncTaskRunner
 from mpt_extension_sdk.runtime.logging import correlation_id_ctx, setup_logging, task_id_ctx
 from mpt_extension_sdk.settings.runtime import RuntimeSettings
 
@@ -115,6 +115,7 @@ def _create_fastapi_app(extension_app: ExtensionApp) -> FastAPI:
             yield
         finally:
             app.state.ready = False
+            await app.state.async_task_runner.shutdown()
 
     app = FastAPI(
         title="MPT Extension API",
@@ -126,6 +127,7 @@ def _create_fastapi_app(extension_app: ExtensionApp) -> FastAPI:
         lifespan=runtime_lifespan,
     )
     app.state.ready = False
+    app.state.async_task_runner = AsyncTaskRunner()
     return app
 
 
