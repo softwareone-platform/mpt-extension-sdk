@@ -1,11 +1,11 @@
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from mpt_extension_sdk.extension_validator import ExtensionValidator
 from mpt_extension_sdk.routing.enums import HTTPMethod, RouteType
 from mpt_extension_sdk.routing.models import APIRouteDefinition
 from mpt_extension_sdk.routing.routers.base import BaseExtensionRouter
 from mpt_extension_sdk.routing.types import APIRouteCallback
+from mpt_extension_sdk.routing.validators import RouteValidator
 from mpt_extension_sdk.schemas import BaseSchema
 
 
@@ -62,7 +62,7 @@ class APIRouter(BaseExtensionRouter):
     ) -> Callable[[APIRouteCallback], APIRouteCallback]:
         """Create a decorator for an authenticated API route."""
         normalized_path = self._join_paths(self.prefix, path)
-        ExtensionValidator.validate_body_validator_type(body_validator)
+        RouteValidator.validate_body_validator_type(body_validator)
 
         def decorator(route_handler: APIRouteCallback) -> APIRouteCallback:
             self._register_base_route(

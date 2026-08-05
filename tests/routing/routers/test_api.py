@@ -67,6 +67,13 @@ def test_api_router_registers_post_and_body(route_handler):
     assert route.body_validator_type is FakePayloadSchema
 
 
+def test_api_router_rejects_bad_body_validator():
+    router = APIRouter(prefix="/api")
+
+    with pytest.raises(TypeError, match="must inherit from 'BaseSchema'"):
+        router.post(path="orders", name="orders-create", body_validator=dict)
+
+
 def test_api_router_allows_same_path_diff_methods(route_handler):
     router = APIRouter(prefix="/api")
     router.get(path="orders", name="orders-list")(route_handler)

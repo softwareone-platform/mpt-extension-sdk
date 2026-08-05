@@ -3,11 +3,11 @@ from dataclasses import dataclass
 from typing import cast
 
 from mpt_extension_sdk.context import ContextAdapter
-from mpt_extension_sdk.extension_validator import ExtensionValidator
 from mpt_extension_sdk.routing.enums import EventDeliveryMode, RouteType
 from mpt_extension_sdk.routing.models import EventRouteDefinition
 from mpt_extension_sdk.routing.routers.base import BaseExtensionRouter
 from mpt_extension_sdk.routing.types import EventRouteCallback
+from mpt_extension_sdk.routing.validators import RouteValidator
 
 _NO_CONTEXT_ADAPTER = object()
 
@@ -20,7 +20,7 @@ class EventRouter(BaseExtensionRouter):
 
     def __post_init__(self) -> None:
         """Validate the default router adapter when configured."""
-        ExtensionValidator.validate_context_adapter_type(self.context_adapter_type)
+        RouteValidator.validate_context_adapter_type(self.context_adapter_type)
 
     def event(
         self,
@@ -79,7 +79,7 @@ class EventRouter(BaseExtensionRouter):
         resolved_adapter_type = cast(
             "type[ContextAdapter] | None", definition_payload["context_adapter_type"]
         )
-        ExtensionValidator.validate_context_adapter_type(resolved_adapter_type)
+        RouteValidator.validate_context_adapter_type(resolved_adapter_type)
         normalized_path = self._join_paths(self.prefix, cast(str, definition_payload["path"]))
 
         def decorator(event_handler: EventRouteCallback) -> EventRouteCallback:

@@ -8,6 +8,7 @@ from mpt_extension_sdk.routing import (
     EventRouteDefinition,
 )
 from mpt_extension_sdk.routing.routers.base import BaseExtensionRouter
+from mpt_extension_sdk.routing.validators import RouteValidator
 from mpt_extension_sdk.runtime.builders import PlugMetadataBuilder
 from mpt_extension_sdk.runtime.models import MetaConfig, MetaEvent, MetaPlug
 from mpt_extension_sdk.services.mpt_api_service import MPTAPIService
@@ -49,7 +50,7 @@ class ExtensionApp:
     def include_router(self, router: BaseExtensionRouter) -> None:
         """Include a router in the extension app."""
         for route in router.prefixed_routes(self.prefix):
-            ExtensionValidator.validate_route_uniqueness(route=route, routes=self._routes)
+            RouteValidator.validate_route_uniqueness(route=route, routes=self._routes)
             self._routes.append(route)
 
     def to_meta_config(self) -> MetaConfig:
