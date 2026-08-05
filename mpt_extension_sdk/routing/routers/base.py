@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 
-from mpt_extension_sdk.extension_validator import ExtensionValidator
 from mpt_extension_sdk.routing import BaseRouteDefinition
+from mpt_extension_sdk.routing.validators import RouteValidator
 
 
 @dataclass
@@ -51,5 +51,5 @@ class BaseExtensionRouter:
         if not route.name.strip():
             raise ValueError("Route name cannot be empty")
 
-        ExtensionValidator.validate_route_uniqueness(route=route, routes=self._routes)
+        RouteValidator.validate_route_uniqueness(route=route, routes=self._routes)
         self._routes.append(route)
