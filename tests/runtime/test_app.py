@@ -11,6 +11,7 @@ from mpt_extension_sdk.errors.runtime import ConfigError
 from mpt_extension_sdk.extension_app import ExtensionApp
 from mpt_extension_sdk.routing import RouteType, ScheduleRouteDefinition
 from mpt_extension_sdk.runtime import app as runtime_app
+from mpt_extension_sdk.runtime.async_tasks import AsyncTaskRunner
 
 
 def runtime_plug_provider():
@@ -174,6 +175,15 @@ def test_lifespan_with_wrapper_argument():
 
     assert asyncio.run(_run_lifespan_with_wrapper(result)) is True
     assert result.state.ready is False
+
+
+def test_lifespan_shuts_down_async_task_runner(mocker):
+    app = runtime_app._create_fastapi_app(ExtensionApp())
+    app.state.async_task_runner = mocker.create_autospec(AsyncTaskRunner, instance=True)
+
+    asyncio.run(_run_lifespan_with_wrapper(app))  # act
+
+    app.state.async_task_runner.shutdown.assert_awaited_once_with()
 
 
 def test_ready_follows_app_lifespan(runtime_settings, runtime_app_patches):
