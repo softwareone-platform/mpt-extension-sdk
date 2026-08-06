@@ -5,7 +5,8 @@ import pytest
 from mpt_extension_sdk.api.auth import AuthContext, AuthenticationError
 from mpt_extension_sdk.pipeline.context.agreement import AgreementContext
 from mpt_extension_sdk.pipeline.context.order import OrderContext
-from mpt_extension_sdk.pipeline.factory import build_context
+from mpt_extension_sdk.pipeline.context.schedule import ScheduleContext
+from mpt_extension_sdk.pipeline.factory import RouteContextFactory, build_context
 from mpt_extension_sdk.runtime.logging import correlation_id_ctx, task_id_ctx
 from mpt_extension_sdk.services.mpt_api_service import MPTAPIService
 from mpt_extension_sdk.services.mpt_api_service.agreement import AgreementService
@@ -28,11 +29,14 @@ def event_context_scope():
         task_id_ctx.reset(task_token)
 
 
+@pytest.fixture
+def auth(mocker):
+    return mocker.Mock(spec=AuthContext, extension_id="EXT-1")
+
+
 async def test_build_context_returns_order_context(
-    mocker, logger, runtime_settings, event_factory, order_factory
+    mocker, logger, runtime_settings, event_factory, order_factory, auth
 ):
-    auth = mocker.Mock()
-    auth.extension_id = "EXT-1"
     mocker.patch(
         "mpt_extension_sdk.pipeline.factory.get_runtime_settings",
         autospec=True,
@@ -62,10 +66,8 @@ async def test_build_context_returns_order_context(
 
 
 async def test_build_context_returns_agreement_context(
-    mocker, logger, runtime_settings, event_factory, agreement_factory
+    mocker, logger, runtime_settings, event_factory, agreement_factory, auth
 ):
-    auth = mocker.Mock(spec=AuthContext)
-    auth.extension_id = "EXT-1"
     mocker.patch(
         "mpt_extension_sdk.pipeline.factory.get_runtime_settings",
         autospec=True,
@@ -95,10 +97,8 @@ async def test_build_context_returns_agreement_context(
 
 
 async def test_build_ctx_rejects_unsupported_obj_type(
-    mocker, logger, runtime_settings, event_factory
+    mocker, logger, runtime_settings, event_factory, auth
 ):
-    auth = mocker.Mock(spec=AuthContext)
-    auth.extension_id = "EXT-1"
     mocker.patch(
         "mpt_extension_sdk.pipeline.factory.get_runtime_settings",
         autospec=True,
@@ -122,10 +122,8 @@ async def test_build_ctx_rejects_unsupported_obj_type(
 
 
 async def test_build_context_carries_contextvars(
-    mocker, logger, runtime_settings, event_factory, order_factory
+    mocker, logger, runtime_settings, event_factory, order_factory, auth
 ):
-    auth = mocker.Mock()
-    auth.extension_id = "EXT-1"
     fake_service = mocker.AsyncMock(spec=MPTAPIService, orders=mocker.AsyncMock(spec=OrderService))
     fake_service.orders.get_by_id = mocker.AsyncMock(return_value=order_factory("ORD-1"))
     FakeAuthAPIService.from_auth_context = mocker.AsyncMock(return_value=fake_service)
@@ -150,10 +148,8 @@ async def test_build_context_carries_contextvars(
 
 
 async def test_build_context_uses_auth_context(
-    mocker, logger, runtime_settings, event_factory, order_factory
+    mocker, logger, runtime_settings, event_factory, order_factory, auth
 ):
-    auth = mocker.Mock(spec=AuthContext)
-    auth.extension_id = "EXT-1"
     service = mocker.AsyncMock(spec=MPTAPIService, orders=mocker.AsyncMock(spec=OrderService))
     service.orders.get_by_id = mocker.AsyncMock(return_value=order_factory("ORD-1"))
     mocker.patch(
@@ -183,9 +179,8 @@ async def test_build_context_uses_auth_context(
 
 
 async def test_build_context_rejects_mismatched_ext_id(
-    mocker, logger, runtime_settings, event_factory
+    mocker, logger, runtime_settings, event_factory, auth
 ):
-    auth = mocker.Mock(spec=AuthContext)
     auth.extension_id = "EXT-2"
     FakeAuthAPIService.from_auth_context = mocker.AsyncMock()
     mocker.patch(
@@ -208,3 +203,34 @@ async def test_build_context_rejects_mismatched_ext_id(
         )
 
     FakeAuthAPIService.from_auth_context.assert_not_awaited()
+
+
+async def test_build_schedule_context(mocker, logger, runtime_settings, task_service, auth):
+    service = mocker.AsyncMock(spec=MPTAPIService)
+    mocker.patch(
+        "mpt_extension_sdk.pipeline.factory.get_runtime_settings",
+        autospec=True,
+        return_value=runtime_settings,
+    )
+    mocker.patch(
+        "mpt_extension_sdk.pipeline.factory.get_extension_settings",
+        autospec=True,
+        return_value=mocker.AsyncMock(spec=BaseExtensionSettings),
+    )
+    FakeAuthAPIService.from_auth_context = mocker.AsyncMock(return_value=service)
+    factory = RouteContextFactory.from_service_type(FakeAuthAPIService)
+
+    result = await factory.build_schedule_context(
+        schedule_id="agreements.sync",
+        task_id="TSK-1",
+        handler_logger=logger,
+        auth=auth,
+        task_service=task_service,
+    )
+
+    assert isinstance(result, ScheduleContext)
+    assert (result.meta.schedule_id, result.meta.task_id, result.task.id) == (
+        "agreements.sync",
+        "TSK-1",
+        "TSK-1",
+    )

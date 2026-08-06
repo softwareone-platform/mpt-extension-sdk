@@ -8,8 +8,14 @@ from mpt_extension_sdk.api.models.events import Event
 from mpt_extension_sdk.pipeline.context.agreement import AgreementContext
 from mpt_extension_sdk.pipeline.context.event import EventBaseContext, EventMetadata
 from mpt_extension_sdk.pipeline.context.order import OrderContext
+from mpt_extension_sdk.pipeline.context.schedule import (
+    ScheduleContext,
+    ScheduleMetadata,
+    ScheduleTaskHandle,
+)
 from mpt_extension_sdk.runtime.logging import correlation_id_ctx, task_id_ctx
 from mpt_extension_sdk.services.mpt_api_service import MPTAPIService
+from mpt_extension_sdk.services.mpt_api_service.task import TaskService
 from mpt_extension_sdk.settings.extension import BaseExtensionSettings, get_extension_settings
 from mpt_extension_sdk.settings.runtime import RuntimeSettings, get_runtime_settings
 
@@ -67,6 +73,34 @@ class RouteContextFactory:
         )
         return await self._build_event_context_with_model(
             event, handler_logger, api_service, auth=auth
+        )
+
+    async def build_schedule_context(
+        self,
+        *,
+        schedule_id: str,
+        task_id: str,
+        handler_logger: logging.Logger,
+        auth: AuthContext,
+        task_service: TaskService,
+    ) -> ScheduleContext:
+        """Build the authenticated context for a schedule execution."""
+        self._assert_extension_id_matches(auth)
+        api_service = await self.service_type.from_auth_context(
+            base_url=self.runtime_settings.mpt_api_base_url, auth=auth
+        )
+        return ScheduleContext(
+            logger=handler_logger,
+            meta=ScheduleMetadata(
+                schedule_id=schedule_id,
+                task_id=task_id,
+                correlation_id=correlation_id_ctx.get(),
+            ),
+            task=ScheduleTaskHandle(id=task_id, task_service=task_service),
+            mpt_api_service=api_service,
+            ext_settings=self.extension_settings,
+            runtime_settings=self.runtime_settings,
+            auth=auth,
         )
 
     def _assert_extension_id_matches(self, auth: AuthContext) -> None:
