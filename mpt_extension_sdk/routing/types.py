@@ -6,5 +6,6 @@ if TYPE_CHECKING:
 
 RouteCallback = Callable[..., Awaitable[Any] | Any]
 EventRouteCallback = Callable[..., Awaitable[None] | None]
+ScheduleRouteCallback = Callable[..., Awaitable[None]]
 APIRouteCallback = Callable[..., Awaitable[object] | object]
 PlugRouteCallback = Callable[[], Sequence["Plug | NavigationPlug | ModalPlug"]]

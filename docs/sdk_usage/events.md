@@ -56,8 +56,29 @@ request at runtime.
 
 ## Schedule Routes
 
-`ScheduleRouter` exists in the SDK contract and exposes a `schedule(path, name)`
-decorator, but scheduled routes are out of scope for the current phase: they are
-not yet mounted by the runtime nor emitted into the generated metadata. Treat
-`ScheduleRouter` as a forward-looking placeholder and do not rely on it for
-production flows yet.
+`ScheduleRouter` exposes a `task(path, *, id, name, description, cron)` decorator to
+register a periodic operation:
+
+```python
+from mpt_extension_sdk import ScheduleRouter
+
+schedule_router = ScheduleRouter(prefix="/schedule")
+
+
+@schedule_router.task(
+    "/agreements/sync",
+    id="schedule.agreements.sync",
+    name="agreements-sync",
+    description="Synchronize agreements periodically",
+    cron="*/15 * * * *",
+)
+async def sync_agreements(ctx): ...
+```
+
+The SDK validates that the schedule `id` is unique within the extension and that
+`cron` is a five-field expression, and emits each schedule into the generated
+metadata under `schedules` (`id`, `name`, `description`, `cron`, `path`).
+
+The runtime does not execute schedules yet: the delivery endpoint and execution
+protocol arrive in a later phase. Registering a schedule publishes it in metadata,
+but the SDK does not invoke the handler.

@@ -20,6 +20,7 @@ from mpt_extension_sdk.routing import (
     PlugRouter,
     RouteType,
 )
+from mpt_extension_sdk.routing.routers.schedule import ScheduleRouter
 from mpt_extension_sdk.runtime.models import MetaConfig
 from mpt_extension_sdk.services.mpt_api_service import MPTAPIService
 from mpt_extension_sdk.settings.extension import BaseExtensionSettings
@@ -123,6 +124,54 @@ def test_meta_config_ignores_non_event_routes(dummy_handler):
         "task": True,
     }
     assert result.plugs is None
+
+
+def test_meta_config_includes_schedules(dummy_handler):
+    schedule_router = ScheduleRouter(prefix="/schedule")
+    app = ExtensionApp(prefix="/api/v1")
+    schedule_router.task(
+        path="/daily",
+        id="daily-sync",
+        name="Daily Sync",
+        description="Sync data every day",
+        cron="0 0 * * *",
+    )(dummy_handler)
+    app.include_router(schedule_router)
+
+    result = app.to_meta_config()
+
+    assert result.schedules is not None
+    assert result.schedules[0].model_dump() == {
+        "id": "daily-sync",
+        "name": "Daily Sync",
+        "description": "Sync data every day",
+        "cron": "0 0 * * *",
+        "path": "/api/v1/schedule/daily",
+    }
+
+
+def test_duplicate_schedule_id_across_routers(dummy_handler):
+    app = ExtensionApp(prefix="/api/v1")
+    first = ScheduleRouter(prefix="/schedule")
+    second = ScheduleRouter(prefix="/other")
+    first.task(
+        path="/a",
+        id="dup",
+        name="First",
+        description="First",
+        cron="0 0 * * *",
+    )(dummy_handler)
+    second.task(
+        path="/b",
+        id="dup",
+        name="Second",
+        description="Second",
+        cron="0 0 * * *",
+    )(dummy_handler)
+    app.include_router(first)
+
+    with pytest.raises(ValueError, match="Schedule id 'dup' is already registered"):
+        app.include_router(second)
 
 
 def test_meta_config_includes_plugs(mocker):

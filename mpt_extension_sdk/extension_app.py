@@ -6,11 +6,12 @@ from mpt_extension_sdk.routing import (
     BaseRouteDefinition,
     EventDeliveryMode,
     EventRouteDefinition,
+    ScheduleRouteDefinition,
 )
 from mpt_extension_sdk.routing.routers.base import BaseExtensionRouter
 from mpt_extension_sdk.routing.validators import RouteValidator
 from mpt_extension_sdk.runtime.builders import PlugMetadataBuilder
-from mpt_extension_sdk.runtime.models import MetaConfig, MetaEvent, MetaPlug
+from mpt_extension_sdk.runtime.models import MetaConfig, MetaEvent, MetaPlug, MetaSchedule
 from mpt_extension_sdk.services.mpt_api_service import MPTAPIService
 
 
@@ -67,6 +68,18 @@ class ExtensionApp:
                 for route in self._routes
                 if isinstance(route, EventRouteDefinition)
             ],
+            schedules=[
+                MetaSchedule(
+                    id=route.id,
+                    name=route.name,
+                    description=route.description,
+                    cron=route.cron,
+                    path=route.path,
+                )
+                for route in self._routes
+                if isinstance(route, ScheduleRouteDefinition)
+            ]
+            or None,
             plugs=self._build_meta_plugs() or None,
         )
 
