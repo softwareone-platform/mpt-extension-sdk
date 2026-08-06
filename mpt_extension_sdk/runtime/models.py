@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Any, Self
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
 from mpt_extension_sdk.errors.runtime import ConfigError
 
@@ -47,6 +47,26 @@ class MetaPlug(BaseModel):
         return self
 
 
+class MetaSchedule(BaseModel):
+    """Metadata model for a registered schedule."""
+
+    id: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+    description: str = Field(min_length=1)
+    cron: str = Field(min_length=1)
+    path: str = Field(min_length=1)
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    @field_validator("cron")
+    @classmethod
+    def validate_cron(cls, cron: str) -> str:
+        """Validate the five-field cron format accepted by the framework."""
+        if len(cron.split()) != 5:
+            raise ValueError("Schedule cron must contain five fields")
+        return cron
+
+
 class MetaConfig(BaseModel):
     """MetaConfig model for loading metadata."""
 
@@ -55,6 +75,7 @@ class MetaConfig(BaseModel):
     version: str = Field(default="1.0.0", min_length=1)
 
     events: list[MetaEvent]
+    schedules: list[MetaSchedule] | None = None
     plugs: list[MetaPlug] | None = None
 
     model_config = ConfigDict(extra="forbid")

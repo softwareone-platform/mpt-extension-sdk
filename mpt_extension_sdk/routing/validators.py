@@ -84,3 +84,10 @@ class RouteValidator:
             for existing_route in routes
         ):
             raise ValueError(f"Route event '{getattr(route, 'event', '')}' is already registered")
+
+        if route.route_type == RouteType.SCHEDULE and any(
+            existing_route.route_type == RouteType.SCHEDULE
+            and getattr(existing_route, "id", None) == getattr(route, "id", None)
+            for existing_route in routes
+        ):
+            raise ValueError(f"Schedule id '{getattr(route, 'id', '')}' is already registered")

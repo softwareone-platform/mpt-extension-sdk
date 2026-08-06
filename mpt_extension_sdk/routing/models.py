@@ -7,6 +7,7 @@ from mpt_extension_sdk.routing.types import (
     EventRouteCallback,
     PlugRouteCallback,
     RouteCallback,
+    ScheduleRouteCallback,
 )
 from mpt_extension_sdk.schemas import BaseSchema
 
@@ -44,6 +45,11 @@ class APIRouteDefinition(BaseRouteDefinition):
 @dataclass(frozen=True)
 class ScheduleRouteDefinition(BaseRouteDefinition):
     """Route definition for schedule handlers."""
+
+    callback: ScheduleRouteCallback
+    id: str
+    description: str
+    cron: str
 
 
 @dataclass(frozen=True)

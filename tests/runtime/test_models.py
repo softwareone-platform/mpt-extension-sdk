@@ -4,7 +4,7 @@ import pytest
 import yaml
 
 from mpt_extension_sdk.errors.runtime import ConfigError
-from mpt_extension_sdk.runtime.models import MetaConfig, MetaPlug
+from mpt_extension_sdk.runtime.models import MetaConfig, MetaPlug, MetaSchedule
 
 
 @pytest.fixture
@@ -194,3 +194,30 @@ def test_to_file_omits_container_plug_href(metadata_path):
     assert written_payload["plugs"] == [
         {"id": "learn-extensions", "name": "Learn Extensions", "socket": "portal"}
     ]
+
+
+def test_meta_schedule_builds_valid_instance():
+    result = MetaSchedule(
+        id="daily-sync",
+        name="Daily Sync",
+        description="Sync data every day",
+        cron="0 0 * * *",
+        path="/schedule/daily",
+    )
+
+    assert (result.id, result.cron, result.path) == (
+        "daily-sync",
+        "0 0 * * *",
+        "/schedule/daily",
+    )
+
+
+def test_meta_schedule_rejects_short_cron():
+    with pytest.raises(ValueError, match="must contain five fields"):
+        MetaSchedule(
+            id="daily-sync",
+            name="Daily Sync",
+            description="Sync data every day",
+            cron="* * * *",
+            path="/schedule/daily",
+        )

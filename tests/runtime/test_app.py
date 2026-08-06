@@ -247,7 +247,13 @@ def test_register_not_supported_ext_routes(dummy_handler):
     extension_app = ExtensionApp(prefix="/api/v1")
     extension_app._routes.append(
         ScheduleRouteDefinition(
-            path="/cron", name="cron", route_type=RouteType.SCHEDULE, callback=dummy_handler
+            path="/cron",
+            name="cron",
+            route_type=RouteType.SCHEDULE,
+            callback=dummy_handler,
+            id="cron",
+            description="Cron task",
+            cron="0 0 * * *",
         )
     )
 
