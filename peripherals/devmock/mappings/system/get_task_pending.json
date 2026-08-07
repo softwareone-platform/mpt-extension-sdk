@@ -1,0 +1,47 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPathPattern": "/public/v1/system/tasks/[^/]+",
+    "customMatcher": {
+      "name": "state-matcher",
+      "parameters": {
+        "hasContext": "{{request.pathSegments.[4]}}",
+        "property": {
+          "status": {
+            "absent": true
+          }
+        }
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": "{\"id\":\"{{request.pathSegments.[4]}}\",\"status\":\"rescheduled\",\"audit\":{\"created\":{\"at\":\"{{state context=request.pathSegments.[4] property='enqueuedAt' default=''}}\"},\"started\":{\"at\":\"{{now}}\"}},\"parameters\":{\"extensionId\":\"EXT-1111-1111\",\"maxTaskProcessingSeconds\":120,\"maxTaskLifetimeSeconds\":86400}}",
+    "transformers": [
+      "response-template"
+    ]
+  },
+  "priority": 3,
+  "serveEventListeners": [
+    {
+      "name": "webhook",
+      "parameters": {
+        "method": "POST",
+        "url": "http://app:8080/api/v2/schedules/use-cases/{{state context=originalRequest.pathSegments.[4] property='schedule'}}",
+        "headers": {
+          "Content-Type": "application/json",
+          "MPT-Task-Id": "{{originalRequest.pathSegments.[4]}}",
+          "Authorization": "Bearer {{#base64 padding=false}}{\"alg\":\"none\",\"typ\":\"JWT\"}{{/base64}}.{{#base64 padding=false}}{\"https://claims.softwareone.com/extensionId\":\"EXT-1111-1111\",\"https://claims.softwareone.com/accountId\":\"ACC-0000-3453\",\"https://claims.softwareone.com/accountType\":\"Client\",\"https://claims.softwareone.com/modules\":{},\"exp\":2095751649}{{/base64}}."
+        },
+        "body": "{\"id\":\"{{randomValue type='UUID'}}\",\"object\":{\"id\":\"mock.use-cases.{{state context=originalRequest.pathSegments.[4] property='schedule'}}\",\"name\":\"schedule-use-case-{{state context=originalRequest.pathSegments.[4] property='schedule'}}\",\"objectType\":\"Schedule\"},\"task\":{\"id\":\"{{originalRequest.pathSegments.[4]}}\"},\"details\":{\"enqueueTime\":\"{{state context=originalRequest.pathSegments.[4] property='enqueuedAt' default=''}}\",\"deliveryTime\":\"{{now}}\",\"eventType\":\"Schedule\"}}",
+        "delay": {
+          "type": "fixed",
+          "milliseconds": 30000
+        }
+      }
+    }
+  ]
+}

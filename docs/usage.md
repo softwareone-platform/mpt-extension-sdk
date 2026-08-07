@@ -9,8 +9,10 @@ This guide is the entry point for building an extension package on top of
 - [Application setup](sdk_usage/application.md): install the SDK, shape an
   extension package, create `ExtensionApp`, include routers, and configure the
   runtime.
-- [Event routes](sdk_usage/events.md): register task and non-task event handlers
-  (and the status of schedule routes).
+- [Event routes](sdk_usage/events.md): register task and non-task event handlers.
+- [Schedule routes](sdk_usage/schedules.md): register periodic work, read the
+  schedule delivery, and follow the delivery protocol the Extension Framework
+  drives.
 - [Authenticated API routes](sdk_usage/api.md): expose authenticated endpoints,
   validate bodies, read request/auth context, return API responses, and use
   pagination.

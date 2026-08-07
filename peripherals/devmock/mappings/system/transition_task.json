@@ -1,0 +1,79 @@
+{
+  "mappings": [
+    {
+      "request": {
+        "method": "POST",
+        "urlPathPattern": "/public/v1/system/tasks/[^/]+/complete"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{}"
+      },
+      "priority": 2,
+      "serveEventListeners": [
+        {
+          "name": "recordState",
+          "parameters": {
+            "context": "{{request.pathSegments.[4]}}",
+            "state": {
+              "status": "completed"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "request": {
+        "method": "POST",
+        "urlPathPattern": "/public/v1/system/tasks/[^/]+/fail"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{}"
+      },
+      "priority": 2,
+      "serveEventListeners": [
+        {
+          "name": "recordState",
+          "parameters": {
+            "context": "{{request.pathSegments.[4]}}",
+            "state": {
+              "status": "failed"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "request": {
+        "method": "POST",
+        "urlPathPattern": "/public/v1/system/tasks/[^/]+/reschedule"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{}"
+      },
+      "priority": 2,
+      "serveEventListeners": [
+        {
+          "name": "recordState",
+          "parameters": {
+            "context": "{{request.pathSegments.[4]}}",
+            "state": {
+              "claimed": "null"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

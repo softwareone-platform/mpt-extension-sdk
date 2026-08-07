@@ -40,15 +40,6 @@ Repository command mapping:
 - `make check` runs local validation checks such as formatting, linting, typing, and lockfile validation
 - `make check-all` runs both checks and tests
 
-Shared make-target knowledge also applies in this repository:
-
-- `make build`: build the local runnable or testable environment
-- `make format`: automatically format the source code
-- `make check`: run local validation checks
-- `make test`: run the automated test suite
-- `make check-all`: run the full local validation flow expected before merge
-- `make bash`: open a shell in the application container or runtime environment
-
 ## Pytest Configuration
 
 Repository-specific test settings come from [`pyproject.toml`](../pyproject.toml):

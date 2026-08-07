@@ -1,0 +1,28 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPathPattern": "/public/v1/system/tasks/[^/]+",
+    "customMatcher": {
+      "name": "state-matcher",
+      "parameters": {
+        "hasContext": "{{request.pathSegments.[4]}}",
+        "property": {
+          "status": {
+            "matches": ".*"
+          }
+        }
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": "{\"id\":\"{{request.pathSegments.[4]}}\",\"status\":\"{{state context=request.pathSegments.[4] property='status'}}\",\"audit\":{\"created\":{\"at\":\"{{state context=request.pathSegments.[4] property='enqueuedAt' default=''}}\"},\"started\":{\"at\":\"{{now}}\"}},\"parameters\":{\"extensionId\":\"EXT-1111-1111\",\"maxTaskProcessingSeconds\":120,\"maxTaskLifetimeSeconds\":86400}}",
+    "transformers": [
+      "response-template"
+    ]
+  },
+  "priority": 2
+}

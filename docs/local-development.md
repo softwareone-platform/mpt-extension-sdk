@@ -6,6 +6,14 @@ This document describes repository-specific local setup and execution for the So
 
 The default local workflow is Docker-based and uses [`compose.yaml`](../compose.yaml) through the repository `make` targets.
 
+Two stacks are available. `make run` starts the extension alone, as the platform
+runs it. `make run-demo` layers [`compose.demo.yaml`](../compose.demo.yaml) on
+top and starts the whole local harness: the extension in `--local` mode, a second
+instance used to demonstrate the claim on an execution, a WireMock devmock that
+answers the Marketplace and Tasks APIs, and a Jaeger collector for traces. See
+[`peripherals/devmock/README.md`](../peripherals/devmock/README.md) for the
+endpoints it stubs and how to run the schedule demo.
+
 The packaged runtime itself runs in two modes:
 
 - local development through FastAPI + uvicorn
@@ -37,6 +45,7 @@ make test
 ```bash
 make build
 make run
+make run-demo
 make bash
 make format
 make check
