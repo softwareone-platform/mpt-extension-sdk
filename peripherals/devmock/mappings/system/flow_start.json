@@ -1,0 +1,80 @@
+{
+  "mappings": [
+    {
+      "request": {
+        "method": "POST",
+        "urlPathPattern": "/devmock/flows/[^/]+/[^/]+",
+        "customMatcher": {
+          "name": "state-matcher",
+          "parameters": {
+            "hasContext": "{{request.pathSegments.[3]}}",
+            "property": {
+              "status": {
+                "absent": true
+              }
+            }
+          }
+        }
+      },
+      "response": {
+        "status": 409,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"error\":\"a flow is already running for {{request.pathSegments.[3]}}; wait for it to settle or reset the devmock\"}",
+        "transformers": [
+          "response-template"
+        ]
+      },
+      "priority": 1
+    },
+    {
+      "request": {
+        "method": "POST",
+        "urlPathPattern": "/devmock/flows/[^/]+/[^/]+"
+      },
+      "response": {
+        "status": 202,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"started\":\"{{request.pathSegments.[2]}}\",\"task\":\"{{request.pathSegments.[3]}}\"}",
+        "transformers": [
+          "response-template"
+        ]
+      },
+      "priority": 2,
+      "serveEventListeners": [
+        {
+          "name": "recordState",
+          "parameters": {
+            "context": "{{request.pathSegments.[3]}}",
+            "state": {
+              "schedule": "{{request.pathSegments.[2]}}",
+              "enqueuedAt": "{{now}}",
+              "status": "null",
+              "claimed": "null"
+            }
+          }
+        },
+        {
+          "name": "webhook",
+          "parameters": {
+            "method": "POST",
+            "url": "http://app:8080/api/v2/schedules/use-cases/{{originalRequest.pathSegments.[2]}}",
+            "headers": {
+              "Content-Type": "application/json",
+              "MPT-Task-Id": "{{originalRequest.pathSegments.[3]}}",
+              "Authorization": "Bearer {{#base64 padding=false}}{\"alg\":\"none\",\"typ\":\"JWT\"}{{/base64}}.{{#base64 padding=false}}{\"https://claims.softwareone.com/extensionId\":\"EXT-1111-1111\",\"https://claims.softwareone.com/accountId\":\"ACC-0000-3453\",\"https://claims.softwareone.com/accountType\":\"Client\",\"https://claims.softwareone.com/modules\":{},\"exp\":2095751649}{{/base64}}."
+            },
+            "body": "{\"id\":\"{{randomValue type='UUID'}}\",\"object\":{\"id\":\"mock.use-cases.{{originalRequest.pathSegments.[2]}}\",\"name\":\"schedule-use-case-{{originalRequest.pathSegments.[2]}}\",\"objectType\":\"Schedule\"},\"task\":{\"id\":\"{{originalRequest.pathSegments.[3]}}\"},\"details\":{\"enqueueTime\":\"{{now}}\",\"deliveryTime\":\"{{now}}\",\"eventType\":\"Schedule\"}}",
+            "delay": {
+              "type": "fixed",
+              "milliseconds": 500
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

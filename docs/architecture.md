@@ -69,11 +69,19 @@ completes and after shutdown begins). The `/bypass` prefix keeps these endpoints
 reachable by Kubernetes probes over plain HTTP, because Ziticorn serves `/bypass/*`
 directly instead of over the OpenZiti overlay.
 
-At the moment, `event` and `api` route families are implemented end-to-end in
-runtime request handling. Event routes are also emitted into `meta.yaml`. The
-`plug` route family is implemented as declarative metadata with static asset
-exposure under `/static`. The `schedule` route family is modeled in the SDK
-contract but is not yet mounted by the runtime or emitted into `meta.yaml`.
+The `event`, `api`, and `schedule` route families are implemented end-to-end in
+runtime request handling. Event and schedule routes are emitted into
+`meta.yaml`, schedules with their cron expression, since the platform owns the
+timer. The `plug` route family is implemented as declarative metadata with
+static asset exposure under `/static`.
+
+Schedule handlers are executed asynchronously by an application-scoped runner,
+so durable dispatch and the claim on an execution stay with the Extension
+Framework and the platform task rather than with the SDK. Each route family
+documents its own contract: [sdk_usage/events.md](sdk_usage/events.md),
+[sdk_usage/schedules.md](sdk_usage/schedules.md),
+[sdk_usage/api.md](sdk_usage/api.md) and [sdk_usage/plugs.md](sdk_usage/plugs.md),
+with error mapping in [sdk_usage/error-handling.md](sdk_usage/error-handling.md).
 
 ## Boundaries
 

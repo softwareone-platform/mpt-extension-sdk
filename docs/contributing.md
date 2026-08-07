@@ -22,6 +22,8 @@ The default development model for this repository is Docker-based.
 
 - Use `make build` to build the local image and install dependencies.
 - Use `make run` to start the local runtime through Docker Compose.
+- Use `make run-demo` for the local demo stack, described in
+  [local-development.md](local-development.md).
 - Use `make bash` when you need an interactive container session.
 - Use `make build-package` when you need to produce a distributable package artifact inside the configured runtime.
 

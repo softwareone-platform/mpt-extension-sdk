@@ -1,14 +1,52 @@
 services:
   app:
     command: "uv run mpt-ext run --local"
-    depends_on:
-      jaeger:
-        condition: service_started
     env_file:
+      - path: .env
+        required: false
       - path: .env.demo
         required: true
+    depends_on:
+      devmock:
+        condition: service_started
+      jaeger:
+        condition: service_started
+
+  app-secondary:
+    build:
+      context: .
+      target: dev
+    command: "uv run mpt-ext run --local"
+    env_file:
+      - path: .env
+        required: false
+      - path: .env.demo
+        required: true
+    depends_on:
+      devmock:
+        condition: service_started
+      jaeger:
+        condition: service_started
+    volumes:
+      - .:/extension
     ports:
-      - "8080:8080"
+      - "8081:8080"
+
+  devmock:
+    build: ./peripherals/devmock
+    environment:
+      # The state extension keeps contexts in memory and expires them after 60
+      # minutes by default, which would drop a settled task's outcome mid-demo.
+      WIREMOCK_STATE_EXTENSION_CONTEXT_EXPIRATION_SEC: "86400"
+    # The image's own healthcheck probes port 8080; this stack serves on 8000.
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/__admin/health || exit 1"]
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./peripherals/devmock/__files:/home/wiremock/__files
+      - ./peripherals/devmock/mappings:/home/wiremock/mappings
+    command: ["--port", "8000", "--global-response-templating", "--verbose"]
 
   jaeger:
     image: jaegertracing/jaeger:2.17.0

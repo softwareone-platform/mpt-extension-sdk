@@ -1,0 +1,60 @@
+{
+  "mappings": [
+    {
+      "request": {
+        "method": "POST",
+        "urlPathPattern": "/public/v1/system/tasks/[^/]+/execute",
+        "customMatcher": {
+          "name": "state-matcher",
+          "parameters": {
+            "hasContext": "{{request.pathSegments.[4]}}",
+            "hasNotProperty": "claimed"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{}"
+      },
+      "priority": 2,
+      "serveEventListeners": [
+        {
+          "name": "recordState",
+          "parameters": {
+            "context": "{{request.pathSegments.[4]}}",
+            "state": {
+              "claimed": "yes"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "request": {
+        "method": "POST",
+        "urlPathPattern": "/public/v1/system/tasks/[^/]+/execute",
+        "customMatcher": {
+          "name": "state-matcher",
+          "parameters": {
+            "hasContext": "{{request.pathSegments.[4]}}",
+            "hasProperty": "claimed"
+          }
+        }
+      },
+      "response": {
+        "status": 409,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"status\":409,\"title\":\"Conflict\",\"detail\":\"Task {{request.pathSegments.[4]}} is already being executed\"}",
+        "transformers": [
+          "response-template"
+        ]
+      },
+      "priority": 2
+    }
+  ]
+}

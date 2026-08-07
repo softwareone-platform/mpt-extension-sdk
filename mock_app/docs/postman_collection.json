@@ -50,8 +50,18 @@
       "type": "string"
     },
     {
+      "key": "devmock_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "secondary_base_url",
+      "value": "http://localhost:8081",
+      "type": "string"
+    },
+    {
       "key": "extension_id",
-      "value": "EXT-2345-3554",
+      "value": "EXT-1111-1111",
       "type": "string"
     },
     {
@@ -67,6 +77,11 @@
     {
       "key": "auth_token",
       "value": "",
+      "type": "string"
+    },
+    {
+      "key": "timeout_task_id",
+      "value": "TSK-0014-6018-1456-2413",
       "type": "string"
     }
   ],
@@ -271,6 +286,83 @@
           "raw": "{{base_url}}/api/v2/agreements",
           "host": ["{{base_url}}"],
           "path": ["api", "v2", "agreements"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "schedule / start flow ok (expected Defer, then Completed)",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{devmock_url}}/devmock/flows/ok/TSK-0014-6018-1456-2411",
+          "host": ["{{devmock_url}}"],
+          "path": ["devmock", "flows", "ok", "TSK-0014-6018-1456-2411"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "schedule / start flow cancel (expected Defer, then Failed)",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{devmock_url}}/devmock/flows/cancel/TSK-0014-6018-1456-2412",
+          "host": ["{{devmock_url}}"],
+          "path": ["devmock", "flows", "cancel", "TSK-0014-6018-1456-2412"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "schedule / start flow timeout (expected Defer, then Failed on deadline)",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{devmock_url}}/devmock/flows/timeout/{{timeout_task_id}}",
+          "host": ["{{devmock_url}}"],
+          "path": ["devmock", "flows", "timeout", "{{timeout_task_id}}"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "schedule / deliver timeout to secondary (expected Defer, no second handler)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "MPT-Task-Id", "value": "{{timeout_task_id}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"id\": \"{{$guid}}\",\n  \"object\": {\n    \"id\": \"mock.use-cases.timeout\",\n    \"name\": \"schedule-use-case-timeout\",\n    \"objectType\": \"Schedule\"\n  },\n  \"task\": {\n    \"id\": \"{{timeout_task_id}}\"\n  },\n  \"details\": {\n    \"enqueueTime\": \"{{$isoTimestamp}}\",\n    \"deliveryTime\": \"{{$isoTimestamp}}\",\n    \"eventType\": \"Schedule\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{secondary_base_url}}/api/v2/schedules/use-cases/timeout",
+          "host": ["{{secondary_base_url}}"],
+          "path": ["api", "v2", "schedules", "use-cases", "timeout"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "schedule / start flow defer (expected repeated Defer)",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{devmock_url}}/devmock/flows/defer/TSK-0014-6018-1456-2414",
+          "host": ["{{devmock_url}}"],
+          "path": ["devmock", "flows", "defer", "TSK-0014-6018-1456-2414"]
         }
       },
       "response": []
