@@ -5,11 +5,11 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from mpt_extension_sdk import APIRouter, EventRouter, Plug, PlugRouter
+from mpt_extension_sdk import APIRouter, EventRouter, Plug, PlugRouter, ScheduleRouter
 from mpt_extension_sdk.api import APIResponse
 from mpt_extension_sdk.errors.runtime import ConfigError
 from mpt_extension_sdk.extension_app import ExtensionApp
-from mpt_extension_sdk.routing import RouteType, ScheduleRouteDefinition
+from mpt_extension_sdk.routing import BaseRouteDefinition, RouteType
 from mpt_extension_sdk.runtime import app as runtime_app
 from mpt_extension_sdk.runtime.async_tasks import AsyncTaskRunner
 
@@ -242,22 +242,40 @@ def test_register_ext_routes_ignores_plugs(plug_extension_app):
     assert all(route.path != "/api/v1/plug_provider" for route in app.routes)
 
 
+def test_register_schedule_ext_routes(dummy_handler):
+    app = FastAPI()
+    extension_app = ExtensionApp(prefix="/api/v1")
+    router = ScheduleRouter(prefix="/schedules")
+    router.task(
+        "/agreements",
+        id="agreements.sync",
+        name="agreements-sync",
+        description="Synchronize agreements",
+        cron="0 * * * *",
+    )(dummy_handler)
+    extension_app.include_router(router)
+
+    runtime_app.register_extension_routes(app, extension_app)  # act
+
+    assert "/api/v1/schedules/agreements" in {route.path for route in app.routes}
+
+
 def test_register_not_supported_ext_routes(dummy_handler):
     app = FastAPI()
     extension_app = ExtensionApp(prefix="/api/v1")
     extension_app._routes.append(
-        ScheduleRouteDefinition(
-            path="/cron",
-            name="cron",
+        BaseRouteDefinition(
+            path="/unknown",
+            name="unknown",
             route_type=RouteType.SCHEDULE,
             callback=dummy_handler,
-            id="cron",
-            description="Cron task",
-            cron="0 0 * * *",
         )
     )
 
-    with pytest.raises(ConfigError, match="Only event, api, and plug routes are supported"):
+    with pytest.raises(
+        ConfigError,
+        match="Only event, api, schedule, and plug routes are supported",
+    ):
         runtime_app.register_extension_routes(app, extension_app)
 
 

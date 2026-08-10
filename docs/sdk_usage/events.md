@@ -79,6 +79,10 @@ The SDK validates that the schedule `id` is unique within the extension and that
 `cron` is a five-field expression, and emits each schedule into the generated
 metadata under `schedules` (`id`, `name`, `description`, `cron`, `path`).
 
-The runtime does not execute schedules yet: the delivery endpoint and execution
-protocol arrive in a later phase. Registering a schedule publishes it in metadata,
-but the SDK does not invoke the handler.
+The runtime executes schedules: the Extension Framework delivers each schedule
+occurrence to the SDK, which drives the delivery protocol. Every non-final task
+responds with `Defer` on the watchdog cadence, and the event is only `OK`'d once
+the task reaches a final state. The SDK then submits the handler to its
+application-scoped runner.
+
+See [schedules.md](schedules.md) for the full delivery protocol and handler guide.
