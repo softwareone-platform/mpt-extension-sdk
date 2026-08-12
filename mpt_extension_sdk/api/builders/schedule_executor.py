@@ -87,9 +87,11 @@ class ScheduleTaskExecutor:
                 if isinstance(context, EventResponse):
                     response = context
                 else:
-                    response = await self._start_and_submit(task=task, context=context)
+                    response = await self._start_and_submit(task=task, context=context, event=event)
             else:
-                response = EventResponse.reschedule(watchdog_delay_seconds(task))
+                response = EventResponse.reschedule(
+                    watchdog_delay_seconds(task, enqueued_at=event.details.enqueue_time)
+                )
         return response
 
     async def _build_context_or_failure(
@@ -109,7 +111,9 @@ class ScheduleTaskExecutor:
         except CONTEXT_CREATION_ERRORS as error:
             return self.acceptance.map_context_error(error)
 
-    async def _start_and_submit(self, *, task: Task, context: ScheduleContext) -> EventResponse:
+    async def _start_and_submit(
+        self, *, task: Task, context: ScheduleContext, event: TaskEvent
+    ) -> EventResponse:
         """Recover a lost task, start it, and submit the handler to the runner."""
         if task.is_processing:
             recovery_response = await self.acceptance.reschedule_lost_task(task.id)
@@ -120,9 +124,11 @@ class ScheduleTaskExecutor:
         if start_response is not None:
             return start_response
 
-        return await self._submit_to_runner(task=task, context=context)
+        return await self._submit_to_runner(task=task, context=context, event=event)
 
-    async def _submit_to_runner(self, *, task: Task, context: ScheduleContext) -> EventResponse:
+    async def _submit_to_runner(
+        self, *, task: Task, context: ScheduleContext, event: TaskEvent
+    ) -> EventResponse:
         """Submit an accepted schedule task to the application runner."""
         try:
             submitted = self.runner.submit(
@@ -145,4 +151,6 @@ class ScheduleTaskExecutor:
             return EventResponse.reschedule()
 
         self.handler_logger.debug("Schedule task %s submitted", task.id)
-        return EventResponse.reschedule(watchdog_delay_seconds(task))
+        return EventResponse.reschedule(
+            watchdog_delay_seconds(task, enqueued_at=event.details.enqueue_time)
+        )

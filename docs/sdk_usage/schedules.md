@@ -58,7 +58,9 @@ final state. The SDK decides each response from the platform task state:
 
 The watchdog cadence is an exponential backoff derived from the elapsed
 processing time, clamped between 5 and 30 minutes and capped by the event's
-remaining retention.
+remaining retention, which is measured from the `enqueueTime` in the delivery
+body. Near retention expiry the cap wins, so the delay can fall below the
+5-minute minimum to keep the redelivery inside the retention window.
 
 Authentication failures return `Cancel`. Transient failures (task fetch,
 context creation, task start) return `Defer` with the 5-minute default delay.

@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, Header, Request, status
 
 from mpt_extension_sdk.api.builders.dependencies import get_tasks_service
 from mpt_extension_sdk.api.builders.schedule_executor import ScheduleTaskExecutor
+from mpt_extension_sdk.api.builders.schedule_timing import delivery_latency_seconds
 from mpt_extension_sdk.api.models.events import EventResponse, TaskEvent
 from mpt_extension_sdk.extension_app import ExtensionApp
 from mpt_extension_sdk.routing import ScheduleRouteDefinition
@@ -25,9 +26,10 @@ def create_schedule_route(route: ScheduleRouteDefinition, extension_app: Extensi
         task_service: Annotated[TaskService, Depends(get_tasks_service)],
     ) -> EventResponse:
         handler_logger.info(
-            "Received schedule task (%s) on event (%s): %s",
+            "Received schedule task (%s) on event (%s) held for %.3fs: %s",
             task_id,
             event.id,
+            delivery_latency_seconds(event.details.enqueue_time, event.details.delivery_time),
             request.headers.get("x-envoy-original-path", request.url.path),
         )
         runner: AsyncTaskRunner = request.app.state.async_task_runner
