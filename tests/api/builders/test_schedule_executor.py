@@ -8,6 +8,7 @@ from mpt_extension_sdk.api.builders.schedule_executor import ScheduleTaskExecuto
 from mpt_extension_sdk.api.models.events import EventResponse, ResponseEnum
 from mpt_extension_sdk.errors.runtime import AsyncTasksRunnerError, ConfigError
 from mpt_extension_sdk.extension_app import ExtensionApp
+from mpt_extension_sdk.runtime.logging import event_id_ctx
 
 
 @pytest.fixture
@@ -22,11 +23,11 @@ def executor(schedule_route, task_service, async_task_runner, logger):
 
 
 @pytest.fixture
-def run(mocker, executor):
+def run(mocker, executor, task_event):
     http_request = mocker.Mock(spec=Request)
 
-    async def factory():
-        return await executor.execute(request=http_request, task_id="TSK-001")
+    async def factory(event=task_event):
+        return await executor.execute(request=http_request, task_id="TSK-001", event=event)
 
     return factory
 
@@ -220,3 +221,15 @@ async def test_cancels_non_recoverable_context(build_schedule_context, run):
     result = await run()
 
     assert result == EventResponse.cancel(reason="Non-recoverable context error")
+
+
+async def test_event_reaches_the_context(build_schedule_context, run, task_event):
+    await run()  # act
+
+    assert build_schedule_context.call_args.kwargs["event"] is task_event
+
+
+async def test_event_id_in_log_context(build_schedule_context, run, task_event):
+    await run()  # act
+
+    assert event_id_ctx.get() == task_event.id

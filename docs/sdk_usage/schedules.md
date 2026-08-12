@@ -4,8 +4,42 @@ Use `ScheduleRouter` to register periodic work triggered by the Extension
 Framework. The SDK publishes the cron configuration in extension metadata; it
 does not run an in-process scheduler.
 
-The Extension Framework invokes schedule endpoints without a request body and
-provides the platform task identifier through the `MPT-Task-Id` header.
+## Delivery body
+
+The Extension Framework delivers a schedule as a task event, and also provides
+the platform task identifier in the `MPT-Task-Id` header:
+
+```json
+{
+  "id": "e5b68484-42a3-4e8a-a699-ad4b4e029745",
+  "object": {
+    "id": "agreements.sync",
+    "name": "agreements-sync",
+    "objectType": "Schedule"
+  },
+  "task": {"id": "TSK-0014-2070-1237-2512"},
+  "details": {
+    "enqueueTime": "2026-08-11T17:04:00.000Z",
+    "deliveryTime": "2026-08-11T17:04:00.514Z",
+    "eventType": "Schedule"
+  }
+}
+```
+
+Both are required: the SDK takes the task identifier from the header and the
+event from the body, and rejects a delivery that is missing either. Handlers read
+the delivery through the schedule metadata:
+
+| `ctx.meta` field | Source |
+| --- | --- |
+| `schedule_id` | The registered schedule identifier |
+| `task_id` | The `MPT-Task-Id` header |
+| `event_id` | The event identifier from the body |
+| `enqueue_time` | When the framework enqueued the event |
+| `correlation_id` | The request correlation identifier |
+
+The event identifier is also part of the logging context, which is what joins an
+extension log line with the framework worker log for the same delivery.
 
 ## Delivery protocol
 

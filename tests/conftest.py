@@ -14,7 +14,7 @@ from mpt_extension_sdk.api.auth.constants import (
     CLAIM_EXTENSION_ID,
     CLAIM_MODULES,
 )
-from mpt_extension_sdk.api.models.events import Event
+from mpt_extension_sdk.api.models.events import Event, TaskEvent
 from mpt_extension_sdk.models.agreement import Agreement
 from mpt_extension_sdk.models.order import Order
 from mpt_extension_sdk.routing import EventRouter
@@ -104,6 +104,34 @@ def event_factory():
         })
 
     return factory
+
+
+@pytest.fixture
+def task_event_payload():
+    """Return the delivery body the Extension Framework sends for a schedule."""
+
+    def factory(task_id="TSK-001", event_id="e5b68484-42a3-4e8a-a699-ad4b4e029745"):
+        return {
+            "id": event_id,
+            "object": {
+                "id": "agreements.sync",
+                "name": "agreements-sync",
+                "objectType": "Schedule",
+            },
+            "task": {"id": task_id},
+            "details": {
+                "enqueueTime": "2026-08-11T17:04:00.000Z",
+                "deliveryTime": "2026-08-11T17:04:00.514Z",
+                "eventType": "Schedule",
+            },
+        }
+
+    return factory
+
+
+@pytest.fixture
+def task_event(task_event_payload):
+    return TaskEvent.model_validate(task_event_payload())
 
 
 @pytest.fixture
