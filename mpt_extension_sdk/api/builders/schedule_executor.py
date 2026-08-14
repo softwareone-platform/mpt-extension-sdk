@@ -15,7 +15,7 @@ from mpt_extension_sdk.api.builders.schedule_timing import (
     get_execution_deadline,
     watchdog_delay_seconds,
 )
-from mpt_extension_sdk.api.models.events import EventResponse
+from mpt_extension_sdk.api.models.events import EventResponse, TaskEvent
 from mpt_extension_sdk.errors.runtime import AsyncTasksRunnerError
 from mpt_extension_sdk.extension_app import ExtensionApp
 from mpt_extension_sdk.models.task import Task
@@ -49,19 +49,21 @@ class ScheduleTaskExecutor:
             handler_logger=handler_logger,
         )
 
-    async def execute(self, *, request: Request, task_id: str) -> EventResponse:
+    async def execute(self, *, request: Request, task_id: str, event: TaskEvent) -> EventResponse:
         """Answer a schedule delivery according to the platform task state."""
-        set_event_context(task_id=task_id)
+        set_event_context(task_id=task_id, event_id=event.id)
         try:
             auth = RequestAuthenticationService().authenticate(request)
         except AuthenticationError:
             self.handler_logger.exception("Schedule task authentication failed")
             response = EventResponse.cancel(reason="Authentication failed")
         else:
-            response = await self._respond_by_task_state(task_id=task_id, auth=auth)
+            response = await self._respond_by_task_state(task_id=task_id, auth=auth, event=event)
         return response
 
-    async def _respond_by_task_state(self, *, task_id: str, auth: AuthContext) -> EventResponse:
+    async def _respond_by_task_state(
+        self, *, task_id: str, auth: AuthContext, event: TaskEvent
+    ) -> EventResponse:
         """Choose the delivery response from the current platform task state."""
         task = await self.acceptance.fetch_task(task_id)
         if task is None:
@@ -70,14 +72,18 @@ class ScheduleTaskExecutor:
             self.handler_logger.info("Schedule task %s is final: acknowledging the event", task_id)
             response = EventResponse.ok()
         else:
-            response = await self._handle_non_final_delivery(task=task, auth=auth)
+            response = await self._handle_non_final_delivery(task=task, auth=auth, event=event)
         return response
 
-    async def _handle_non_final_delivery(self, *, task: Task, auth: AuthContext) -> EventResponse:
+    async def _handle_non_final_delivery(
+        self, *, task: Task, auth: AuthContext, event: TaskEvent
+    ) -> EventResponse:
         """Reserve the task locally and accept it, or defer when already reserved."""
         with self.runner.reserve(task.id) as reserved:
             if reserved:
-                context = await self._build_context_or_failure(auth=auth, task_id=task.id)
+                context = await self._build_context_or_failure(
+                    auth=auth, task_id=task.id, event=event
+                )
                 if isinstance(context, EventResponse):
                     response = context
                 else:
@@ -87,7 +93,7 @@ class ScheduleTaskExecutor:
         return response
 
     async def _build_context_or_failure(
-        self, *, auth: AuthContext, task_id: str
+        self, *, auth: AuthContext, task_id: str, event: TaskEvent
     ) -> ScheduleContext | EventResponse:
         """Build the schedule context or map the acceptance failure to a response."""
         factory = RouteContextFactory.from_service_type(self.extension_app.mpt_api_service_type)
@@ -98,6 +104,7 @@ class ScheduleTaskExecutor:
                 handler_logger=self.handler_logger,
                 auth=auth,
                 task_service=self.task_service,
+                event=event,
             )
         except CONTEXT_CREATION_ERRORS as error:
             return self.acceptance.map_context_error(error)

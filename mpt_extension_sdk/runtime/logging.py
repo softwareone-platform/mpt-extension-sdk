@@ -14,16 +14,20 @@ from mpt_extension_sdk.models.status import UnknownStatusWarning
 correlation_id_ctx: contextvars.ContextVar[str] = contextvars.ContextVar(
     "correlation_id", default=""
 )
+event_id_ctx: contextvars.ContextVar[str] = contextvars.ContextVar("event_id", default="")
 task_id_ctx: contextvars.ContextVar[str] = contextvars.ContextVar("task_id", default="")
 order_id_ctx: contextvars.ContextVar[str] = contextvars.ContextVar("order_id", default="")
 agreement_id_ctx: contextvars.ContextVar[str] = contextvars.ContextVar("agreement_id", default="")
 
 
-def set_event_context(*, task_id: str = "", order_id: str = "", agreement_id: str = "") -> None:
+def set_event_context(
+    *, event_id: str = "", task_id: str = "", order_id: str = "", agreement_id: str = ""
+) -> None:
     """Persist entity identifiers for the current event execution."""
     agreement_id_ctx.set(agreement_id)
     order_id_ctx.set(order_id)
     task_id_ctx.set(task_id)
+    event_id_ctx.set(event_id)
 
 
 class CorrelationIdFilter(Filter):
@@ -44,6 +48,8 @@ class CorrelationIdFilter(Filter):
         """
         correlation_id = correlation_id_ctx.get()
         record.correlation_id = correlation_id
+        event_id = event_id_ctx.get()
+        record.event_id = event_id
         task_id = task_id_ctx.get()
         record.task_id = task_id
         order_id = order_id_ctx.get()
@@ -55,6 +61,8 @@ class CorrelationIdFilter(Filter):
         record.span_id = getattr(record, "otelSpanID", "")
 
         parts = [f"({task_id})"] if task_id else []
+        if event_id:
+            parts.append(f"(event: {event_id})")
         if order_id:
             parts.append(f"(order: {order_id})")
         if agreement_id:

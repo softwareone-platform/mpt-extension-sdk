@@ -1,3 +1,4 @@
+import datetime as dt
 import logging
 from dataclasses import dataclass
 
@@ -13,6 +14,8 @@ logger = logging.getLogger(__name__)
 class ScheduleMetadata:
     """Immutable schedule execution metadata."""
 
+    enqueue_time: dt.datetime
+    event_id: str
     schedule_id: str
     task_id: str
     correlation_id: str | None = None

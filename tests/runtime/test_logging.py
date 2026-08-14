@@ -83,11 +83,12 @@ def test_get_azure_handler_requires_service_name(
     azure_monitor_modules["azure_exporter"].assert_not_called()
 
 
-def test_set_event_context_updates_context_vars():
+def test_set_event_context_updates_context_vars():  # noqa: WPS218
     runtime_logging.set_event_context(
-        task_id="TASK-1", order_id="ORD-1", agreement_id="AGR-1"
+        event_id="EVT-1", task_id="TASK-1", order_id="ORD-1", agreement_id="AGR-1"
     )  # act
 
+    assert runtime_logging.event_id_ctx.get() == "EVT-1"
     assert runtime_logging.task_id_ctx.get() == "TASK-1"
     assert runtime_logging.order_id_ctx.get() == "ORD-1"
     assert runtime_logging.agreement_id_ctx.get() == "AGR-1"
@@ -95,7 +96,9 @@ def test_set_event_context_updates_context_vars():
 
 def test_correlation_id_filter_sets_record_fields():  # noqa: WPS218
     runtime_logging.correlation_id_ctx.set("corr-1")
-    runtime_logging.set_event_context(task_id="TASK-1", order_id="ORD-1", agreement_id="AGR-1")
+    runtime_logging.set_event_context(
+        event_id="EVT-1", task_id="TASK-1", order_id="ORD-1", agreement_id="AGR-1"
+    )
     record = logging.LogRecord("tests", logging.INFO, __file__, 10, "msg", (), None)
     record.otelTraceID = "trace-1"
     record.otelSpanID = "span-1"
@@ -104,12 +107,15 @@ def test_correlation_id_filter_sets_record_fields():  # noqa: WPS218
 
     assert result is True
     assert record.correlation_id == "corr-1"
+    assert record.event_id == "EVT-1"
     assert record.task_id == "TASK-1"
     assert record.order_id == "ORD-1"
     assert record.agreement_id == "AGR-1"
     assert record.trace_id == "trace-1"
     assert record.span_id == "span-1"
-    assert record.request_context == ("(TASK-1) (order: ORD-1) (agreement: AGR-1) (trace: trace-1)")
+    assert record.request_context == (
+        "(TASK-1) (event: EVT-1) (order: ORD-1) (agreement: AGR-1) (trace: trace-1)"
+    )
 
 
 def test_filter_without_optional_data():
@@ -122,13 +128,14 @@ def test_filter_without_optional_data():
     assert result is True
     assert (
         record.correlation_id,
+        record.event_id,
         record.task_id,
         record.order_id,
         record.agreement_id,
         record.trace_id,
         record.span_id,
         record.request_context,
-    ) == ("corr-2", "", "", "", "", "", "")
+    ) == ("corr-2", "", "", "", "", "", "", "")
 
 
 def test_get_logging_config_includes_ext_logger():

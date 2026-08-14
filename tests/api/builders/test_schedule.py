@@ -36,13 +36,57 @@ def patch_context(mocker, schedule_context):
     return factory.return_value.build_schedule_context
 
 
-def test_route_defers_queued_task(patch_context, schedule_client, schedule_route, task_headers):
-    result = schedule_client.post(schedule_route.path, headers=task_headers)
+def test_route_defers_queued_task(
+    patch_context, schedule_client, schedule_route, task_headers, task_event_payload
+):
+    result = schedule_client.post(
+        schedule_route.path, json=task_event_payload(), headers=task_headers
+    )
 
     assert result.json()["response"] == ResponseEnum.DEFER
 
 
-def test_route_requires_task_id_header(patch_context, schedule_client, schedule_route):
-    result = schedule_client.post(schedule_route.path)
+def test_route_requires_task_id_header(
+    patch_context, schedule_client, schedule_route, task_event_payload
+):
+    result = schedule_client.post(schedule_route.path, json=task_event_payload())
 
     assert result.status_code == 422
+
+
+def test_route_requires_task_event_body(
+    patch_context, schedule_client, schedule_route, task_headers
+):
+    result = schedule_client.post(schedule_route.path, headers=task_headers)
+
+    assert result.status_code == 422
+
+
+def test_route_rejects_unexpected_body(
+    patch_context, schedule_client, schedule_route, task_headers
+):
+    result = schedule_client.post(
+        schedule_route.path, json={"unexpected": "body"}, headers=task_headers
+    )
+
+    assert result.status_code == 422
+
+
+def test_route_exposes_delivered_event(
+    patch_context, schedule_client, schedule_route, task_headers, task_event_payload
+):
+    schedule_client.post(  # act
+        schedule_route.path, json=task_event_payload(), headers=task_headers
+    )
+
+    assert patch_context.call_args.kwargs["event"].id == "e5b68484-42a3-4e8a-a699-ad4b4e029745"
+
+
+def test_route_reads_task_id_from_header(
+    patch_context, schedule_client, schedule_route, task_headers, task_event_payload, task_service
+):
+    schedule_client.post(  # act
+        schedule_route.path, json=task_event_payload(task_id="TSK-BODY"), headers=task_headers
+    )
+
+    task_service.get.assert_awaited_once_with("TSK-001")

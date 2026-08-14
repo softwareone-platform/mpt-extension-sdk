@@ -1,3 +1,4 @@
+import datetime as dt
 from contextlib import contextmanager
 
 import pytest
@@ -205,7 +206,9 @@ async def test_build_context_rejects_mismatched_ext_id(
     FakeAuthAPIService.from_auth_context.assert_not_awaited()
 
 
-async def test_build_schedule_context(mocker, logger, runtime_settings, task_service, auth):
+async def test_build_schedule_context(
+    mocker, logger, runtime_settings, task_service, auth, task_event
+):
     service = mocker.AsyncMock(spec=MPTAPIService)
     mocker.patch(
         "mpt_extension_sdk.pipeline.factory.get_runtime_settings",
@@ -219,6 +222,7 @@ async def test_build_schedule_context(mocker, logger, runtime_settings, task_ser
     )
     FakeAuthAPIService.from_auth_context = mocker.AsyncMock(return_value=service)
     factory = RouteContextFactory.from_service_type(FakeAuthAPIService)
+    enqueued_at = dt.datetime(2026, 8, 11, 17, 4, tzinfo=dt.UTC)
 
     result = await factory.build_schedule_context(
         schedule_id="agreements.sync",
@@ -226,6 +230,7 @@ async def test_build_schedule_context(mocker, logger, runtime_settings, task_ser
         handler_logger=logger,
         auth=auth,
         task_service=task_service,
+        event=task_event,
     )
 
     assert isinstance(result, ScheduleContext)
@@ -234,3 +239,4 @@ async def test_build_schedule_context(mocker, logger, runtime_settings, task_ser
         "TSK-1",
         "TSK-1",
     )
+    assert (result.meta.event_id, result.meta.enqueue_time) == (task_event.id, enqueued_at)

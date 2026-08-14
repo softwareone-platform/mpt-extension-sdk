@@ -4,7 +4,7 @@ from typing import Any, Self
 
 from mpt_extension_sdk.api.auth import AuthContext, AuthenticationError
 from mpt_extension_sdk.api.context import APIContext, AuthenticatedRequestContext
-from mpt_extension_sdk.api.models.events import Event
+from mpt_extension_sdk.api.models.events import Event, TaskEvent
 from mpt_extension_sdk.pipeline.context.agreement import AgreementContext
 from mpt_extension_sdk.pipeline.context.event import EventBaseContext, EventMetadata
 from mpt_extension_sdk.pipeline.context.order import OrderContext
@@ -75,7 +75,7 @@ class RouteContextFactory:
             event, handler_logger, api_service, auth=auth
         )
 
-    async def build_schedule_context(
+    async def build_schedule_context(  # noqa: WPS211
         self,
         *,
         schedule_id: str,
@@ -83,6 +83,7 @@ class RouteContextFactory:
         handler_logger: logging.Logger,
         auth: AuthContext,
         task_service: TaskService,
+        event: TaskEvent,
     ) -> ScheduleContext:
         """Build the authenticated context for a schedule execution."""
         self._assert_extension_id_matches(auth)
@@ -92,6 +93,8 @@ class RouteContextFactory:
         return ScheduleContext(
             logger=handler_logger,
             meta=ScheduleMetadata(
+                enqueue_time=event.details.enqueue_time,
+                event_id=event.id,
                 schedule_id=schedule_id,
                 task_id=task_id,
                 correlation_id=correlation_id_ctx.get(),
