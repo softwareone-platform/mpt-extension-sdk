@@ -1,3 +1,5 @@
+import datetime as dt
+
 import pytest
 from fastapi import Request
 from freezegun import freeze_time
@@ -5,10 +7,15 @@ from mpt_api_client.exceptions import MPTError
 
 from mpt_extension_sdk.api.auth import AuthenticationError
 from mpt_extension_sdk.api.builders.schedule_executor import ScheduleTaskExecutor
+from mpt_extension_sdk.api.builders.schedule_timing import EVENT_RETENTION_SECONDS
 from mpt_extension_sdk.api.models.events import EventResponse, ResponseEnum
 from mpt_extension_sdk.errors.runtime import AsyncTasksRunnerError, ConfigError
 from mpt_extension_sdk.extension_app import ExtensionApp
 from mpt_extension_sdk.runtime.logging import event_id_ctx
+
+# Shortly after the delivery time of the task_event fixture, so the event of every
+# delivery under test was enqueued in the past, as the framework delivers it.
+DELIVERED_AT = "2026-08-11T17:05:00Z"
 
 
 @pytest.fixture
@@ -46,7 +53,7 @@ def build_schedule_context(mocker, schedule_context):
     return factory.return_value.build_schedule_context
 
 
-@freeze_time("2024-06-01")
+@freeze_time(DELIVERED_AT)
 async def test_queued_defers_watchdog(build_schedule_context, run):
     result = await run()
 
@@ -73,7 +80,7 @@ async def test_submitted_execution_runs_handler(
     schedule_callback.assert_awaited_once_with(schedule_context)
 
 
-@freeze_time("2024-06-01")
+@freeze_time(DELIVERED_AT)
 async def test_submitted_execution_deadline(build_schedule_context, run, async_task_runner):
     await run()
 
@@ -100,7 +107,7 @@ async def test_final_task_skips_runner(
     async_task_runner.reserve.assert_not_called()
 
 
-@freeze_time("2024-06-01")
+@freeze_time(DELIVERED_AT)
 async def test_watchdog_defers_while_running(
     build_schedule_context, run, task_service, task_factory, async_task_runner
 ):
@@ -221,6 +228,17 @@ async def test_cancels_non_recoverable_context(build_schedule_context, run):
     result = await run()
 
     assert result == EventResponse.cancel(reason="Non-recoverable context error")
+
+
+async def test_watchdog_capped_by_event_retention(build_schedule_context, run, task_event):
+    hundred_seconds_left = task_event.details.enqueue_time + dt.timedelta(
+        seconds=EVENT_RETENTION_SECONDS - 100
+    )
+
+    with freeze_time(hundred_seconds_left):
+        result = await run()
+
+    assert result == EventResponse.reschedule(40)
 
 
 async def test_event_reaches_the_context(build_schedule_context, run, task_event):
