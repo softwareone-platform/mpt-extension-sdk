@@ -52,8 +52,8 @@ final state. The SDK decides each response from the platform task state:
 | --- | --- | --- |
 | `Queued` (first delivery) | Start task, submit handler | `Defer` (watchdog cadence) |
 | `Rescheduled` | Start task, submit handler | `Defer` (watchdog cadence) |
-| `Processing`, running in this instance | None — this is the watchdog | `Defer` (watchdog cadence) |
-| `Processing`, not running in this instance | Lost execution: reschedule, start, submit handler | `Defer` (watchdog cadence) |
+| `Processing`, running in this process | None — this is the watchdog | `Defer` (watchdog cadence) |
+| `Processing`, running elsewhere | None — the platform rejects the claim | `Defer` (watchdog cadence) |
 | `Completed` / `Failed` | None | `OK` — the event is acknowledged |
 
 The watchdog cadence is an exponential backoff derived from the elapsed
@@ -80,10 +80,19 @@ Transient failures (task fetch, context creation, task start) return `Defer`
 with the 5-minute default delay. If submission fails after the task starts, the
 SDK reschedules the task and returns `Defer`.
 
-The runner reserves the task identifier synchronously before context creation.
-Concurrent delivery of the same task identifier therefore cannot start or
-submit the task twice; the extra delivery is answered with `Defer`, keeping
-the watchdog alive. Failed acceptance releases the reservation.
+## Claiming an execution
+
+Starting the platform task is the claim. The platform accepts that transition
+only from a retryable state, so it rejects every delivery of a task that is
+already being executed, and the SDK answers the rejection with `Defer` at the
+watchdog cadence.
+
+A delivery can reach any instance of the extension, and any of its worker
+processes. Keeping the claim in the platform is what limits a task to one
+execution across all of them. The runner still reserves the task identifier
+locally, but only to spare the round trip when a redelivery lands on the
+process already running it. See [configuration.md](../configuration.md) for
+the worker count settings.
 
 ## Schedule Tasks
 
@@ -183,6 +192,12 @@ this when routers are included and when extension metadata is validated.
 Schedule handlers must be idempotent and must not rely on process-local state.
 If an extension instance shuts down gracefully during execution, the SDK fails
 the platform task with an explicit interruption reason and the next cron
-occurrence executes normally. After an abrupt termination (crash, OOM), the
-next watchdog delivery finds the task in `Processing` without a local
-execution and restarts it, re-executing the handler from the beginning.
+occurrence executes normally.
+
+After an abrupt termination (crash, OOM) no lifecycle call is possible and the
+task stays in `Processing`. The SDK does not restart it, because a delivery
+cannot tell a lost execution from one running in another process or instance.
+The platform finalizes the task when it exceeds `maxTaskProcessingSeconds`, and
+the following delivery finds it in `Failed` and acknowledges the event. The
+interrupted occurrence is skipped rather than executed twice. The next cron
+occurrence runs normally.

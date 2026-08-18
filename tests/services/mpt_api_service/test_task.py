@@ -54,28 +54,26 @@ async def test_task_service_get(service, tasks_client):
 
     tasks_client.get.assert_awaited_once_with("TASK-1")
     assert task.id == "TASK-1"
-    assert task.is_processing is True
     assert task.is_final is False
     assert task.created_at is not None
 
 
 @pytest.mark.parametrize(
-    ("status", "is_final", "is_processing"),
+    ("status", "is_final"),
     [
-        ("Completed", True, False),
-        ("Failed", True, False),
-        ("Processing", False, True),
-        ("Queued", False, False),
-        ("Rescheduled", False, False),
-        ("Waiting", False, False),
+        ("Completed", True),
+        ("Failed", True),
+        ("Processing", False),
+        ("Queued", False),
+        ("Rescheduled", False),
+        ("Waiting", False),
     ],
 )
 @pytest.mark.filterwarnings("ignore::mpt_extension_sdk.models.task.UnknownTaskStatusWarning")
-def test_task_status_helpers(status, is_final, is_processing):
+def test_task_status_helpers(status, is_final):
     task = Task(id="TASK-1", status=status)  # act
 
     assert task.is_final is is_final
-    assert task.is_processing is is_processing
 
 
 def test_task_status_parses_known_status_as_enum():

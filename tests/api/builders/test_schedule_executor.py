@@ -130,31 +130,49 @@ async def test_watchdog_skips_acceptance(
     build_schedule_context.assert_not_awaited()
 
 
-async def test_recovers_lost_processing_task(
-    build_schedule_context, run, task_service, task_factory
+async def test_task_claimed_elsewhere_not_restarted(
+    build_schedule_context, run, task_service, task_factory, task_conflict
 ):
     task_service.get.return_value = task_factory("Processing", started_seconds_ago=600)
-
-    await run()  # act
-
-    task_service.reschedule.assert_awaited_once_with("TSK-001")
-
-
-async def test_rescheduled_restarts(build_schedule_context, run, task_service, task_factory):
-    task_service.get.return_value = task_factory("Rescheduled")
+    task_service.start.side_effect = task_conflict
 
     await run()  # act
 
     task_service.reschedule.assert_not_awaited()
 
 
-async def test_defers_when_recovery_fails(build_schedule_context, run, task_service, task_factory):
+async def test_task_claimed_elsewhere_skips_handler(
+    build_schedule_context, run, task_service, task_factory, task_conflict, async_task_runner
+):
     task_service.get.return_value = task_factory("Processing", started_seconds_ago=600)
-    task_service.reschedule.side_effect = MPTError("tasks API unavailable")
+    task_service.start.side_effect = task_conflict
+
+    await run()  # act
+
+    async_task_runner.submit.assert_not_called()
+
+
+@freeze_time(DELIVERED_AT)
+async def test_task_claimed_elsewhere_keeps_cadence(
+    build_schedule_context, run, task_service, task_factory, task_conflict
+):
+    task_service.get.return_value = task_factory("Processing", started_seconds_ago=600)
+    task_service.start.side_effect = task_conflict
 
     result = await run()
 
-    assert result.response == ResponseEnum.DEFER
+    assert result == EventResponse.reschedule(600)
+
+
+async def test_rescheduled_starts_and_submits(
+    build_schedule_context, run, task_service, task_factory, async_task_runner
+):
+    task_service.get.return_value = task_factory("Rescheduled")
+
+    await run()  # act
+
+    task_service.start.assert_awaited_once_with("TSK-001")
+    async_task_runner.submit.assert_called_once()
 
 
 async def test_defers_when_submit_fails(

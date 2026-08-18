@@ -6,6 +6,7 @@ from mpt_extension_sdk.api.auth import AuthenticationError
 from mpt_extension_sdk.api.models.events import EventResponse
 from mpt_extension_sdk.errors.runtime import ConfigError, ValidationError
 from mpt_extension_sdk.models.task import Task
+from mpt_extension_sdk.runtime.task_transitions import TASK_CONFLICT_STATUS_CODE
 from mpt_extension_sdk.services.mpt_api_service.task import TaskService
 
 NON_RECOVERABLE_CONTEXT_ERRORS = (ConfigError, ValidationError, TypeError, ValueError)
@@ -28,21 +29,28 @@ class ScheduleTaskAcceptance:
             self.handler_logger.exception("Could not fetch schedule task", exc_info=error)
             return None
 
-    async def reschedule_lost_task(self, task_id: str) -> EventResponse | None:
-        """Move a lost Processing task back to a retryable state."""
-        try:
-            await self.task_service.reschedule(task_id)
-        except MPTError as error:
-            self.handler_logger.exception("Schedule task recovery failed", exc_info=error)
-            return EventResponse.reschedule()
-        self.handler_logger.warning("Schedule task %s lost its execution and will restart", task_id)
-        return None
+    async def start_task(self, task_id: str, *, watchdog_delay: int) -> EventResponse | None:
+        """Claim a platform task and return a deferring response when it is not claimed.
 
-    async def start_task(self, task_id: str) -> EventResponse | None:
-        """Start a platform task and return a deferring response on failure."""
+        Starting the task is the claim: the platform only accepts the transition from a
+        retryable state, so it rejects with a conflict every delivery of a task that is
+        already being executed, whichever worker process or instance the delivery lands on.
+
+        Args:
+            task_id: Unique identifier of the platform task.
+            watchdog_delay: Delay to answer with when another execution holds the task.
+
+        Returns:
+            None when this delivery claimed the task, otherwise the deferring response.
+        """
         try:
             await self.task_service.start(task_id)
         except MPTError as error:
+            if getattr(error, "status_code", None) == TASK_CONFLICT_STATUS_CODE:
+                self.handler_logger.info(
+                    "Schedule task %s is already claimed by another execution", task_id
+                )
+                return EventResponse.reschedule(watchdog_delay)
             self.handler_logger.exception("Schedule task start failed", exc_info=error)
             return EventResponse.reschedule()
         return None

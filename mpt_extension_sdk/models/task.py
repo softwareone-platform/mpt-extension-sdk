@@ -26,7 +26,6 @@ class TaskStatus(CaseInsensitiveStrEnum):
     RESCHEDULED = "rescheduled"
 
 
-ACTIVE_STATUSES = frozenset((TaskStatus.PROCESSING,))
 FINAL_STATUSES = frozenset((TaskStatus.COMPLETED, TaskStatus.FAILED))
 
 
@@ -57,11 +56,6 @@ class Task(BaseModel):
     def is_final(self) -> bool:
         """Whether the task has reached a final state."""
         return self.status in FINAL_STATUSES
-
-    @property
-    def is_processing(self) -> bool:
-        """Whether the task is in an active processing state."""
-        return self.status in ACTIVE_STATUSES
 
     @property
     def created_at(self) -> dt.datetime | None:

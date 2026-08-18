@@ -84,7 +84,7 @@ class ScheduleTaskExecutor:
     async def _handle_non_final_delivery(
         self, *, task: Task, auth: AuthContext, event: TaskEvent
     ) -> EventResponse:
-        """Reserve the task locally and accept it, or defer when already reserved."""
+        watchdog_delay = watchdog_delay_seconds(task, enqueued_at=event.details.enqueue_time)
         with self.runner.reserve(task.id) as reserved:
             if reserved:
                 context = await self._build_context_or_failure(
@@ -93,17 +93,16 @@ class ScheduleTaskExecutor:
                 if isinstance(context, EventResponse):
                     response = context
                 else:
-                    response = await self._start_and_submit(task=task, context=context, event=event)
+                    response = await self._start_and_submit(
+                        task=task, context=context, watchdog_delay=watchdog_delay
+                    )
             else:
-                response = EventResponse.reschedule(
-                    watchdog_delay_seconds(task, enqueued_at=event.details.enqueue_time)
-                )
+                response = EventResponse.reschedule(watchdog_delay)
         return response
 
     async def _build_context_or_failure(
         self, *, auth: AuthContext, task_id: str, event: TaskEvent
     ) -> ScheduleContext | EventResponse:
-        """Build the schedule context or map the acceptance failure to a response."""
         factory = RouteContextFactory.from_service_type(self.extension_app.mpt_api_service_type)
         try:
             return await factory.build_schedule_context(
@@ -118,24 +117,19 @@ class ScheduleTaskExecutor:
             return self.acceptance.map_context_error(error)
 
     async def _start_and_submit(
-        self, *, task: Task, context: ScheduleContext, event: TaskEvent
+        self, *, task: Task, context: ScheduleContext, watchdog_delay: int
     ) -> EventResponse:
-        """Recover a lost task, start it, and submit the handler to the runner."""
-        if task.is_processing:
-            recovery_response = await self.acceptance.reschedule_lost_task(task.id)
-            if recovery_response is not None:
-                return recovery_response
-
-        start_response = await self.acceptance.start_task(task.id)
+        start_response = await self.acceptance.start_task(task.id, watchdog_delay=watchdog_delay)
         if start_response is not None:
             return start_response
 
-        return await self._submit_to_runner(task=task, context=context, event=event)
+        return await self._submit_to_runner(
+            task=task, context=context, watchdog_delay=watchdog_delay
+        )
 
     async def _submit_to_runner(
-        self, *, task: Task, context: ScheduleContext, event: TaskEvent
+        self, *, task: Task, context: ScheduleContext, watchdog_delay: int
     ) -> EventResponse:
-        """Submit an accepted schedule task to the application runner."""
         try:
             submitted = self.runner.submit(
                 execution=TaskExecution(
@@ -157,6 +151,4 @@ class ScheduleTaskExecutor:
             return EventResponse.reschedule()
 
         self.handler_logger.debug("Schedule task %s submitted", task.id)
-        return EventResponse.reschedule(
-            watchdog_delay_seconds(task, enqueued_at=event.details.enqueue_time)
-        )
+        return EventResponse.reschedule(watchdog_delay)
