@@ -30,12 +30,28 @@ ACTIVE_STATUSES = frozenset((TaskStatus.PROCESSING,))
 FINAL_STATUSES = frozenset((TaskStatus.COMPLETED, TaskStatus.FAILED))
 
 
+class TaskParameters(BaseModel):
+    """Lifetime limits the platform publishes with a task."""
+
+    max_task_processing_seconds: float | None = Field(
+        default=None,
+        serialization_alias="maxTaskProcessingSeconds",
+        validation_alias="maxTaskProcessingSeconds",
+    )
+    max_task_lifetime_seconds: float | None = Field(
+        default=None,
+        serialization_alias="maxTaskLifetimeSeconds",
+        validation_alias="maxTaskLifetimeSeconds",
+    )
+
+
 class Task(BaseModel):
     """Platform task tracked by a schedule execution."""
 
     id: str
     status: TaskStatus | str = Field(union_mode="left_to_right")
     audit: Audit | None = None
+    parameters: TaskParameters | None = None  # noqa: WPS110
 
     @property
     def is_final(self) -> bool:

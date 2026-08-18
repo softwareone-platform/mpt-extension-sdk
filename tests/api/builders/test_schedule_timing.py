@@ -4,8 +4,10 @@ import pytest
 from freezegun import freeze_time
 
 from mpt_extension_sdk.api.builders.schedule_timing import (
+    FALLBACK_MAX_TASK_PROCESSING,
     MAX_WATCHDOG_DELAY_SECONDS,
     MIN_WATCHDOG_DELAY_SECONDS,
+    TASK_TIMEOUT_SAFETY_MARGIN,
     delivery_latency_seconds,
     get_execution_deadline,
     watchdog_delay_seconds,
@@ -88,6 +90,44 @@ def test_deadline_subtracts_elapsed_processing(task_factory):
     result = get_execution_deadline(task)
 
     assert result == 40
+
+
+@freeze_time("2024-06-01")
+def test_deadline_uses_published_processing(task_factory, mocker):
+    logger = mocker.patch("mpt_extension_sdk.api.builders.schedule_timing.logger")
+    task = task_factory("Queued", task_parameters={"maxTaskProcessingSeconds": 3600})
+
+    result = get_execution_deadline(task)
+
+    assert result == 3540
+    reported_fields = [call.args[1] for call in logger.error.call_args_list]
+    assert reported_fields == ["maxTaskLifetimeSeconds"]
+
+
+@freeze_time("2024-06-01")
+def test_deadline_uses_published_lifetime(task_factory, mocker):
+    logger = mocker.patch("mpt_extension_sdk.api.builders.schedule_timing.logger")
+    task = task_factory(
+        "Processing", created_seconds_ago=42000, task_parameters={"maxTaskLifetimeSeconds": 43200}
+    )
+
+    result = get_execution_deadline(task)
+
+    assert result == 1140
+    reported_fields = [call.args[1] for call in logger.error.call_args_list]
+    assert reported_fields == ["maxTaskProcessingSeconds"]
+
+
+@freeze_time("2024-06-01")
+def test_deadline_reports_error_on_missing_limits(task_factory, mocker):
+    logger = mocker.patch("mpt_extension_sdk.api.builders.schedule_timing.logger")
+    task = task_factory("Queued")
+
+    result = get_execution_deadline(task)
+
+    assert result == FALLBACK_MAX_TASK_PROCESSING - TASK_TIMEOUT_SAFETY_MARGIN
+    reported_fields = [call.args[1] for call in logger.error.call_args_list]
+    assert reported_fields == ["maxTaskProcessingSeconds", "maxTaskLifetimeSeconds"]
 
 
 @freeze_time("2024-06-01")
