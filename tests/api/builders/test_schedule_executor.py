@@ -222,6 +222,18 @@ async def test_cancels_on_auth_failure(mocker, run):
     assert result == EventResponse.cancel(reason="Authentication failed")
 
 
+async def test_final_task_ok_without_auth(mocker, run, task_service, task_factory):
+    task_service.get.return_value = task_factory("Completed")
+    mocker.patch(
+        "mpt_extension_sdk.api.builders.schedule_executor.RequestAuthenticationService.authenticate",
+        side_effect=AuthenticationError,
+    )
+
+    result = await run()
+
+    assert result == EventResponse.ok()
+
+
 async def test_cancels_non_recoverable_context(build_schedule_context, run):
     build_schedule_context.side_effect = ConfigError("invalid extension configuration")
 

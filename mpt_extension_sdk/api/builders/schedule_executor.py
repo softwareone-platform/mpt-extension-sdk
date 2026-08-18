@@ -50,30 +50,36 @@ class ScheduleTaskExecutor:
         )
 
     async def execute(self, *, request: Request, task_id: str, event: TaskEvent) -> EventResponse:
-        """Answer a schedule delivery according to the platform task state."""
+        """Answer a schedule delivery according to the platform task state.
+
+        The task state is read before authentication, so a task read as final is
+        acknowledged instead of answered with `Cancel`: the framework applies a `Cancel`
+        answer to the task, and it does so even when the task is already `Completed`,
+        which would record a successful execution as failed. A task that becomes final
+        after the read is still exposed, which the SDK cannot prevent: the framework
+        performs the transition, so no call of ours can carry a precondition.
+        """
         set_event_context(task_id=task_id, event_id=event.id)
+        task = await self.acceptance.fetch_task(task_id)
+        if task is None:
+            return EventResponse.reschedule()
+
+        if task.is_final:
+            self.handler_logger.info("Schedule task %s is final: acknowledging the event", task_id)
+            return EventResponse.ok()
+
+        return await self._authenticated_delivery(request=request, task=task, event=event)
+
+    async def _authenticated_delivery(
+        self, *, request: Request, task: Task, event: TaskEvent
+    ) -> EventResponse:
         try:
             auth = RequestAuthenticationService().authenticate(request)
         except AuthenticationError:
             self.handler_logger.exception("Schedule task authentication failed")
-            response = EventResponse.cancel(reason="Authentication failed")
-        else:
-            response = await self._respond_by_task_state(task_id=task_id, auth=auth, event=event)
-        return response
+            return EventResponse.cancel(reason="Authentication failed")
 
-    async def _respond_by_task_state(
-        self, *, task_id: str, auth: AuthContext, event: TaskEvent
-    ) -> EventResponse:
-        """Choose the delivery response from the current platform task state."""
-        task = await self.acceptance.fetch_task(task_id)
-        if task is None:
-            response = EventResponse.reschedule()
-        elif task.is_final:
-            self.handler_logger.info("Schedule task %s is final: acknowledging the event", task_id)
-            response = EventResponse.ok()
-        else:
-            response = await self._handle_non_final_delivery(task=task, auth=auth, event=event)
-        return response
+        return await self._handle_non_final_delivery(task=task, auth=auth, event=event)
 
     async def _handle_non_final_delivery(
         self, *, task: Task, auth: AuthContext, event: TaskEvent
