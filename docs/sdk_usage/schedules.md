@@ -62,10 +62,23 @@ remaining retention, which is measured from the `enqueueTime` in the delivery
 body. Near retention expiry the cap wins, so the delay can fall below the
 5-minute minimum to keep the redelivery inside the retention window.
 
-Authentication failures return `Cancel`. Transient failures (task fetch,
-context creation, task start) return `Defer` with the 5-minute default delay.
-If submission fails after the task starts, the SDK reschedules the task and
-returns `Defer`.
+Authentication failures return `Cancel`, except on a task the SDK read as
+final: the task state is read before authenticating, and a task already in a
+final state is acknowledged with `OK`. The Extension Framework applies a
+`Cancel` answer to the task even when the task is already `Completed`, so
+answering `Cancel` there would record a successful execution as failed.
+
+This narrows the window rather than closing it. A task that reaches a final
+state after the SDK read it, and before the framework applies the answer, can
+still be failed by a `Cancel`. The SDK cannot close that gap on its own: it
+answers the delivery and the framework performs the transition, so there is no
+SDK call to carry a precondition, and the Tasks API exposes no conditional
+transition. Closing it belongs to the framework, which already rejects the same
+transition with `409` when an extension attempts it.
+
+Transient failures (task fetch, context creation, task start) return `Defer`
+with the 5-minute default delay. If submission fails after the task starts, the
+SDK reschedules the task and returns `Defer`.
 
 The runner reserves the task identifier synchronously before context creation.
 Concurrent delivery of the same task identifier therefore cannot start or
