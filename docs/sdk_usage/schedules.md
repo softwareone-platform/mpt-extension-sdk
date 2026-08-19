@@ -141,12 +141,29 @@ runner maps handler outcomes to platform task transitions:
   apply `Cancel` response semantics, which transitions the platform task to
   `Failed`.
 
-Schedules run at the platform's fixed task-lifetime defaults: 2 hours of
-processing (`maxTaskProcessing`) and a 24-hour total lifespan
-(`maxTaskLifespan`). The Extension Framework does not accept per-schedule
-timeout overrides, so these limits cannot be configured from the SDK. The SDK
-uses the smaller of the two — counting the lifespan already consumed by the
-task — minus a safety margin as its local execution deadline. If the handler
+The platform publishes the task-lifetime limits under `parameters`:
+
+```json
+"parameters": {
+  "extensionId": "EXT-7847-1229",
+  "maxTaskProcessingSeconds": 7200,
+  "maxTaskLifetimeSeconds": 86400
+}
+```
+
+The SDK reads them from there, so it measures the same budget the platform
+enforces. The Extension Framework does not accept per-schedule timeout
+overrides, so these limits cannot be configured from the SDK.
+
+Each limit is handled independently. A limit the task does not publish is logged
+as an error and falls back to the SDK safety net — 2 hours of processing, a
+24-hour total lifespan — while a limit the task does publish is still used as
+sent. The safety net exists so a handler cannot run unbounded; it is not a copy
+of the platform budget, and once it applies to a limit the SDK is no longer
+guaranteed to finalize the task before the platform does.
+
+The SDK uses the smaller of the two — counting the lifespan already consumed by
+the task — minus a safety margin as its local execution deadline. If the handler
 exceeds that deadline, the SDK fails the platform task with an explicit
 processing timeout reason.
 
