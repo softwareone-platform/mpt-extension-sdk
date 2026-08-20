@@ -2,6 +2,7 @@ import datetime as dt
 from collections.abc import Callable
 
 import pytest
+from mpt_api_client.exceptions import MPTAPIError
 
 from mpt_extension_sdk.models.task import Task
 from mpt_extension_sdk.pipeline import ScheduleContext
@@ -27,6 +28,12 @@ def task_factory():
         })
 
     return factory
+
+
+@pytest.fixture
+def task_conflict():
+    """The platform rejection of a claim another execution already holds."""
+    return MPTAPIError(status_code=409, message="conflict", payload={})
 
 
 @pytest.fixture

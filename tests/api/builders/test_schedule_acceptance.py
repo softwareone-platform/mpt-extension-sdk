@@ -30,22 +30,8 @@ async def test_fetch_task_returns_none_on_error(acceptance, task_service):
     assert result is None
 
 
-async def test_reschedule_lost_returns_none(acceptance, task_service):
-    result = await acceptance.reschedule_lost_task("TSK-1")
-
-    assert result is None
-
-
-async def test_reschedule_lost_defers_on_error(acceptance, task_service):
-    task_service.reschedule.side_effect = MPTError("boom")
-
-    result = await acceptance.reschedule_lost_task("TSK-1")
-
-    assert result == EventResponse.reschedule()
-
-
 async def test_start_task_returns_none(acceptance, task_service):
-    result = await acceptance.start_task("TSK-1")
+    result = await acceptance.start_task("TSK-1", watchdog_delay=600)
 
     assert result is None
 
@@ -53,9 +39,17 @@ async def test_start_task_returns_none(acceptance, task_service):
 async def test_start_task_defers_on_error(acceptance, task_service):
     task_service.start.side_effect = MPTError("boom")
 
-    result = await acceptance.start_task("TSK-1")
+    result = await acceptance.start_task("TSK-1", watchdog_delay=600)
 
     assert result == EventResponse.reschedule()
+
+
+async def test_start_task_defers_when_claimed(acceptance, task_service, task_conflict):
+    task_service.start.side_effect = task_conflict
+
+    result = await acceptance.start_task("TSK-1", watchdog_delay=600)
+
+    assert result == EventResponse.reschedule(600)
 
 
 async def test_reschedule_after_submit_swallows(acceptance, task_service):

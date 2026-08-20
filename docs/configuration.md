@@ -79,6 +79,9 @@ LOG_LEVEL=INFO
 - In local `FastAPI + uvicorn` mode, `SDK_LOCAL_RELOAD=true` takes precedence
   over multi-worker settings. Use reload for local development, or disable
   reload before increasing `SDK_LOCAL_WORKERS`.
+- Worker count does not duplicate schedule executions: they are claimed in the
+  platform, which covers every worker process and every instance, as described
+  in [sdk_usage/schedules.md](sdk_usage/schedules.md).
 - [`mpt_extension_sdk/runtime/bootstrap/registration.py`](../mpt_extension_sdk/runtime/bootstrap/registration.py)
   registers the running extension instance and persists the returned identity
   when present.
