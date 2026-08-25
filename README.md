@@ -12,17 +12,16 @@ The repository contains:
 
 ## Documentation
 
-Start here:
+Shortcuts to the documents a reader is most likely to want next. This is not the
+full inventory: [docs/documentation.md](docs/documentation.md) holds the
+authoritative map of every document and the topic it owns.
 
-- [AGENTS.md](AGENTS.md): entry point for AI agents
+- [docs/usage.md](docs/usage.md): SDK usage guide with examples
 - [docs/architecture.md](docs/architecture.md): package structure, runtime model, and boundaries
 - [docs/configuration.md](docs/configuration.md): runtime environment variables and integration settings
-- [docs/usage.md](docs/usage.md): SDK usage guide with examples
-- [docs/local-development.md](docs/local-development.md): local setup and Docker-based workflows
-- [docs/testing.md](docs/testing.md): testing strategy and commands
+- [docs/local-development.md](docs/local-development.md): local setup, Docker-based workflows, and repository-specific `make` targets
 - [docs/contributing.md](docs/contributing.md): repository-specific workflow
-- [docs/migrations.md](docs/migrations.md): SDK migration notes and compatibility changes
-- [docs/documentation.md](docs/documentation.md): repository documentation rules
+- [AGENTS.md](AGENTS.md): entry point for AI agents
 
 ## Quick Start
 
@@ -33,4 +32,6 @@ make build
 make test
 ```
 
-For SDK consumer examples and installation, see [docs/usage.md](docs/usage.md).
+For the local stacks and this repository's `make` targets, see
+[docs/local-development.md](docs/local-development.md). For SDK consumer
+examples and installation, see [docs/usage.md](docs/usage.md).

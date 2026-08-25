@@ -5,7 +5,6 @@ rules imported from `mpt-extension-skills`:
 
 - `standards/unittests.md`
 - `knowledge/build-and-checks.md`
-- `knowledge/make-targets.md`
 
 The repository-local rules below override or narrow those shared rules where
 needed.
@@ -26,19 +25,17 @@ and the `tests/` tree already covers the main SDK domains, including:
 
 ## Commands
 
-Use the repository make targets:
+Run the suite with `make test`, as described in the shared
+[knowledge/make-targets.md](https://github.com/softwareone-platform/mpt-extension-skills/blob/main/knowledge/make-targets.md).
+[local-development.md](local-development.md#make-commands) covers the targets
+specific to this repository.
+
+Repository-specific to testing: `make test` forwards `args` to `pytest`, so a
+subset can be run without leaving the Compose runtime.
 
 ```bash
-make test
-make check
-make check-all
+make test args="tests/cli -k meta_validate"
 ```
-
-Repository command mapping:
-
-- `make test` runs `pytest`
-- `make check` runs local validation checks such as formatting, linting, typing, and lockfile validation
-- `make check-all` runs both checks and tests
 
 ## Pytest Configuration
 

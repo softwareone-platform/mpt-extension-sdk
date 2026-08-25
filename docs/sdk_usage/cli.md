@@ -1,5 +1,8 @@
 # CLI And Metadata
 
+This document is the single source of truth for the `mpt-ext` command contract.
+Other documents must link here instead of restating what the commands do.
+
 The SDK ships the `mpt-ext` command (a Typer application) for the common
 developer tasks of running an extension and managing its metadata. Running an
 extension package built on the SDK exposes:
@@ -15,8 +18,12 @@ mpt-ext meta validate
 
 - `mpt-ext run --local` starts the local `FastAPI + uvicorn` runtime, intended
   for development and debugging.
-- `mpt-ext run` starts the platform runtime (`mrok`/`ziticorn`): it builds
-  metadata, registers the extension instance, and serves the extension.
+- `mpt-ext run` registers the extension instance and starts the platform
+  runtime (`mrok`/`ziticorn`).
+
+Both modes load the same ASGI application, and importing it writes `meta.yaml`
+from the extension app before the server starts. Writing the metadata artifact
+is therefore a property of runtime startup, not of a specific `run` mode.
 
 ## Metadata (`meta.yaml`)
 
@@ -28,6 +35,8 @@ maintained by hand. The generated document contains:
 - `version` — the metadata version (default `1.0.0`)
 - `events` — one entry per event/task route (`event`, `condition`, `path`,
   `task`)
+- `schedules` — one entry per registered schedule route (`id`, `name`,
+  `description`, `cron`, `path`), when the extension declares any
 - `plugs` — one entry per registered plug, when the extension declares any
 
 ```yaml
@@ -38,6 +47,12 @@ events:
     condition: "and(eq(type,Purchase),in(product.id,(PRD-5516-5707)))"
     path: /api/v2/events/orders/purchase
     task: true
+schedules:
+  - id: agreements.sync
+    name: agreements-sync
+    description: Synchronize agreements
+    cron: "*/15 * * * *"
+    path: /api/v2/schedules/agreements/sync
 plugs:
   - id: adobe
     name: Adobe

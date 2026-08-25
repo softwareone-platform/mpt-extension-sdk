@@ -7,35 +7,39 @@ This repository follows the shared documentation standard:
 The shared standard owns the general documentation rules. This file documents
 only repository-specific additions and exceptions.
 
-## Repository Rules
+## Documentation Ownership Map
 
-- `README.md` must stay short and act as the main human entry point.
-- `AGENTS.md` must stay operational and tell AI agents which files to read first.
-- `docs/architecture.md` must describe the SDK package structure and boundaries.
-- `docs/configuration.md` must hold SDK runtime environment-variable guidance.
-- `docs/usage.md` must stay as the SDK usage entry point and package long
-  description.
-- `docs/sdk_usage/` must hold granular SDK consumer examples split by topic.
-- topic-specific behavior must live in the matching file under [`docs/`](.).
-- `.github/copilot-instructions.md` must remain a thin adapter that points back
-  to [`AGENTS.md`](../AGENTS.md).
-- `pyproject.toml` uses [`docs/usage.md`](usage.md) as the package readme.
+This section is the authoritative map of the documentation set: it lists every
+document and the topic that document owns. It is the place to look when
+deciding where content belongs.
 
-## Current Documentation Map
+| Document | Owns |
+| --- | --- |
+| [`README.md`](../README.md) | human entry point: overview and quick start. Must stay short and navigational. |
+| [`AGENTS.md`](../AGENTS.md) | AI entry point: the order in which an agent should read the documentation, and the code paths to inspect. Must stay operational. |
+| [`architecture.md`](architecture.md) | SDK package structure, runtime model, and major boundaries. |
+| [`configuration.md`](configuration.md) | SDK runtime environment variables and integration-facing settings. |
+| [`usage.md`](usage.md) | SDK usage entry point and package long description. Stays navigational; full examples belong in `sdk_usage/`. |
+| [`sdk_usage/`](sdk_usage/) | granular SDK consumer examples split by topic, including the `mpt-ext` command contract in [`sdk_usage/cli.md`](sdk_usage/cli.md). |
+| [`local-development.md`](local-development.md) | local setup, the local stacks, and the `make` targets specific to this repository. |
+| [`contributing.md`](contributing.md) | repository-specific development workflow and links to shared standards. |
+| [`testing.md`](testing.md) | testing strategy, test scope, and pytest configuration. |
+| [`migrations.md`](migrations.md) | SDK compatibility and migration guidance. |
+| [`documentation.md`](documentation.md) | this document: the documentation rules and the ownership map above. |
+| [`.github/copilot-instructions.md`](../.github/copilot-instructions.md) | thin tool adapter. Must only point back to [`AGENTS.md`](../AGENTS.md). |
 
-- [`README.md`](../README.md): human entry point, overview, quick start, and documentation map
-- [`AGENTS.md`](../AGENTS.md): AI entry point and reading order
-- [`architecture.md`](architecture.md): package structure and major boundaries
-- [`configuration.md`](configuration.md): runtime variables and integration-facing settings
-- [`usage.md`](usage.md): SDK usage entry point and package long description
-- [`sdk_usage/`](sdk_usage/): granular SDK usage examples split by topic
-- [`local-development.md`](local-development.md): local setup and command entry points
-- [`contributing.md`](contributing.md): repository-specific development workflow
-- [`testing.md`](testing.md): testing strategy and command mapping
-- [`migrations.md`](migrations.md): SDK compatibility guidance
+[`pyproject.toml`](../pyproject.toml) uses [`usage.md`](usage.md) as the package
+readme.
 
 ## Documentation Change Rule
 
-When documentation changes, update the smallest topic-specific document. Keep
-[`docs/usage.md`](usage.md) navigational and put full examples in
-[`docs/sdk_usage/`](sdk_usage/).
+When documentation changes, update the smallest topic-specific document, and
+update the document that owns the topic according to the map above.
+
+A topic must be described in exactly one document. Every other document links to
+the owner instead of restating it. The same applies to shared standards: link to
+them rather than copying their content into this repository.
+
+[`README.md`](../README.md) and [`AGENTS.md`](../AGENTS.md) both link the
+documentation set for the purposes the map gives them. Neither is an inventory,
+and neither should be grown into one.

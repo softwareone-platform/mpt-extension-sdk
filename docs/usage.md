@@ -38,19 +38,6 @@ This guide is the entry point for building an extension package on top of
 
 ## Runtime Commands
 
-Use the `mpt-ext` CLI command when running an extension built on top of the SDK:
-
-```bash
-mpt-ext run --local
-mpt-ext run
-mpt-ext meta generate
-mpt-ext meta validate
-```
-
-- `mpt-ext run --local` starts the local `FastAPI + uvicorn` runtime.
-- `mpt-ext run` writes `meta.yaml`, registers the extension instance, and starts
-  the platform runtime with `mrok`/`ziticorn`.
-- `mpt-ext meta generate` writes metadata derived from `ext_app.to_meta_config()`.
-- `mpt-ext meta validate` compares the checked-in `meta.yaml` with generated
-  metadata, validates plug static assets, and writes `meta.generated.yaml` when
-  validation fails.
+An extension built on the SDK is run through the packaged `mpt-ext` CLI. The
+commands and their contract are documented in
+[CLI and metadata](sdk_usage/cli.md).
