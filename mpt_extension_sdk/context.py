@@ -18,6 +18,7 @@ class BaseContext:
 
     logger: Logger
     mpt_api_service: "MPTAPIService"
+    vendor_mpt_api_service: "MPTAPIService"
 
     account_settings: AccountSettings = field(default_factory=AccountSettings)
     ext_settings: "BaseExtensionSettings"

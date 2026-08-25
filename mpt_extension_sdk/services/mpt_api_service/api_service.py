@@ -66,3 +66,14 @@ class MPTAPIService:  # noqa: WPS215, WPS230
             api_token: MPT API token.
         """
         return cls(build_mpt_client(base_url=base_url, api_token=api_token))
+
+    @classmethod
+    async def from_vendor_account(cls, base_url: str) -> Self:
+        """Create the service authenticated as the vendor account owning the extension.
+
+        The extension API key is always scoped to the vendor that owns the extension,
+        so the vendor identity needs no account-scoped token exchange. The owner
+        account has no installation of its own extension, so the installation-scoped
+        exchange used by ``from_auth_context`` does not apply to it.
+        """
+        return cls.from_config(base_url=base_url, api_token=get_runtime_settings().ext_api_key)

@@ -315,7 +315,13 @@ def test_ext_app_rejects_invalid_service_type():
 
 
 def test_ext_app_build_ctx_returns_unadapted_ctx(
-    mocker, logger, runtime_settings, order_factory, dummy_handler, auth_context
+    mocker,
+    logger,
+    runtime_settings,
+    order_factory,
+    dummy_handler,
+    auth_context,
+    vendor_mpt_api_service,
 ):
     context = OrderContext(
         logger=logger,
@@ -326,6 +332,7 @@ def test_ext_app_build_ctx_returns_unadapted_ctx(
             task_id="TASK-1",
         ),
         mpt_api_service=mocker.AsyncMock(spec=MPTAPIService),
+        vendor_mpt_api_service=vendor_mpt_api_service,
         ext_settings=mocker.AsyncMock(spec=BaseExtensionSettings),
         runtime_settings=runtime_settings,
         auth=auth_context,
@@ -356,7 +363,13 @@ class CustomOrderContext(OrderContext, ContextAdapter):
 
 
 def test_ext_app_build_context_adapts_order_ctx(
-    mocker, logger, runtime_settings, order_factory, dummy_handler, auth_context
+    mocker,
+    logger,
+    runtime_settings,
+    order_factory,
+    dummy_handler,
+    auth_context,
+    vendor_mpt_api_service,
 ):
     context = OrderContext(
         logger=logger,
@@ -367,6 +380,7 @@ def test_ext_app_build_context_adapts_order_ctx(
             task_id="TASK-1",
         ),
         mpt_api_service=mocker.AsyncMock(spec=MPTAPIService),
+        vendor_mpt_api_service=vendor_mpt_api_service,
         ext_settings=mocker.AsyncMock(spec=BaseExtensionSettings),
         runtime_settings=runtime_settings,
         auth=auth_context,
@@ -395,7 +409,13 @@ class BadOrderContext(OrderContext, ContextAdapter):
 
 
 def test_ext_app_build_ctx_invalid_return_type(
-    mocker, logger, runtime_settings, order_factory, dummy_handler, auth_context
+    mocker,
+    logger,
+    runtime_settings,
+    order_factory,
+    dummy_handler,
+    auth_context,
+    vendor_mpt_api_service,
 ):
     context = OrderContext(
         logger=logger,
@@ -406,6 +426,7 @@ def test_ext_app_build_ctx_invalid_return_type(
             task_id="TASK-1",
         ),
         mpt_api_service=mocker.AsyncMock(spec=MPTAPIService),
+        vendor_mpt_api_service=vendor_mpt_api_service,
         ext_settings=mocker.AsyncMock(spec=BaseExtensionSettings),
         runtime_settings=runtime_settings,
         auth=auth_context,
@@ -435,6 +456,7 @@ class WrongOrderAdapter(ContextAdapter):
             logger=ctx.logger,
             meta=ctx.meta,
             mpt_api_service=ctx.mpt_api_service,
+            vendor_mpt_api_service=ctx.vendor_mpt_api_service,
             account_settings=ctx.account_settings,
             ext_settings=ctx.ext_settings,
             runtime_settings=ctx.runtime_settings,
@@ -444,7 +466,13 @@ class WrongOrderAdapter(ContextAdapter):
 
 
 def test_ext_app_build_ctx_rejects_wrong_subtype(
-    mocker, logger, runtime_settings, order_factory, dummy_handler, auth_context
+    mocker,
+    logger,
+    runtime_settings,
+    order_factory,
+    dummy_handler,
+    auth_context,
+    vendor_mpt_api_service,
 ):
     context = OrderContext(
         logger=logger,
@@ -455,6 +483,7 @@ def test_ext_app_build_ctx_rejects_wrong_subtype(
             task_id="TASK-1",
         ),
         mpt_api_service=mocker.AsyncMock(spec=MPTAPIService),
+        vendor_mpt_api_service=vendor_mpt_api_service,
         ext_settings=mocker.AsyncMock(spec=BaseExtensionSettings),
         runtime_settings=runtime_settings,
         auth=auth_context,

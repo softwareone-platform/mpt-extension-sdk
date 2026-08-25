@@ -20,6 +20,14 @@ from mpt_extension_sdk.settings.extension import BaseExtensionSettings, get_exte
 from mpt_extension_sdk.settings.runtime import RuntimeSettings, get_runtime_settings
 
 
+@dataclass(frozen=True)
+class ContextServices:
+    """Marketplace services exposed to a single execution context."""
+
+    mpt_api_service: MPTAPIService
+    vendor_mpt_api_service: MPTAPIService
+
+
 @dataclass
 class RouteContextFactory:
     """Factory for building execution contexts across route families."""
@@ -46,13 +54,11 @@ class RouteContextFactory:
     ) -> APIContext:
         """Build the authenticated execution context for an API request."""
         self._assert_extension_id_matches(auth_context)
-        api_service = await self.service_type.from_auth_context(
-            base_url=self.runtime_settings.mpt_api_base_url,
-            auth=auth_context,
-        )
+        services = await self._build_services(auth_context)
         return APIContext(
             logger=handler_logger,
-            mpt_api_service=api_service,
+            mpt_api_service=services.mpt_api_service,
+            vendor_mpt_api_service=services.vendor_mpt_api_service,
             ext_settings=self.extension_settings,
             runtime_settings=self.runtime_settings,
             auth=auth_context,
@@ -67,12 +73,9 @@ class RouteContextFactory:
     ) -> EventBaseContext:
         """Build the fully hydrated execution context for an incoming event."""
         self._assert_extension_id_matches(auth)
-        api_service = await self.service_type.from_auth_context(
-            base_url=self.runtime_settings.mpt_api_base_url,
-            auth=auth,
-        )
+        services = await self._build_services(auth)
         return await self._build_event_context_with_model(
-            event, handler_logger, api_service, auth=auth
+            event, handler_logger, services, auth=auth
         )
 
     async def build_schedule_context(  # noqa: WPS211
@@ -87,9 +90,7 @@ class RouteContextFactory:
     ) -> ScheduleContext:
         """Build the authenticated context for a schedule execution."""
         self._assert_extension_id_matches(auth)
-        api_service = await self.service_type.from_auth_context(
-            base_url=self.runtime_settings.mpt_api_base_url, auth=auth
-        )
+        services = await self._build_services(auth)
         return ScheduleContext(
             logger=handler_logger,
             meta=ScheduleMetadata(
@@ -100,10 +101,19 @@ class RouteContextFactory:
                 correlation_id=correlation_id_ctx.get(),
             ),
             task=ScheduleTaskHandle(id=task_id, task_service=task_service),
-            mpt_api_service=api_service,
+            mpt_api_service=services.mpt_api_service,
+            vendor_mpt_api_service=services.vendor_mpt_api_service,
             ext_settings=self.extension_settings,
             runtime_settings=self.runtime_settings,
             auth=auth,
+        )
+
+    async def _build_services(self, auth: AuthContext) -> ContextServices:
+        """Build the account-scoped and vendor-scoped Marketplace services."""
+        base_url = self.runtime_settings.mpt_api_base_url
+        return ContextServices(
+            mpt_api_service=await self.service_type.from_auth_context(base_url=base_url, auth=auth),
+            vendor_mpt_api_service=await self.service_type.from_vendor_account(base_url=base_url),
         )
 
     def _assert_extension_id_matches(self, auth: AuthContext) -> None:
@@ -115,14 +125,22 @@ class RouteContextFactory:
         self,
         event: Event,
         handler_logger: logging.Logger,
-        api_service: MPTAPIService,
+        services: ContextServices,
         auth: AuthContext,
     ) -> EventBaseContext:
         """Build a fully hydrated execution context for the current event object."""
+        api_service = services.mpt_api_service
         common_kwargs: dict[str, Any] = {
             "logger": handler_logger,
-            "meta": self._build_execution_metadata(event),
+            "meta": EventMetadata(
+                event_id=event.id,
+                object_id=event.object.id,
+                object_type=event.object.object_type,
+                correlation_id=correlation_id_ctx.get(),
+                task_id=task_id_ctx.get(),
+            ),
             "mpt_api_service": api_service,
+            "vendor_mpt_api_service": services.vendor_mpt_api_service,
             "account_settings": None,
             "ext_settings": self.extension_settings,
             "runtime_settings": self.runtime_settings,
@@ -139,16 +157,6 @@ class RouteContextFactory:
             return AgreementContext(agreement=agreement, **common_kwargs)
 
         raise RuntimeError(f"Unsupported context type: {object_type}")
-
-    def _build_execution_metadata(self, event: Event) -> EventMetadata:
-        """Build immutable execution metadata from the incoming event."""
-        return EventMetadata(
-            event_id=event.id,
-            object_id=event.object.id,
-            object_type=event.object.object_type,
-            correlation_id=correlation_id_ctx.get(),
-            task_id=task_id_ctx.get(),
-        )
 
 
 async def build_api_context(
