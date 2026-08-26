@@ -69,6 +69,43 @@ ext_app.include_router(api_router)
 ext_app.include_router(orders_router)
 ```
 
+## Run Code At Runtime Startup
+
+Register process-wide initialization with `ExtensionApp.on_startup`. Hooks run
+once per served process, after the SDK bootstraps observability and before the
+app reports itself as ready:
+
+```python
+from mpt_extension_sdk import ExtensionApp
+
+ext_app = ExtensionApp(prefix="/api/v2")
+
+
+@ext_app.on_startup
+def warm_up_caches() -> None:
+    """Prepare process-wide state before the app serves traffic."""
+    ...
+
+
+@ext_app.on_startup
+async def open_vendor_session() -> None:
+    """Async hooks are awaited."""
+    ...
+```
+
+Hooks take no arguments; sync and async callables are both supported, and they
+run in registration order. `on_startup` returns the hook, so it also works as a
+decorator. Hooks run only when the runtime serves the extension
+(`mpt-ext run`) — metadata generation (`mpt-ext meta generate` /
+`meta validate`) never invokes them. Metadata generation does import `app.py`
+and call registered plug providers to build `meta.yaml`, so it is not free of
+extension code; startup hooks are simply not part of it. That makes
+`on_startup` the place for side effects that must stay out of module import,
+such as extra OpenTelemetry instrumentation (see
+[observability.md](observability.md#adding-other-instrumentation)).
+
+Registering no hooks keeps the previous startup behavior unchanged.
+
 ## Configure The Runtime
 
 The SDK commonly relies on:

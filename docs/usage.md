@@ -7,8 +7,8 @@ This guide is the entry point for building an extension package on top of
 ## Usage Topics
 
 - [Application setup](sdk_usage/application.md): install the SDK, shape an
-  extension package, create `ExtensionApp`, include routers, and configure the
-  runtime.
+  extension package, create `ExtensionApp`, include routers, register startup
+  hooks, and configure the runtime.
 - [Event routes](sdk_usage/events.md): register task and non-task event handlers.
 - [Schedule routes](sdk_usage/schedules.md): register periodic work, read the
   schedule delivery, and follow the delivery protocol the Extension Framework

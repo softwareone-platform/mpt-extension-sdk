@@ -63,6 +63,9 @@ using the metadata-file writer from `runtime/runner.py`. In platform mode `runti
 extension instance, persists the returned identity when present, and starts the exported ASGI app through Ziticorn.
 `runtime/app.py` assembles the FastAPI app, configures middleware and observability,
 loads the extension's exported `ext_app`, and mounts every registered route.
+Its lifespan runs the startup hooks registered through `ExtensionApp.on_startup`
+before the app reports itself as ready, so serve-time initialization stays out of
+`app.py` import time and never runs during metadata generation.
 It also registers built-in operational endpoints under the `/bypass` prefix:
 `/bypass/health` (status plus extension version), `/bypass/live` (liveness probe),
 and `/bypass/ready` (readiness probe, returning `503` until application startup

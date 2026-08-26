@@ -87,10 +87,9 @@ call. `trace_span` works on both async and sync functions.
 
 ## Adding Other Instrumentation
 
-If an extension needs additional dependency-specific instrumentation, declare it
-in the same `app.py` module where `ExtensionApp` is created — not inside
-handlers, pipelines, or steps. Keep the instrumentation call in an idempotent
-helper:
+If an extension needs additional dependency-specific instrumentation, register it
+through `ExtensionApp.on_startup` in the same `app.py` module where
+`ExtensionApp` is created — not inside handlers, pipelines, or steps:
 
 ```python
 from mpt_extension_sdk import ExtensionApp
@@ -99,20 +98,18 @@ from opentelemetry.instrumentation.botocore import BotocoreInstrumentor
 ext_app = ExtensionApp(prefix="/api/v2")
 
 
+@ext_app.on_startup
 def instrument_dependencies() -> None:
-    """Register extra instrumentation. Safe to call more than once."""
+    """Register extra instrumentation once the runtime starts serving."""
     BotocoreInstrumentor().instrument()
 ```
 
-Be careful where you call it. `app.py` is imported to resolve `ext_app` during
-metadata generation (`mpt-ext meta generate` / `meta validate`), so calling
-`instrument_dependencies()` at module import time runs it during metadata
-generation too, which conflicts with the requirement to keep `app.py` imports
-deterministic and free of heavy side effects. Keep the helper idempotent and
-invoke it only when the runtime actually serves the extension.
+Startup hooks run only when the runtime serves the extension (`mpt-ext run`),
+after the SDK has configured the tracer provider and before the app reports
+itself as ready, so extra instrumentation attaches to the same provider the SDK
+bootstraps. Metadata generation (`mpt-ext meta generate` / `meta validate`)
+never invokes startup hooks, so instrumentation registered this way stays out of
+metadata runs and `app.py` keeps a deterministic import.
 
-> **Note:** the SDK does not yet expose a first-class extension startup hook, so
-> there is currently no clean serve-time-only place to call this helper. A
-> dedicated `ExtensionApp.on_startup` hook is tracked in
-> [MPT-22678](https://softwareone.atlassian.net/browse/MPT-22678); this section
-> will be updated to use it once it lands.
+See [application.md](application.md#run-code-at-runtime-startup) for the general
+startup-hook contract.

@@ -56,9 +56,34 @@ def runtime_app_patches(mocker, extension_runtime_app):
 
 
 @pytest.fixture
-def middleware_test_app():
-    app = runtime_app._create_fastapi_app(ExtensionApp())
-    runtime_app._configure_middlewares(app)
+def run_lifespan():
+    def factory(app):
+        async def wrapper():
+            # mrok's proxy passes its own ASGIAppWrapper (without `state`) here
+            async with app.router.lifespan_context(object()):
+                return app.state.ready
+
+        return asyncio.run(wrapper())
+
+    return factory
+
+
+@pytest.fixture
+def runtime_app_factory(runtime_settings, runtime_app_patches):
+    def factory():
+        return runtime_app.create_runtime_app(runtime_settings)
+
+    return factory
+
+
+@pytest.fixture
+def built_runtime_app(runtime_app_factory):
+    return runtime_app_factory()
+
+
+@pytest.fixture
+def middleware_test_app(built_runtime_app):
+    app = built_runtime_app
 
     @app.get("/dummy")
     def dummy():  # noqa: WPS430
@@ -121,13 +146,15 @@ def test_load_ext_app_returns_exported_app(mocker):
     assert result is module.ext_app
 
 
-def test_create_runtime_app_bootstraps_deps(runtime_settings, runtime_app_patches):
+def test_create_runtime_app_bootstraps_deps(
+    runtime_settings, runtime_app_patches, built_runtime_app
+):
     setup_logging = runtime_app_patches["setup_logging"]
     load_extension_app = runtime_app_patches["load_extension_app"]
     bootstrap = runtime_app_patches["bootstrap"]
     instrument_fastapi_app = runtime_app_patches["instrument_fastapi_app"]
 
-    result = runtime_app.create_runtime_app(runtime_settings)
+    result = built_runtime_app
 
     assert result.version == runtime_app_patches["load_extension_app"].return_value.version
     setup_logging.assert_called_once_with(
@@ -138,56 +165,50 @@ def test_create_runtime_app_bootstraps_deps(runtime_settings, runtime_app_patche
     instrument_fastapi_app.assert_called_once()
 
 
-def test_create_runtime_app_registers_health(runtime_settings, runtime_app_patches):
+def test_create_runtime_app_registers_health(runtime_app_patches, built_runtime_app):
     extension_app = runtime_app_patches["load_extension_app"].return_value
 
-    result = runtime_app.create_runtime_app(runtime_settings)
+    result = built_runtime_app
 
     response = TestClient(result).get("/bypass/health")
     assert response.status_code == 200
     assert response.json() == {"status": "ok", "version": extension_app.version}
 
 
-def test_create_runtime_app_registers_live(runtime_settings, runtime_app_patches):
-    result = runtime_app.create_runtime_app(runtime_settings)
+def test_create_runtime_app_registers_live(built_runtime_app):
+    result = built_runtime_app
 
     response = TestClient(result).get("/bypass/live")
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
 
 
-def test_ready_returns_unavailable_before_startup(runtime_settings, runtime_app_patches):
-    result = runtime_app.create_runtime_app(runtime_settings)
+def test_ready_returns_unavailable_before_startup(built_runtime_app):
+    result = built_runtime_app
 
     response = TestClient(result).get("/bypass/ready")
     assert response.status_code == 503
     assert response.json() == {"status": "unavailable"}
 
 
-async def _run_lifespan_with_wrapper(app: FastAPI) -> bool:
-    # mrok's proxy passes its own ASGIAppWrapper (without `state`) here
-    async with app.router.lifespan_context(object()):
-        return app.state.ready
+def test_lifespan_with_wrapper_argument(built_runtime_app, run_lifespan):
+    result = built_runtime_app
 
-
-def test_lifespan_with_wrapper_argument():
-    result = runtime_app._create_fastapi_app(ExtensionApp())
-
-    assert asyncio.run(_run_lifespan_with_wrapper(result)) is True
+    assert run_lifespan(result) is True
     assert result.state.ready is False
 
 
-def test_lifespan_shuts_down_async_task_runner(mocker):
-    app = runtime_app._create_fastapi_app(ExtensionApp())
+def test_lifespan_shuts_down_async_task_runner(mocker, built_runtime_app, run_lifespan):
+    app = built_runtime_app
     app.state.async_task_runner = mocker.create_autospec(AsyncTaskRunner, instance=True)
 
-    asyncio.run(_run_lifespan_with_wrapper(app))  # act
+    run_lifespan(app)  # act
 
     app.state.async_task_runner.shutdown.assert_awaited_once_with()
 
 
-def test_ready_follows_app_lifespan(runtime_settings, runtime_app_patches):
-    result = runtime_app.create_runtime_app(runtime_settings)
+def test_ready_follows_app_lifespan(built_runtime_app):
+    result = built_runtime_app
 
     with TestClient(result) as client:
         started_response = client.get("/bypass/ready")
@@ -198,14 +219,14 @@ def test_ready_follows_app_lifespan(runtime_settings, runtime_app_patches):
     assert stopped_response.json() == {"status": "unavailable"}
 
 
-def test_create_runtime_app_registers_ext_routes(runtime_settings, runtime_app_patches):
-    result = runtime_app.create_runtime_app(runtime_settings)
+def test_create_runtime_app_registers_ext_routes(built_runtime_app):
+    result = built_runtime_app
 
     assert "/api/v1/events/orders/purchase" in {route.path for route in result.routes}
 
 
-def test_create_runtime_app_mounts_static(runtime_settings, runtime_app_patches):
-    result = runtime_app.create_runtime_app(runtime_settings)
+def test_create_runtime_app_mounts_static(built_runtime_app):
+    result = built_runtime_app
 
     assert "/static" in {route.path for route in result.routes}
 
@@ -287,3 +308,61 @@ def test_middlewares_propagate_request_headers(middleware_test_app):
     assert result.status_code == 200
     assert result.headers["x-request-id"] == "req-1"
     assert result.headers["mpt-task-id"] == "task-1"
+
+
+def test_build_defers_startup_hooks(mocker, runtime_app_factory, extension_runtime_app):
+    hook = mocker.Mock(return_value=None)
+    extension_runtime_app.on_startup(hook)
+
+    runtime_app_factory()  # act
+
+    hook.assert_not_called()
+
+
+def test_lifespan_runs_sync_startup_hooks(
+    mocker, runtime_app_factory, extension_runtime_app, run_lifespan
+):
+    hook = mocker.Mock(return_value=None)
+    extension_runtime_app.on_startup(hook)
+    app = runtime_app_factory()
+
+    run_lifespan(app)  # act
+
+    hook.assert_called_once_with()
+
+
+def test_lifespan_awaits_async_startup_hooks(
+    mocker, runtime_app_factory, extension_runtime_app, run_lifespan
+):
+    hook = mocker.AsyncMock(return_value=None)
+    extension_runtime_app.on_startup(hook)
+    app = runtime_app_factory()
+
+    run_lifespan(app)  # act
+
+    hook.assert_awaited_once_with()
+
+
+def test_hooks_run_in_registration_order(
+    mocker, runtime_app_factory, extension_runtime_app, run_lifespan
+):
+    parent = mocker.Mock()
+    extension_runtime_app.on_startup(parent.first)
+    extension_runtime_app.on_startup(parent.second)
+    app = runtime_app_factory()
+
+    run_lifespan(app)  # act
+
+    assert parent.mock_calls == [mocker.call.first(), mocker.call.second()]
+
+
+def test_hook_error_keeps_app_unready(
+    mocker, runtime_app_factory, extension_runtime_app, run_lifespan
+):
+    extension_runtime_app.on_startup(mocker.Mock(side_effect=RuntimeError("startup hook failed")))
+    app = runtime_app_factory()
+
+    with pytest.raises(RuntimeError, match="startup hook failed"):
+        run_lifespan(app)  # act
+
+    assert TestClient(app).get("/bypass/ready").status_code == 503

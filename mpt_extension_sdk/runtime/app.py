@@ -111,12 +111,13 @@ def _create_fastapi_app(extension_app: ExtensionApp) -> FastAPI:
 
     @asynccontextmanager
     async def runtime_lifespan(_lifespan_app: object) -> AsyncIterator[None]:  # noqa: WPS430
-        """Mark the app as ready while the server is accepting traffic.
+        """Run the extension startup hooks, then keep the app ready while serving.
 
         Uses the closed-over FastAPI instance instead of the lifespan argument:
         ASGI wrappers such as mrok's proxy pass their own wrapper object here,
         which does not expose `state`.
         """
+        await extension_app.startup_hooks.run()
         app.state.ready = True
         try:
             yield
