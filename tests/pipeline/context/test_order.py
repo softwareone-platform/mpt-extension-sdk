@@ -6,7 +6,7 @@ from mpt_extension_sdk.settings.extension import BaseExtensionSettings
 
 
 def test_order_context_exposes_order_id(
-    mocker, logger, runtime_settings, order_factory, auth_context
+    mocker, logger, runtime_settings, order_factory, auth_context, vendor_mpt_api_service
 ):
     context = OrderContext(
         logger=logger,
@@ -17,6 +17,7 @@ def test_order_context_exposes_order_id(
             task_id="TASK-1",
         ),
         mpt_api_service=mocker.AsyncMock(spec=MPTAPIService),
+        vendor_mpt_api_service=vendor_mpt_api_service,
         ext_settings=mocker.AsyncMock(spec=BaseExtensionSettings),
         runtime_settings=runtime_settings,
         auth=auth_context,
@@ -29,7 +30,7 @@ def test_order_context_exposes_order_id(
 
 
 async def test_order_context_refreshes_order(
-    mocker, logger, runtime_settings, order_factory, auth_context
+    mocker, logger, runtime_settings, order_factory, auth_context, vendor_mpt_api_service
 ):
     service = mocker.AsyncMock(spec=MPTAPIService, orders=mocker.AsyncMock(spec=OrderService))
     service.orders.get_by_id = mocker.AsyncMock(return_value=order_factory("ORD-2"))
@@ -42,6 +43,7 @@ async def test_order_context_refreshes_order(
             task_id="TASK-1",
         ),
         mpt_api_service=service,
+        vendor_mpt_api_service=vendor_mpt_api_service,
         ext_settings=mocker.AsyncMock(spec=BaseExtensionSettings),
         runtime_settings=runtime_settings,
         auth=auth_context,

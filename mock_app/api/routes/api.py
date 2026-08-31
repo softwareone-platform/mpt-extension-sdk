@@ -27,6 +27,17 @@ async def handle_get_agreements(ctx: APIContext) -> APIResponse:
     return APIResponse.paginated(result)
 
 
+@api_router.get("/vendor/agreements", name="vendor-agreements-list")
+async def handle_get_vendor_agreements(ctx: APIContext) -> APIResponse:
+    """Return paginated agreements read as the vendor account owning the extension."""
+    pagination = ctx.request.pagination
+    page = await ctx.vendor_mpt_api_service.agreements.get_all(
+        offset=pagination.offset, limit=pagination.limit
+    )
+    result = PaginatedResult.from_pagination(pagination, payload=page.resources, total=page.total)
+    return APIResponse.paginated(result)
+
+
 @api_router.post("/agreements", name="agreements-create", body_validator=AgreementSchema)
 async def handle_create_agreement(body: AgreementSchema, ctx: APIContext) -> APIResponse:
     """Create one agreement through the mock service facade."""

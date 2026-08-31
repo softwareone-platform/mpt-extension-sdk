@@ -114,6 +114,7 @@ def api_service_type_factory(mocker):
     def factory(fake_service):
         class FakeAPIService(MPTAPIService):  # noqa: WPS431
             from_auth_context = mocker.AsyncMock(return_value=fake_service)
+            from_vendor_account = mocker.AsyncMock(return_value=fake_service)
 
         fake_service.service_type = FakeAPIService
         return FakeAPIService

@@ -191,6 +191,11 @@ def extension_router():
 
 
 @pytest.fixture
+def vendor_mpt_api_service(mocker):
+    return mocker.AsyncMock(spec=MPTAPIService)
+
+
+@pytest.fixture
 def fake_api_service_factory(mocker):
     def factory(fake_service=None):
         if fake_service is None:
