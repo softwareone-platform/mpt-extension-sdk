@@ -50,10 +50,9 @@ orders_router = EventRouter(prefix="/events/orders")
 ```
 
 The SDK also exposes `APIRouter`, `ScheduleRouter`, and `PlugRouter`.
-`EventRouter` and `APIRouter` are mounted by the runtime. `PlugRouter` is
-declarative: its plug definitions are emitted into metadata and its static
-assets are exposed through `/static`. `ScheduleRouter` is modeled in the SDK
-contract but is not yet mounted by the runtime or emitted into metadata.
+`EventRouter`, `APIRouter`, and `ScheduleRouter` are mounted by the runtime.
+`PlugRouter` is declarative: its plug definitions are emitted into metadata and
+its static assets are exposed through `/static`.
 
 ## Include Multiple Routers
 

@@ -94,6 +94,19 @@ locally, but only to spare the round trip when a redelivery lands on the
 process already running it. See [configuration.md](../configuration.md) for
 the worker count settings.
 
+## Delivery failures
+
+A delivery the extension does not answer is retried by the Extension Framework
+five times, about 120 seconds apart. When the last retry fails the event goes to
+a dead-letter queue and the platform fails its task, roughly ten minutes after
+the first delivery. Answering `Defer` is a successful delivery: it does not
+consume the retry budget, it schedules the next watchdog instead.
+
+An extension therefore has about two minutes to answer each delivery, and no
+more than ten minutes of unanswered deliveries before the execution is lost.
+This is why the SDK answers the delivery as soon as it has submitted the
+handler, instead of holding the request open for the business logic.
+
 ## Schedule Tasks
 
 Use `task(...)` to register a schedule handler. The SDK starts the platform

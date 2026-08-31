@@ -9,7 +9,6 @@ from mpt_extension_sdk.api.builders.schedule_timing import delivery_latency_seco
 from mpt_extension_sdk.api.models.events import EventResponse, TaskEvent
 from mpt_extension_sdk.extension_app import ExtensionApp
 from mpt_extension_sdk.routing import ScheduleRouteDefinition
-from mpt_extension_sdk.runtime.async_tasks import AsyncTaskRunner
 from mpt_extension_sdk.services.mpt_api_service.task import TaskService
 
 
@@ -32,12 +31,11 @@ def create_schedule_route(route: ScheduleRouteDefinition, extension_app: Extensi
             delivery_latency_seconds(event.details.enqueue_time, event.details.delivery_time),
             request.headers.get("x-envoy-original-path", request.url.path),
         )
-        runner: AsyncTaskRunner = request.app.state.async_task_runner
         return await ScheduleTaskExecutor(
             route=route,
             extension_app=extension_app,
             task_service=task_service,
-            runner=runner,
+            runner=request.app.state.async_task_runner,
             handler_logger=handler_logger,
         ).execute(request=request, task_id=task_id, event=event)
 

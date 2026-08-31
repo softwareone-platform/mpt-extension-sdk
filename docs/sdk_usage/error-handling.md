@@ -2,8 +2,9 @@
 
 The SDK centralizes runtime error mapping. Extension code expresses business
 intent by raising typed exceptions, and the SDK maps each one to the correct
-outcome: an event response for event/task routes, or a problem-details response
-for API routes. Extensions do not implement their own response mappers.
+outcome: an event response for event/task routes, a platform task transition for
+task-based event and schedule routes, or a problem-details response for API
+routes. Extensions do not implement their own response mappers.
 
 This page covers the event/pipeline error model. For the API error model
 (`application/problem+json`, `APIError` subclasses, `422`/`500` responses) see
@@ -113,3 +114,13 @@ of seconds, and the canceled response as
 Because `StopStepError` becomes `CancelError` and `DeferStepError` becomes
 `DeferError`, raising step errors is enough to drive the event outcome. You
 rarely need to construct `CancelError` or `DeferError` directly.
+
+## Task Transition Mapping
+
+A route that carries a platform task transitions it from the handler outcome:
+
+| Handler outcome | Task transition |
+| --- | --- |
+| returns normally | the task is completed |
+| `DeferError` | the task is rescheduled |
+| any other exception | the task is failed |
