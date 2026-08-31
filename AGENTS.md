@@ -8,9 +8,13 @@ Working protocol for any task in this repository:
 4. Treat repository-local documents as repository-specific additions, restrictions, or overrides to shared guidance.
 5. If a repository-local rule conflicts with a shared rule, the local repository rule takes precedence.
 
+The list below is a reading *order*, not a statement of what each document
+owns. [docs/documentation.md](docs/documentation.md) holds the authoritative map
+of every document and its topic; consult it when deciding where content belongs.
+
 When applicable, read the repository in this order:
 
-1. [README.md](README.md) for the repository purpose, quick start, and documentation map.
+1. [README.md](README.md) for the repository purpose and quick start.
 2. [docs/architecture.md](docs/architecture.md) for the package layout, runtime model, and responsibilities.
 3. [docs/configuration.md](docs/configuration.md) for environment variables and integration-facing settings.
 4. [docs/usage.md](docs/usage.md) when a task is about how to build on top of the SDK.
@@ -26,8 +30,8 @@ Then inspect the code paths relevant to the task:
 - [`mpt_extension_sdk/api/builders/`](mpt_extension_sdk/api/builders): FastAPI route builders for API/event handlers, argument resolution, execution, and error mapping
 - [`mpt_extension_sdk/pipeline/`](mpt_extension_sdk/pipeline): execution contexts, pipeline primitives, step decorators, and context factory helpers
 - [`mpt_extension_sdk/runtime/app.py`](mpt_extension_sdk/runtime/app.py): FastAPI app assembly, middleware registration, observability bootstrap, and extension route mounting
-- [`mpt_extension_sdk/runtime/main.py`](mpt_extension_sdk/runtime/main.py): exported ASGI application used by local and platform runtimes
-- [`mpt_extension_sdk/runtime/runner.py`](mpt_extension_sdk/runtime/runner.py): local `uvicorn` startup, platform `ziticorn` startup, and metadata generation before launch
+- [`mpt_extension_sdk/runtime/main.py`](mpt_extension_sdk/runtime/main.py): exported ASGI application used by local and platform runtimes; writes `meta.yaml` on import
+- [`mpt_extension_sdk/runtime/runner.py`](mpt_extension_sdk/runtime/runner.py): local `uvicorn` startup, platform `ziticorn` startup, and the metadata-file writer
 - [`mpt_extension_sdk/runtime/bootstrap/`](mpt_extension_sdk/runtime/bootstrap): extension instance registration, platform identity persistence, and bootstrap HTTP calls
 - [`mpt_extension_sdk/services/mpt_api_service/`](mpt_extension_sdk/services/mpt_api_service): Marketplace service layer used by handlers, pipelines, and runtime task operations
 - [`mpt_extension_sdk/settings/`](mpt_extension_sdk/settings): runtime and extension settings discovery from environment variables and extension modules

@@ -18,14 +18,11 @@ Shared operational knowledge also applies:
 
 ## Development Model
 
-The default development model for this repository is Docker-based.
+The default development model for this repository is Docker-based: work happens
+inside the Compose runtime rather than in a host virtual environment.
 
-- Use `make build` to build the local image and install dependencies.
-- Use `make run` to start the local runtime through Docker Compose.
-- Use `make run-demo` for the local demo stack, described in
-  [local-development.md](local-development.md).
-- Use `make bash` when you need an interactive container session.
-- Use `make build-package` when you need to produce a distributable package artifact inside the configured runtime.
+Setup, the local stacks, and the full `make` target list live in
+[local-development.md](local-development.md).
 
 ## Code Organization Expectations
 
@@ -44,21 +41,16 @@ Repository-specific expectations:
 ## Validation Before Review
 
 Follow the shared validation flow in [knowledge/build-and-checks.md](https://github.com/softwareone-platform/mpt-extension-skills/blob/main/knowledge/build-and-checks.md).
+[local-development.md](local-development.md#make-commands) covers the targets
+specific to this repository.
 
-Repository-specific command entry points are:
+Repository-specific expectations on top of the shared flow:
 
-```bash
-make check
-make test
-make check-all
-```
-
-Use `make build-package` only when you need a distributable package artifact from this repository.
-
-See [testing.md](testing.md) for repository-specific testing expectations.
+- rebuild with `make build` whenever [`uv.lock`](../uv.lock) changed, before
+  running any check.
+- see [testing.md](testing.md) for when tests are required.
 
 ## Documentation Changes
 
-Documentation rules live in [documentation.md](documentation.md).
-
-When changing docs, update the smallest relevant file instead of duplicating policy across multiple documents.
+Documentation rules, and the map of which document owns which topic, live in
+[documentation.md](documentation.md).

@@ -44,7 +44,7 @@ The main package lives under [`mpt_extension_sdk/`](../mpt_extension_sdk).
 
 - [`mpt_extension_sdk/extension_app.py`](../mpt_extension_sdk/extension_app.py): exposes `ExtensionApp`
 - [`mpt_extension_sdk/routing/`](../mpt_extension_sdk/routing): defines route-family routers and route metadata types
-- [`mpt_extension_sdk/api/router.py`](../mpt_extension_sdk/api/router.py): façade for FastAPI route builders
+- [`mpt_extension_sdk/api/builders/`](../mpt_extension_sdk/api/builders): FastAPI route builders for API, event, and schedule routes
 - [`mpt_extension_sdk/runtime/app.py`](../mpt_extension_sdk/runtime/app.py): creates the FastAPI app, loads the exported extension app, and mounts routes
 - [`mpt_extension_sdk/runtime/main.py`](../mpt_extension_sdk/runtime/main.py): exports the ASGI application instance
 - [`mpt_extension_sdk/runtime/runner.py`](../mpt_extension_sdk/runtime/runner.py): runs the extension locally with `uvicorn` or on the platform with `ziticorn`
@@ -58,8 +58,9 @@ The SDK runtime has two main execution surfaces:
 - local development through `FastAPI + uvicorn`
 - platform execution through `mrok`/`ziticorn`, after extension registration and identity bootstrap
 
-`runtime/runner.py` generates `meta.yaml` before startup. In platform mode it registers the extension instance,
-persists the returned identity when present, and starts the exported ASGI app through Ziticorn.
+`runtime/main.py` writes `meta.yaml` while the ASGI application is imported, so it happens in both run modes,
+using the metadata-file writer from `runtime/runner.py`. In platform mode `runtime/runner.py` registers the
+extension instance, persists the returned identity when present, and starts the exported ASGI app through Ziticorn.
 `runtime/app.py` assembles the FastAPI app, configures middleware and observability,
 loads the extension's exported `ext_app`, and mounts every registered route.
 It also registers built-in operational endpoints under the `/bypass` prefix:

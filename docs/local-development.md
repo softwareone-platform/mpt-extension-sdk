@@ -27,57 +27,48 @@ The packaged runtime itself runs in two modes:
 
 ## Setup
 
-Build the local environment:
+Build the local environment before anything else:
 
 ```bash
 make build
 ```
 
-Run the main validation commands:
+## Make Commands
 
-```bash
-make check
-make test
-```
+`make help` lists every available target. The targets this repository shares
+with the rest of the family — `build`, `format`, `check`, `test`, `check-all`,
+`bash`, `review`, and the `uv-*` dependency targets — mean what the shared
+[knowledge/make-targets.md](https://github.com/softwareone-platform/mpt-extension-skills/blob/main/knowledge/make-targets.md)
+says they mean, and their behavior is not restated here.
 
-## Common Commands
+The targets the shared document does not cover:
 
-```bash
-make build
-make run
-make run-demo
-make bash
-make format
-make check
-make test
-make check-all
-make build-package
-```
+- `make run` starts the extension alone through [`compose.yaml`](../compose.yaml).
+- `make run-demo` layers [`compose.demo.yaml`](../compose.demo.yaml) on top and
+  starts the full local harness described in
+  [Local Execution Model](#local-execution-model).
+- `make down` stops and removes the Compose containers.
+- `make build-package` runs `uv build` in the runtime container to produce a
+  distributable package artifact.
 
-## CLI Commands
+What the shared contract leaves to each repository:
 
-Use the packaged `mpt-ext` CLI inside the repository runtime when you need SDK
-runtime operations.
+- `make check` resolves to `ruff format --check`, `ruff check`, `flake8`, `mypy`,
+  and `uv lock --check` here.
+- `make test` accepts pytest arguments; see [testing.md](testing.md).
 
-Common examples:
-
-```bash
-mpt-ext run --local
-mpt-ext run
-mpt-ext meta generate
-mpt-ext meta validate
-```
-
-- `mpt-ext run --local` starts the FastAPI + uvicorn runtime for local development.
-- `mpt-ext run` performs extension registration and starts mrok/ziticorn.
-- `mpt-ext meta generate` writes the metadata file generated from `ext_app`.
-- `mpt-ext meta validate` checks the checked-in metadata artifact against generated output.
+`build`, `run`, `run-demo`, and `down` drive Docker Compose from the host. The
+rest — `bash`, `format`, `check`, `test`, `build-package` — run their tooling
+inside the Compose runtime, where the packaged `mpt-ext` CLI is available too,
+for example from `make bash`. Its commands are documented in
+[sdk_usage/cli.md](sdk_usage/cli.md).
 
 ## Packaging
 
 - [`pyproject.toml`](../pyproject.toml) defines the package metadata and the `mpt-ext` CLI entry point.
-- `make build-package` runs `uv build` in the configured runtime.
 - [`docs/usage.md`](usage.md) is used as the package long description.
+- build the artifact with `make build-package`, described in
+  [Make Commands](#make-commands).
 - runtime configuration details live in [configuration.md](configuration.md)
 
 ## Local Constraints
