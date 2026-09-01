@@ -501,3 +501,26 @@ def test_ext_app_build_ctx_rejects_wrong_subtype(
 
     with pytest.raises(TypeError, match="must inherit from 'OrderContext'"):
         ExtensionApp().build_context(route, context)
+
+
+def test_ext_app_registers_startup_hook():
+    extension_app = ExtensionApp()
+
+    result = extension_app.on_startup(lambda: None)
+
+    assert list(extension_app.startup_hooks) == [result]
+
+
+def test_ext_app_rejects_non_callable_hook():
+    with pytest.raises(TypeError, match="Startup hook must be callable"):
+        ExtensionApp().on_startup("not-a-hook")
+
+
+def test_ext_app_meta_skips_startup_hooks():
+    startup_calls = []
+    extension_app = ExtensionApp()
+    extension_app.on_startup(lambda: startup_calls.append("startup"))
+
+    extension_app.to_meta_config()  # act
+
+    assert not startup_calls

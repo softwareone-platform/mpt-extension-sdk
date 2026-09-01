@@ -1,8 +1,14 @@
 from dataclasses import dataclass, field
 
-from mpt_extension_sdk.routing.models import BaseRouteDefinition, PlugRouteDefinition
+from mpt_extension_sdk.routing.enums import EventDeliveryMode
+from mpt_extension_sdk.routing.models import (
+    BaseRouteDefinition,
+    EventRouteDefinition,
+    PlugRouteDefinition,
+    ScheduleRouteDefinition,
+)
 from mpt_extension_sdk.routing.plugs import ModalPlug, NavigationPlug, Plug
-from mpt_extension_sdk.runtime.models import MetaPlug
+from mpt_extension_sdk.runtime.models import MetaConfig, MetaEvent, MetaPlug, MetaSchedule
 
 DeclaredPlug = Plug | NavigationPlug | ModalPlug
 
@@ -77,3 +83,51 @@ class PlugMetadataBuilder:
         if plug.id in self._plug_ids:
             raise ValueError(f"Plug id '{plug.id}' is already registered")
         self._plug_ids.add(plug.id)
+
+
+@dataclass(kw_only=True)
+class MetaConfigBuilder:
+    """Build extension metadata from the registered application routes."""
+
+    openapi: str
+    routes: list[BaseRouteDefinition]
+
+    def build(self) -> MetaConfig:
+        """Build the extension metadata config."""
+        return MetaConfig(
+            openapi=self.openapi,
+            events=self._build_events(),
+            schedules=self._build_schedules() or None,
+            plugs=self._build_plugs() or None,
+        )
+
+    def _build_events(self) -> list[MetaEvent]:
+        """Build event metadata from registered event routes."""
+        return [
+            MetaEvent(
+                event=route.event,
+                condition=route.condition,
+                path=route.path,
+                task=route.delivery_mode == EventDeliveryMode.TASK,
+            )
+            for route in self.routes
+            if isinstance(route, EventRouteDefinition)
+        ]
+
+    def _build_schedules(self) -> list[MetaSchedule]:
+        """Build schedule metadata from registered schedule routes."""
+        return [
+            MetaSchedule(
+                id=route.id,
+                name=route.name,
+                description=route.description,
+                cron=route.cron,
+                path=route.path,
+            )
+            for route in self.routes
+            if isinstance(route, ScheduleRouteDefinition)
+        ]
+
+    def _build_plugs(self) -> list[MetaPlug]:
+        """Build plug metadata from registered plug providers."""
+        return PlugMetadataBuilder(routes=self.routes).build()
