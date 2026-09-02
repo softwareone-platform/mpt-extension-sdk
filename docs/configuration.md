@@ -85,6 +85,10 @@ LOG_LEVEL=INFO
 - [`mpt_extension_sdk/runtime/bootstrap/registration.py`](../mpt_extension_sdk/runtime/bootstrap/registration.py)
   registers the running extension instance and persists the returned identity
   when present.
+- With `SDK_ZITI_RELOAD=true`, every reloaded worker registers the instance
+  again, so plug, event, and schedule metadata changes reach the platform
+  without a full restart. Reload is a development setting; with it off, the
+  runtime registers only at startup as before.
 
 ## Observability
 

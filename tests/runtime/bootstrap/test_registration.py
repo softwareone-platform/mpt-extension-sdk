@@ -1,6 +1,11 @@
+import httpx
 import pytest
 
-from mpt_extension_sdk.runtime.bootstrap.registration import RegistrationResult, register_instance
+from mpt_extension_sdk.runtime.bootstrap.registration import (
+    RegistrationResult,
+    register_instance,
+    register_instance_on_reload,
+)
 
 
 @pytest.fixture
@@ -65,3 +70,25 @@ def test_register_instance_reuses_identity(runtime_settings, registration_patche
         runtime_settings.identity_file_path,
         {"mrok": {"extension": runtime_settings.extension_id}},
     )
+
+
+def test_register_on_reload_registers_again(runtime_settings, mocker):
+    register = mocker.patch(
+        "mpt_extension_sdk.runtime.bootstrap.registration.register_instance", autospec=True
+    )
+
+    register_instance_on_reload(runtime_settings)  # act
+
+    register.assert_called_once_with(runtime_settings)
+
+
+def test_register_on_reload_survives_a_failure(runtime_settings, mocker):
+    mocker.patch(
+        "mpt_extension_sdk.runtime.bootstrap.registration.register_instance",
+        autospec=True,
+        side_effect=httpx.ConnectError("platform is down"),
+    )
+
+    result = register_instance_on_reload(runtime_settings)
+
+    assert result is None
