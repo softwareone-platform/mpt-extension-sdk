@@ -2,6 +2,8 @@ import logging
 from dataclasses import dataclass
 from typing import Any
 
+import httpx
+
 from mpt_extension_sdk.runtime.bootstrap.client import register_extension_instance
 from mpt_extension_sdk.runtime.bootstrap.identity import load_identity, save_identity
 from mpt_extension_sdk.settings.runtime import RuntimeSettings
@@ -49,3 +51,17 @@ def register_instance(settings: RuntimeSettings) -> RegistrationResult:
 
     logger.info("Extension registration completed extension_id=%s", settings.extension_id)
     return RegistrationResult(instance=instance_payload)
+
+
+def register_instance_on_reload(settings: RuntimeSettings) -> None:
+    """Register the instance again so a reload propagates metadata changes.
+
+    A failing platform call is logged without stopping the worker.
+    """
+    try:
+        register_instance(settings)
+    except httpx.HTTPError:
+        logger.exception(
+            "Could not register the extension again after a reload extension_id=%s",
+            settings.extension_id,
+        )
