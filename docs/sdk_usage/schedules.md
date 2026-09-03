@@ -161,7 +161,9 @@ runner maps handler outcomes to platform task transitions:
   holds;
 - `CancelError`, `FailError`, `ExtRuntimeError`, or an unexpected exception:
   apply `Cancel` response semantics, which transitions the platform task to
-  `Failed`.
+  `Failed`. See
+  [error-handling.md](error-handling.md) for error-to-outcome mappings and
+  failure logging behavior.
 
 The platform publishes the task-lifetime limits under `parameters`:
 

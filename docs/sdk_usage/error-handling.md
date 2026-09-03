@@ -104,7 +104,7 @@ For event and task routes, the SDK maps the final exception to an
 | `DeferError` | `reschedule(seconds=delay_seconds)` |
 | `FailError` | `cancel(reason=...)` |
 | `ExtRuntimeError` | `cancel(reason="Runtime error")` |
-| any other exception | `cancel(reason="Unexpected error")` |
+| any other exception | `cancel(reason="Unexpected error: <ExceptionType>")` |
 
 On the wire, the rescheduled response serializes as
 `{"response": "Delay", "delay": <seconds>}`, where `delay` is an integer number

@@ -19,6 +19,17 @@ class AgreementService(BaseService[Agreement]):
             Agreement,
             offset=offset,
             limit=limit,
+            select=[
+                "assets",
+                "buyer",
+                "client",
+                "licensee",
+                "lines",
+                "listing",
+                "parameters",
+                "product",
+                "seller",
+            ],
         )
 
     async def get_by_id(self, agreement_id: str) -> Agreement:

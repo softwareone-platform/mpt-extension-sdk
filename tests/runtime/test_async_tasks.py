@@ -58,7 +58,7 @@ def failing_create_task(mocker):
         (DeferError("later"), "reschedule", {}),
         (CancelError("cancelled"), "fail", {"reason": "cancelled"}),
         (FailError("failed"), "fail", {"reason": "failed"}),
-        (RuntimeError("unexpected"), "fail", {"reason": "Unexpected error"}),
+        (RuntimeError("unexpected"), "fail", {"reason": "Unexpected error: RuntimeError"}),
     ],
 )
 async def test_runner_maps_handler_errors(
@@ -71,6 +71,17 @@ async def test_runner_maps_handler_errors(
     await asyncio.sleep(0)  # act
 
     getattr(task_service, expected_action).assert_awaited_once_with("TSK-1", **expected_kwargs)
+
+
+async def test_runner_logs_unexpected_handler_error(mocker, logger, submit):
+    runner = AsyncTaskRunner()
+    error = RuntimeError("unexpected")
+    mock_log_exception = mocker.patch.object(logger, "exception", autospec=True)
+    submit(runner, mocker.AsyncMock(side_effect=error))
+
+    await asyncio.sleep(0)  # act
+
+    mock_log_exception.assert_called_once_with("Async task %s failed", "TSK-1", exc_info=error)
 
 
 async def test_runner_completes_task(mocker, task_service, submit):

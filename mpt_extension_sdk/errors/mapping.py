@@ -21,4 +21,4 @@ def map_exception_to_event_response(error: Exception) -> EventResponse:
     if isinstance(error, ExtRuntimeError):
         return EventResponse.cancel(reason="Runtime error")
 
-    return EventResponse.cancel(reason="Unexpected error")
+    return EventResponse.cancel(reason=f"Unexpected error: {type(error).__name__}")

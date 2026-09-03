@@ -157,4 +157,4 @@ async def test_cancel_error_fails_with_reason(transitions, task_service):
 async def test_unexpected_error_fails(transitions, task_service):
     await transitions.transition_on_error("TSK-1", RuntimeError("boom"))  # act
 
-    task_service.fail.assert_awaited_once_with("TSK-1", reason="Unexpected error")
+    task_service.fail.assert_awaited_once_with("TSK-1", reason="Unexpected error: RuntimeError")
