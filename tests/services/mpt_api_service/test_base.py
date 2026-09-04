@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from mpt_api_client.http.mixins import AsyncCollectionMixin
+
 from mpt_extension_sdk.models.base import BaseModel
 from mpt_extension_sdk.services.api_client_v2.mpt_api_client import AsyncMPTClient
 from mpt_extension_sdk.services.mpt_api_service.base import BaseService
@@ -41,8 +43,8 @@ class FakePage:
 
 async def test_paginate_fetches_page(mocker):
     meta = FakeMeta(FakePagination(limit=2, offset=4, total=10))
-    collection = mocker.Mock(spec=["fetch_page"])
-    collection.fetch_page = mocker.AsyncMock(return_value=FakePage(["one", "two"], meta=meta))
+    collection = mocker.create_autospec(AsyncCollectionMixin, instance=True)
+    collection.fetch_page.return_value = FakePage(["one", "two"], meta=meta)
     mocker.patch.object(
         FakeModel,
         "from_payload",
@@ -61,8 +63,8 @@ async def test_paginate_fetches_page(mocker):
 
 
 async def test_paginate_falls_back_when_meta_missing(mocker):
-    collection = mocker.Mock(spec=["fetch_page"])
-    collection.fetch_page = mocker.AsyncMock(return_value=FakePage(["one", "two"], meta=None))
+    collection = mocker.create_autospec(AsyncCollectionMixin, instance=True)
+    collection.fetch_page.return_value = FakePage(["one", "two"], meta=None)
     mocker.patch.object(
         FakeModel,
         "from_payload",
@@ -78,3 +80,30 @@ async def test_paginate_falls_back_when_meta_missing(mocker):
     assert result.limit == 2
     assert result.resources == [{"payload": "one"}, {"payload": "two"}]
     assert result.total == 6
+
+
+async def test_paginate_selects_fields(mocker):
+    meta = FakeMeta(FakePagination(limit=2, offset=0, total=1))
+    collection = mocker.create_autospec(AsyncCollectionMixin, instance=True)
+    query = mocker.create_autospec(AsyncCollectionMixin, instance=True)
+    collection.select.return_value = query
+    query.fetch_page.return_value = FakePage(["one"], meta=meta)
+    mocker.patch.object(FakeModel, "from_payload", autospec=True, return_value={"payload": "one"})
+    service = FakeService(mocker.Mock(spec=AsyncMPTClient))
+
+    await service._paginate(collection, FakeModel, limit=2, select=["buyer", "seller"])  # act
+
+    collection.select.assert_called_once_with("buyer", "seller")
+    query.fetch_page.assert_awaited_once_with(offset=0, limit=2)
+
+
+async def test_paginate_skips_select_without_fields(mocker):
+    meta = FakeMeta(FakePagination(limit=2, offset=0, total=1))
+    collection = mocker.create_autospec(AsyncCollectionMixin, instance=True)
+    collection.fetch_page.return_value = FakePage(["one"], meta=meta)
+    mocker.patch.object(FakeModel, "from_payload", autospec=True, return_value={"payload": "one"})
+    service = FakeService(mocker.Mock(spec=AsyncMPTClient))
+
+    await service._paginate(collection, FakeModel, limit=2)  # act
+
+    collection.select.assert_not_called()

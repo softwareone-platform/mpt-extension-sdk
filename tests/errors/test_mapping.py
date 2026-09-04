@@ -1,25 +1,31 @@
+import pytest
+
 from mpt_extension_sdk.api.models.events import EventResponse
 from mpt_extension_sdk.errors.mapping import map_exception_to_event_response
 from mpt_extension_sdk.errors.pipeline import CancelError, DeferError, FailError
 from mpt_extension_sdk.errors.runtime import ExtRuntimeError
 
 
-def test_map_exc_to_event_response_cancel(mocker):
+@pytest.mark.parametrize(
+    ("error", "expected_reason"),
+    [
+        (CancelError(), "Cancelled"),
+        (CancelError("fake error msg"), "fake error msg"),
+        (FailError(), "Failed to process the event"),
+        (FailError("fake error msg"), "fake error msg"),
+        (ExtRuntimeError(), "Runtime error"),
+        (ExtRuntimeError("fake internal detail"), "Runtime error"),
+        (Exception(), "Unexpected error: Exception"),
+        (KeyError("fake internal detail"), "Unexpected error: KeyError"),
+    ],
+)
+def test_map_exc_to_event_response_cancel(mocker, error, expected_reason):
     mock_event_response = mocker.patch.object(EventResponse, "cancel", autospec=True)
 
-    result = map_exception_to_event_response(CancelError())
+    result = map_exception_to_event_response(error)
 
     assert result == mock_event_response.return_value
-    mock_event_response.assert_called_once_with(reason="Cancelled")
-
-
-def test_map_exc_to_event_response_cancel_reason(mocker):
-    mock_event_response = mocker.patch.object(EventResponse, "cancel", autospec=True)
-
-    result = map_exception_to_event_response(CancelError("fake error msg"))
-
-    assert result == mock_event_response.return_value
-    mock_event_response.assert_called_once_with(reason="fake error msg")
+    mock_event_response.assert_called_once_with(reason=expected_reason)
 
 
 def test_map_exc_to_event_response_defer(mocker):
@@ -29,30 +35,3 @@ def test_map_exc_to_event_response_defer(mocker):
 
     assert result == mock_event_response.return_value
     mock_event_response.assert_called_once_with(seconds=30)
-
-
-def test_map_exc_to_event_response_fail(mocker):
-    mock_event_response = mocker.patch.object(EventResponse, "cancel", autospec=True)
-
-    result = map_exception_to_event_response(FailError("Failed to process the event"))
-
-    assert result == mock_event_response.return_value
-    mock_event_response.assert_called_once_with(reason="Failed to process the event")
-
-
-def test_map_exc_to_event_response_runtime_error(mocker):
-    mock_event_response = mocker.patch.object(EventResponse, "cancel", autospec=True)
-
-    result = map_exception_to_event_response(ExtRuntimeError("fake error msg"))
-
-    assert result == mock_event_response.return_value
-    mock_event_response.assert_called_once_with(reason="Runtime error")
-
-
-def test_map_exc_to_event_response_unexpected(mocker):
-    mock_event_response = mocker.patch.object(EventResponse, "cancel", autospec=True)
-
-    result = map_exception_to_event_response(Exception())
-
-    assert result == mock_event_response.return_value
-    mock_event_response.assert_called_once_with(reason="Unexpected error")

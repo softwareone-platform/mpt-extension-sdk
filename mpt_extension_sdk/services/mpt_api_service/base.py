@@ -2,6 +2,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
+from mpt_api_client.http.mixins import AsyncCollectionMixin
+
 from mpt_extension_sdk.models.base import BaseModel
 from mpt_extension_sdk.services.api_client_v2.mpt_api_client import AsyncMPTClient
 
@@ -31,14 +33,16 @@ class BaseService[Model: BaseModel]:
 
     async def _paginate(
         self,
-        collection: Any,
+        collection: AsyncCollectionMixin[Any],
         model: type[Model],
         *,
         offset: int = 0,
         limit: int = 100,
+        select: list[str] | None = None,
     ) -> PaginatedCollection[Model]:
         """Fetch and serialize one page from a Marketplace collection."""
-        page = await collection.fetch_page(offset=offset, limit=limit)
+        query = collection.select(*select) if select else collection
+        page = await query.fetch_page(offset=offset, limit=limit)
         pagination = page.meta.pagination if page.meta else None
         resources = [model.from_payload(element) for element in page]
         return PaginatedCollection(
