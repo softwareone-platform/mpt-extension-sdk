@@ -178,4 +178,5 @@ make/local.mk
 meta.yaml
 
 # Claude
-.claude
+.claude/*
+!.claude/settings.json
