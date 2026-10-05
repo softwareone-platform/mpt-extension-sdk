@@ -1,4 +1,4 @@
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Any
@@ -48,7 +48,7 @@ class RouteSpanAttributes:
 
 
 @contextmanager
-def start_event_span(path: str, *, task_based: bool, event: Any) -> Iterator[Span]:  # noqa: WPS210
+def start_event_span(path: str, *, task_based: bool, event: Any) -> Generator[Span]:  # noqa: WPS210
     """Start and yield the span for an incoming event delivery."""
     object_type = getattr(getattr(event, "object", None), "object_type", "")
     object_id = getattr(getattr(event, "object", None), "id", "")
@@ -87,7 +87,7 @@ def start_api_span(  # noqa: WPS211
     method: str,
     route_name: str,
     route_path: str,
-) -> Iterator[Span]:
+) -> Generator[Span]:
     """Start and yield the span for an authenticated API request."""
     with TRACER.start_as_current_span(f"API {method} {route_path}", kind=SpanKind.INTERNAL) as span:
         route_attributes = RouteSpanAttributes(

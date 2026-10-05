@@ -1,5 +1,5 @@
 import logging
-from collections.abc import AsyncIterator, Awaitable, Callable
+from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from importlib import import_module
 from pathlib import Path
@@ -110,7 +110,7 @@ def _create_fastapi_app(extension_app: ExtensionApp) -> FastAPI:
     """Create the base FastAPI application for the extension runtime."""
 
     @asynccontextmanager
-    async def runtime_lifespan(_lifespan_app: object) -> AsyncIterator[None]:  # noqa: WPS430
+    async def runtime_lifespan(_lifespan_app: object) -> AsyncGenerator[None]:  # noqa: WPS430
         """Run the extension startup hooks, then keep the app ready while serving.
 
         Uses the closed-over FastAPI instance instead of the lifespan argument:

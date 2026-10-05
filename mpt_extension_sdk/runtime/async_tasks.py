@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from collections.abc import Awaitable, Callable, Iterator
+from collections.abc import Awaitable, Callable, Generator
 from contextlib import contextmanager
 from dataclasses import dataclass
 
@@ -48,7 +48,7 @@ class AsyncTaskRunner:
         return task_id in self._running
 
     @contextmanager
-    def reserve(self, task_id: str) -> Iterator[bool]:
+    def reserve(self, task_id: str) -> Generator[bool]:
         """Atomically reserve a task while it is being accepted."""
         if self._shutting_down or task_id in self._reserved or self.is_running(task_id):
             yield False

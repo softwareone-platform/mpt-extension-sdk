@@ -29,16 +29,16 @@ dev = [
     "freezegun==1.5.*",
     "ipdb==0.13.*",
     "ipython==9.*",
-    "mypy==2.3.*",
+    "mypy==2.4.*",
     "pre-commit==4.6.*",
     "pytest==9.1.*",
     "pytest-asyncio==1.4.*",
     "pytest-cov==7.1.*",
     "pytest-deadfixtures==3.1.*",
-    "pytest-mock==3.15.*",
+    "pytest-mock==3.16.*",
     "pytest-randomly==5.0.*",
     "pytest-xdist==3.8.*",
-    "ruff==0.16.9", # force ruff version to have same formatting everywhere, also update in pre-commit config
+    "ruff==0.16.10", # force ruff version to have same formatting everywhere, also update in pre-commit config
     "wemake-python-styleguide==1.8.*", # also update pre-commit config
 ]
 
