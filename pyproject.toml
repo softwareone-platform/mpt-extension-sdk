@@ -8,8 +8,8 @@ readme = "docs/usage.md"
 license = {text = "Apache-2.0 license"}
 dependencies = [
     "fastapi[standard]==0.136.*",
-    "mpt-api-client==6.4.*",
-    "mrok==0.10.6",
+    "mpt-api-client>=6.4,<7.1",
+    "mrok==0.10.7",
     "opentelemetry-api==1.40.0",
     "opentelemetry-exporter-otlp-proto-http==1.40.0",
     "opentelemetry-instrumentation-fastapi==0.61b0",
