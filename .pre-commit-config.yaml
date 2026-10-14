@@ -41,7 +41,7 @@ repos:
         pass_filenames: false
         additional_dependencies:
           - fastapi[standard]==0.136.*
-          - mpt-api-client==6.4.*
+          - mpt-api-client==6.5.*
           - mrok==0.10.6
           - opentelemetry-api==1.40.0
           - opentelemetry-exporter-otlp-proto-http==1.40.0
@@ -49,6 +49,6 @@ repos:
           - opentelemetry-instrumentation-httpx==0.61b0
           - opentelemetry-instrumentation-logging==0.61b0
           - opentelemetry-sdk==1.40.0
-          - pydantic==2.12.*
+          - pydantic==2.14.*
           - typer==0.26.*
           - types-pyyaml>=6.0.12.20260408
