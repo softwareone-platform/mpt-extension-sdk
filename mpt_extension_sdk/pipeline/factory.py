@@ -48,8 +48,19 @@ class RouteContextFactory:
         auth_context: AuthContext,
         request_context: AuthenticatedRequestContext,
         handler_logger: logging.Logger,
+        task: TaskHandle | None = None,
     ) -> APIContext:
-        """Build the authenticated execution context for an API request."""
+        """Build the authenticated execution context for an API request.
+
+        Args:
+            auth_context: Authenticated request claims.
+            request_context: Request-derived data exposed to the handler.
+            handler_logger: Logger of the handler the request targets.
+            task: Platform task of a deferred delivery, or None on a direct call.
+
+        Returns:
+            The API context, carrying the platform task when one is given.
+        """
         self._assert_extension_id_matches(auth_context)
         services = await self._build_services(auth_context)
         return APIContext(
@@ -60,6 +71,7 @@ class RouteContextFactory:
             runtime_settings=self.runtime_settings,
             auth=auth_context,
             request=request_context,
+            task=task,
         )
 
     async def build_event_context(

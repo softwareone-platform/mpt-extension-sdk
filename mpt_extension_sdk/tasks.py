@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class TaskHandle:
-    """Restricted Platform Task handle available to task-backed handlers."""
+    """Platform Task id and progress reporting, without access to the task lifecycle."""
 
     id: str
     task_service: TaskService
