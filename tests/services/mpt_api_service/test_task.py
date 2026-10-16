@@ -29,6 +29,12 @@ def service(mocker, tasks_client):
         ("fail", ("TASK-1", "Timed out"), "fail", ("TASK-1", {"reason": "Timed out"})),
         ("progress", ("TASK-1", 0.5), "update", ("TASK-1", {"progress": 0.5})),
         ("reschedule", ("TASK-1",), "reschedule", ("TASK-1",)),
+        (
+            "set_result",
+            ("TASK-1", "/public/v1/commerce/agreements/AGR-1"),
+            "update",
+            ("TASK-1", {"result": "/public/v1/commerce/agreements/AGR-1"}),
+        ),
         ("start", ("TASK-1",), "execute", ("TASK-1",)),
     ],
 )
