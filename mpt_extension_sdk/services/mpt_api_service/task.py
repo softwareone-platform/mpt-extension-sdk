@@ -48,6 +48,15 @@ class TaskService(BaseService[Task]):
         """
         await self._client.system.tasks.reschedule(task_id)
 
+    async def set_result(self, task_id: str, result: str) -> None:
+        """Point the task result at the resource that holds its outcome.
+
+        Args:
+            task_id: Unique identifier of the platform task.
+            result: Relative URI of the resource.
+        """
+        await self._client.system.tasks.update(task_id, {"result": result})
+
     async def start(self, task_id: str) -> None:
         """Signal the platform that processing of a task has started.
 
