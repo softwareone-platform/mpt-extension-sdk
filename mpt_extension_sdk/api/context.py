@@ -11,6 +11,7 @@ from mpt_extension_sdk.context import BaseContext
 
 if TYPE_CHECKING:
     from mpt_extension_sdk.services.mpt_api_service import MPTAPIService
+    from mpt_extension_sdk.tasks import TaskHandle
 
 
 @dataclass(kw_only=True)
@@ -21,6 +22,7 @@ class APIContext(BaseContext):
     request: "AuthenticatedRequestContext"
 
     state: dict[str, Any] = field(default_factory=dict)
+    task: "TaskHandle | None" = None
 
 
 @dataclass(frozen=True)

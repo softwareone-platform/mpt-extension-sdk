@@ -18,6 +18,7 @@ from mpt_extension_sdk.services.mpt_api_service import MPTAPIService
 from mpt_extension_sdk.services.mpt_api_service.agreement import AgreementService
 from mpt_extension_sdk.services.mpt_api_service.order import OrderService
 from mpt_extension_sdk.settings.extension import BaseExtensionSettings
+from mpt_extension_sdk.tasks import TaskHandle
 
 
 class FakeAuthAPIService:
@@ -231,6 +232,31 @@ async def test_api_context_exposes_vendor_service(
     )
 
     assert result.vendor_mpt_api_service is vendor_service
+
+
+async def test_api_context_has_no_task(mocker, logger, auth, account_service):
+    result = await build_api_context(
+        auth_context=auth,
+        request_context=mocker.Mock(spec=AuthenticatedRequestContext),
+        handler_logger=logger,
+        mpt_api_service_type=FakeAuthAPIService,
+    )
+
+    assert result.task is None
+
+
+async def test_build_api_context_with_task(mocker, logger, auth, task_service, account_service):
+    factory = RouteContextFactory.from_service_type(FakeAuthAPIService)
+    task = TaskHandle(id="TSK-1", task_service=task_service)
+
+    result = await factory.build_api_context(
+        auth_context=auth,
+        request_context=mocker.Mock(spec=AuthenticatedRequestContext),
+        handler_logger=logger,
+        task=task,
+    )
+
+    assert result.task is task
 
 
 async def test_schedule_context_exposes_vendor_service(
