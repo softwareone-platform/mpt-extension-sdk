@@ -8,16 +8,13 @@ from mpt_extension_sdk.api.models.events import Event, TaskEvent
 from mpt_extension_sdk.pipeline.context.agreement import AgreementContext
 from mpt_extension_sdk.pipeline.context.event import EventBaseContext, EventMetadata
 from mpt_extension_sdk.pipeline.context.order import OrderContext
-from mpt_extension_sdk.pipeline.context.schedule import (
-    ScheduleContext,
-    ScheduleMetadata,
-    ScheduleTaskHandle,
-)
+from mpt_extension_sdk.pipeline.context.schedule import ScheduleContext, ScheduleMetadata
 from mpt_extension_sdk.runtime.logging import correlation_id_ctx, task_id_ctx
 from mpt_extension_sdk.services.mpt_api_service import MPTAPIService
 from mpt_extension_sdk.services.mpt_api_service.task import TaskService
 from mpt_extension_sdk.settings.extension import BaseExtensionSettings, get_extension_settings
 from mpt_extension_sdk.settings.runtime import RuntimeSettings, get_runtime_settings
+from mpt_extension_sdk.tasks import TaskHandle
 
 
 @dataclass(frozen=True)
@@ -100,7 +97,7 @@ class RouteContextFactory:
                 task_id=task_id,
                 correlation_id=correlation_id_ctx.get(),
             ),
-            task=ScheduleTaskHandle(id=task_id, task_service=task_service),
+            task=TaskHandle(id=task_id, task_service=task_service),
             mpt_api_service=services.mpt_api_service,
             vendor_mpt_api_service=services.vendor_mpt_api_service,
             ext_settings=self.extension_settings,
