@@ -20,6 +20,7 @@ from mpt_extension_sdk.models.order import Order
 from mpt_extension_sdk.routing import EventRouter
 from mpt_extension_sdk.runtime.models import MetaConfig, MetaEvent
 from mpt_extension_sdk.services.mpt_api_service import MPTAPIService
+from mpt_extension_sdk.services.mpt_api_service.task import TaskService
 from mpt_extension_sdk.settings.runtime import RuntimeSettings
 
 FUTURE_EXP_TIMESTAMP = 4102444800
@@ -193,6 +194,11 @@ def extension_router():
 @pytest.fixture
 def vendor_mpt_api_service(mocker):
     return mocker.AsyncMock(spec=MPTAPIService)
+
+
+@pytest.fixture
+def task_service(mocker):
+    return mocker.AsyncMock(spec=TaskService)
 
 
 @pytest.fixture

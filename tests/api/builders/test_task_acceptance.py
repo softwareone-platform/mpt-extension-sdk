@@ -2,7 +2,7 @@ import pytest
 from mpt_api_client.exceptions import MPTError
 
 from mpt_extension_sdk.api.auth import AuthenticationError
-from mpt_extension_sdk.api.builders.schedule_acceptance import ScheduleTaskAcceptance
+from mpt_extension_sdk.api.builders.task_acceptance import TaskAcceptance, TaskHandlerType
 from mpt_extension_sdk.api.models.events import EventResponse
 from mpt_extension_sdk.errors.runtime import ConfigError
 from mpt_extension_sdk.models.task import Task
@@ -10,7 +10,9 @@ from mpt_extension_sdk.models.task import Task
 
 @pytest.fixture
 def acceptance(task_service, logger):
-    return ScheduleTaskAcceptance(task_service=task_service, handler_logger=logger)
+    return TaskAcceptance(
+        handler_type=TaskHandlerType.SCHEDULE, handler_logger=logger, task_service=task_service
+    )
 
 
 async def test_fetch_task_returns_task(acceptance, task_service, mocker):
@@ -77,3 +79,14 @@ def test_map_context_error_defers(acceptance):
     result = acceptance.map_context_error(RuntimeError("transient"))
 
     assert result == EventResponse.reschedule()
+
+
+async def test_log_lines_use_handler_type(task_service, logger, caplog):
+    acceptance = TaskAcceptance(
+        handler_type=TaskHandlerType.DEFERRED_CALL, handler_logger=logger, task_service=task_service
+    )
+    task_service.get.side_effect = MPTError("boom")
+
+    await acceptance.fetch_task("TSK-1")  # act
+
+    assert caplog.messages == ["Deferred call task could not be fetched"]

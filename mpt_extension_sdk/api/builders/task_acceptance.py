@@ -1,4 +1,5 @@
 import logging
+from enum import StrEnum
 
 from mpt_api_client.exceptions import MPTError
 
@@ -13,20 +14,42 @@ NON_RECOVERABLE_CONTEXT_ERRORS = (ConfigError, ValidationError, TypeError, Value
 CONTEXT_CREATION_ERRORS = (AuthenticationError, *NON_RECOVERABLE_CONTEXT_ERRORS, MPTError)
 
 
-class ScheduleTaskAcceptance:
+class TaskHandlerType(StrEnum):
+    """Handler types whose deliveries run as a Platform Task."""
+
+    DEFERRED_CALL = "Deferred call"
+    SCHEDULE = "Schedule"
+
+
+class TaskAcceptance:
     """Platform Task lifecycle operations that defer the delivery on infrastructure failures."""
 
-    def __init__(self, *, task_service: TaskService, handler_logger: logging.Logger) -> None:
-        """Initialize the acceptance operations with their collaborators."""
-        self.task_service = task_service
+    def __init__(
+        self,
+        *,
+        handler_type: TaskHandlerType,
+        handler_logger: logging.Logger,
+        task_service: TaskService,
+    ) -> None:
+        """Initialize the acceptance operations with their collaborators.
+
+        Args:
+            handler_type: Handler type that prefixes every log line.
+            handler_logger: Logger of the handler the delivery targets.
+            task_service: Marketplace Tasks service used for the lifecycle calls.
+        """
+        self.handler_type = handler_type
         self.handler_logger = handler_logger
+        self.task_service = task_service
 
     async def fetch_task(self, task_id: str) -> Task | None:
         """Fetch the platform task, deferring the delivery when unavailable."""
         try:
             return await self.task_service.get(task_id)
         except MPTError as error:
-            self.handler_logger.exception("Could not fetch schedule task", exc_info=error)
+            self.handler_logger.exception(
+                "%s task could not be fetched", self.handler_type, exc_info=error
+            )
             return None
 
     async def start_task(self, task_id: str, *, watchdog_delay: int) -> EventResponse | None:
@@ -48,10 +71,12 @@ class ScheduleTaskAcceptance:
         except MPTError as error:
             if getattr(error, "status_code", None) == TASK_CONFLICT_STATUS_CODE:
                 self.handler_logger.info(
-                    "Schedule task %s is already claimed by another execution", task_id
+                    "%s task %s is already claimed by another execution",
+                    self.handler_type,
+                    task_id,
                 )
                 return EventResponse.reschedule(watchdog_delay)
-            self.handler_logger.exception("Schedule task start failed", exc_info=error)
+            self.handler_logger.exception("%s task start failed", self.handler_type, exc_info=error)
             return EventResponse.reschedule()
         return None
 
@@ -60,17 +85,21 @@ class ScheduleTaskAcceptance:
         try:
             await self.task_service.reschedule(task_id)
         except MPTError as error:
-            self.handler_logger.exception("Schedule task reschedule failed", exc_info=error)
+            self.handler_logger.exception(
+                "%s task reschedule failed", self.handler_type, exc_info=error
+            )
 
     def map_context_error(self, error: Exception) -> EventResponse:
-        """Map context construction failures to schedule acceptance responses."""
+        """Map context construction failures to acceptance responses."""
         if isinstance(error, AuthenticationError):
-            self.handler_logger.error("Schedule task authentication failed", exc_info=error)
+            self.handler_logger.error(
+                "%s task authentication failed", self.handler_type, exc_info=error
+            )
             return EventResponse.cancel(reason="Authentication failed")
         if isinstance(error, NON_RECOVERABLE_CONTEXT_ERRORS):
             self.handler_logger.error(
-                "Schedule context creation is not recoverable", exc_info=error
+                "%s context creation is not recoverable", self.handler_type, exc_info=error
             )
             return EventResponse.cancel(reason="Non-recoverable context error")
-        self.handler_logger.error("Schedule context creation failed", exc_info=error)
+        self.handler_logger.error("%s context creation failed", self.handler_type, exc_info=error)
         return EventResponse.reschedule()

@@ -7,13 +7,14 @@ from mpt_extension_sdk.api.auth import (
     AuthenticationError,
     RequestAuthenticationService,
 )
-from mpt_extension_sdk.api.builders.schedule_acceptance import (
-    CONTEXT_CREATION_ERRORS,
-    ScheduleTaskAcceptance,
-)
 from mpt_extension_sdk.api.builders.schedule_timing import (
     get_execution_deadline,
     watchdog_delay_seconds,
+)
+from mpt_extension_sdk.api.builders.task_acceptance import (
+    CONTEXT_CREATION_ERRORS,
+    TaskAcceptance,
+    TaskHandlerType,
 )
 from mpt_extension_sdk.api.models.events import EventResponse, TaskEvent
 from mpt_extension_sdk.errors.runtime import AsyncTasksRunnerError
@@ -44,9 +45,10 @@ class ScheduleTaskExecutor:
         self.task_service = task_service
         self.runner = runner
         self.handler_logger = handler_logger
-        self.acceptance = ScheduleTaskAcceptance(
-            task_service=task_service,
+        self.acceptance = TaskAcceptance(
+            handler_type=TaskHandlerType.SCHEDULE,
             handler_logger=handler_logger,
+            task_service=task_service,
         )
 
     async def execute(self, *, request: Request, task_id: str, event: TaskEvent) -> EventResponse:
