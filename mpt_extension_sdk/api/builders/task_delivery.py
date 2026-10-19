@@ -16,6 +16,7 @@ from mpt_extension_sdk.api.builders.task_timing import (
     MIN_WATCHDOG_DELAY_SECONDS,
     get_execution_deadline,
 )
+from mpt_extension_sdk.api.errors import APIError
 from mpt_extension_sdk.api.models.events import EventResponse
 from mpt_extension_sdk.errors.runtime import AsyncTasksRunnerError, ConfigError, ValidationError
 from mpt_extension_sdk.models.task import Task
@@ -51,7 +52,7 @@ class TaskDeliveryHandler[DeliveryT](ABC):  # noqa: WPS214
         self.handler_logger = handler_logger
         self._transitions = SafeTaskTransitions(task_service, handler_logger)
 
-    async def deliver(
+    async def execute(
         self, *, request: Request, task_id: str, delivery: DeliveryT
     ) -> EventResponse:
         """Answer the delivery of a platform task."""
@@ -80,6 +81,16 @@ class TaskDeliveryHandler[DeliveryT](ABC):  # noqa: WPS214
     ) -> AsyncTaskHandler:
         """Return the call the runner executes for this delivery."""
 
+    def can_claim(self, task: Task) -> bool:
+        """Return whether this instance should try to claim the task now."""
+        if self.runner.has_capacity():
+            return True
+
+        self.handler_logger.warning(
+            "%s task %s deferred: the runner is at capacity", self.handler_type, task.id
+        )
+        return False
+
     def watchdog_delay(self, task: Task, delivery: DeliveryT) -> int:
         """Return the Delay, in seconds, to answer while the task runs."""
         now = dt.datetime.now(dt.UTC)
@@ -91,6 +102,9 @@ class TaskDeliveryHandler[DeliveryT](ABC):  # noqa: WPS214
         self, *, request: Request, auth: AuthContext, task: Task, delivery: DeliveryT
     ) -> EventResponse:
         watchdog_delay = self.watchdog_delay(task, delivery)
+        if not self.can_claim(task):
+            return EventResponse.reschedule(watchdog_delay)
+
         with self.runner.reserve(task.id) as reserved:
             if not reserved:
                 return EventResponse.reschedule(watchdog_delay)
@@ -99,6 +113,11 @@ class TaskDeliveryHandler[DeliveryT](ABC):  # noqa: WPS214
                 task_callback = await self.build_callback(
                     request=request, auth=auth, task=task, delivery=delivery
                 )
+            except APIError:
+                self.handler_logger.exception(
+                    "%s task request payload is invalid", self.handler_type
+                )
+                return EventResponse.cancel(reason="Invalid request payload")
             except CONTEXT_CREATION_ERRORS as error:
                 return self._map_context_error(error)
 

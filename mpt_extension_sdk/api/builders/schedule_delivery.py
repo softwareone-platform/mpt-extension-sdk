@@ -57,10 +57,13 @@ class ScheduleDeliveryHandler(TaskDeliveryHandler[TaskEvent]):
         )
         return lambda: self.route.callback(context)
 
-    async def execute(self, *, request: Request, task_id: str, event: TaskEvent) -> EventResponse:
-        """Answer a schedule delivery."""
-        set_event_context(task_id=task_id, event_id=event.id)
-        return await self.deliver(request=request, task_id=task_id, delivery=event)
+    @override
+    async def execute(
+        self, *, request: Request, task_id: str, delivery: TaskEvent
+    ) -> EventResponse:
+        """Answer a schedule delivery with its event in the logging context."""
+        set_event_context(task_id=task_id, event_id=delivery.id)
+        return await super().execute(request=request, task_id=task_id, delivery=delivery)
 
     @override
     def watchdog_delay(self, task: Task, delivery: TaskEvent) -> int:
