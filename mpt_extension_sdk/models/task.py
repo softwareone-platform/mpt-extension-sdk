@@ -1,10 +1,10 @@
 import datetime as dt
-from typing import Self
+from typing import Any, Self
 
 from pydantic import Field, model_validator
 
 from mpt_extension_sdk.models.audit import Audit
-from mpt_extension_sdk.models.base import BaseModel
+from mpt_extension_sdk.models.base import BaseModel, ISODatetime
 from mpt_extension_sdk.models.status import (
     CaseInsensitiveStrEnum,
     UnknownStatusWarning,
@@ -24,6 +24,16 @@ class TaskStatus(CaseInsensitiveStrEnum):
     PROCESSING = "processing"
     QUEUED = "queued"
     RESCHEDULED = "rescheduled"
+
+
+class TaskLogSeverity(CaseInsensitiveStrEnum):
+    """Severities of a platform Task Log Record."""
+
+    DEBUG = "Debug"
+    ERROR = "Error"
+    FAILURE = "Failure"
+    INFO = "Info"  # noqa: WPS110
+    WARNING = "Warning"
 
 
 FINAL_STATUSES = frozenset((TaskStatus.COMPLETED, TaskStatus.FAILED))
@@ -74,3 +84,22 @@ class Task(BaseModel):
         """Emit a warning when the status is not a known TaskStatus."""
         warn_on_unknown_status("Task", self.id, self.status, TaskStatus, UnknownTaskStatusWarning)
         return self
+
+
+class TaskReference(BaseModel):
+    """Task reference."""
+
+    id: str
+
+
+class TaskLog(BaseModel):
+    """Platform Task Log Record describing what a task is doing."""
+
+    id: str | None = None
+    eta: ISODatetime | None = None
+    message: str
+    parameters: dict[str, Any] | None = None  # noqa: WPS110
+    progress: float | None = None
+    severity: TaskLogSeverity = TaskLogSeverity.INFO
+    task: TaskReference | None = None
+    timestamp: ISODatetime | None = None

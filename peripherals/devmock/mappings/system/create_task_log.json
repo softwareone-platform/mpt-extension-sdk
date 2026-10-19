@@ -1,0 +1,17 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPathPattern": "/public/v1/system/tasks/[^/]+/logs"
+  },
+  "response": {
+    "status": 201,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": "{{#jsonMerge request.body}}{\"id\":\"TLG-{{randomInt lower=1000 upper=9999}}\",\"task\":{\"id\":\"{{request.pathSegments.[4]}}\"},\"timestamp\":\"{{now}}\"}{{/jsonMerge}}",
+    "transformers": [
+      "response-template"
+    ]
+  },
+  "priority": 2
+}

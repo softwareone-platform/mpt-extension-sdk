@@ -4,7 +4,166 @@ Use `ScheduleRouter` to register periodic work triggered by the Extension
 Framework. The SDK publishes the cron configuration in extension metadata; it
 does not run an in-process scheduler.
 
-## Delivery body
+## Registering a schedule
+
+Use `task(...)` to register a schedule handler. The SDK starts the platform
+task, submits the handler to its application-scoped runner, and answers the
+delivery without waiting for the business logic to finish.
+
+```python
+from mpt_extension_sdk.pipeline import ScheduleContext
+from mpt_extension_sdk.routing import ScheduleRouter
+
+schedule_router = ScheduleRouter(prefix="/schedules")
+
+
+@schedule_router.task(
+    "/agreements/sync",
+    id="agreements.sync",
+    name="agreements-sync",
+    description="Synchronize agreements",
+    cron="*/15 * * * *",
+)
+async def sync_agreements(ctx: ScheduleContext) -> None:
+    await synchronize_agreements(ctx)
+```
+
+Schedule identifiers must be unique within an extension. The SDK validates
+this when routers are included and when extension metadata is validated.
+
+## Handler outcomes
+
+The developer does not call task lifecycle methods. The application-scoped
+runner maps handler outcomes to platform task transitions:
+
+- successful return: complete the task;
+- `DeferError`: reschedule the task. This is a pure state transition — the
+  task carries no timing. The handler is re-executed from the beginning on the
+  next event delivery (watchdog cadence), so it must re-check its precondition
+  on every execution and raise `DeferError` again if the condition still
+  holds;
+- `CancelError`, `FailError`, `ExtRuntimeError`, or an unexpected exception:
+  apply `Cancel` response semantics, which transitions the platform task to
+  `Failed`. See
+  [error-handling.md](error-handling.md) for error-to-outcome mappings and
+  failure logging behavior.
+
+## Reporting to the task
+
+Handlers read the delivery through the schedule metadata:
+
+| `ctx.meta` field | Source |
+| --- | --- |
+| `schedule_id` | The registered schedule identifier |
+| `task_id` | The `MPT-Task-Id` header |
+| `event_id` | The event identifier from the body |
+| `enqueue_time` | When the framework enqueued the event |
+| `correlation_id` | The request correlation identifier |
+
+The event identifier is also part of the logging context, which is what joins an
+extension log line with the framework worker log for the same delivery.
+
+`ctx.task` reports to the platform task, so whoever follows it in the platform
+sees what the operation is doing and why it ended the way it did:
+
+- `ctx.task.progress(...)` updates the task progress;
+- `ctx.task.log(...)` writes a Task Log Record. The severity is `Info` by
+  default; pass any `TaskLogSeverity` value (`Debug`, `Info`, `Warning`,
+  `Error`, or `Failure`) to change it, and `parameters` to fill the `{{Name}}`
+  placeholders of the message template.
+
+For example, a full synchronization can process many agreements and report
+what it is doing without holding the schedule invocation open:
+
+```python
+from mpt_extension_sdk.models import TaskLogSeverity
+
+
+@schedule_router.task(
+    "/agreements/full-sync",
+    id="agreements.full-sync",
+    name="agreements-full-sync",
+    description="Synchronize all agreements",
+    cron="0 * * * *",
+)
+async def full_sync(ctx: ScheduleContext) -> None:
+    agreements = await load_agreements(ctx)
+    total = len(agreements)
+    for position, agreement in enumerate(agreements, start=1):
+        await ctx.task.log(
+            "Synchronizing agreement '{{AgreementId}}'",
+            parameters={"AgreementId": agreement.id},
+        )
+        if not await synchronize_agreement(ctx, agreement):
+            await ctx.task.log(
+                "Agreement '{{AgreementId}}' was skipped",
+                severity=TaskLogSeverity.WARNING,
+                parameters={"AgreementId": agreement.id},
+            )
+        await ctx.task.progress(position / total * 100)
+```
+
+Progress reporting and task logging are optional and best-effort. When the
+platform call fails with an `MPTError`, or a created log record cannot be read
+back, the SDK logs it locally, the handler keeps running, and the task outcome
+is unchanged. Other exceptions propagate to the handler. Neither extends the
+task time limits.
+
+## Time limits
+
+The platform publishes the task-lifetime limits under `parameters`:
+
+```json
+"parameters": {
+  "extensionId": "EXT-7847-1229",
+  "maxTaskProcessingSeconds": 7200,
+  "maxTaskLifetimeSeconds": 86400
+}
+```
+
+The SDK reads them from there, so it measures the same budget the platform
+enforces. The Extension Framework does not accept per-schedule timeout
+overrides, so these limits cannot be configured from the SDK.
+
+Each limit is handled independently. A limit the task does not publish is logged
+as an error and falls back to the SDK safety net — 2 hours of processing, a
+24-hour total lifespan — while a limit the task does publish is still used as
+sent. The safety net exists so a handler cannot run unbounded; it is not a copy
+of the platform budget, and once it applies to a limit the SDK is no longer
+guaranteed to finalize the task before the platform does.
+
+The SDK uses the smaller of the two — counting the lifespan already consumed by
+the task — minus a safety margin as its local execution deadline. If the handler
+exceeds that deadline, the SDK fails the platform task with an explicit
+processing timeout reason.
+
+Operations that cannot reliably finish within the fixed processing budget must
+make progress across separate cron occurrences: persist a progress cursor
+outside the platform task, complete each task once its chunk is done, and let
+the next occurrence resume with a fresh processing window. `DeferError` does not
+extend the budget, since `Processing` and `Rescheduled` share the same clock.
+
+## Idempotency and interruptions
+
+Schedule handlers must be idempotent and must not rely on process-local state.
+If an extension instance shuts down gracefully during execution, the SDK fails
+the platform task with an explicit interruption reason and the next cron
+occurrence executes normally.
+
+After an abrupt termination (crash, OOM) no lifecycle call is possible and the
+task stays in `Processing`. The SDK does not restart it, because a delivery
+cannot tell a lost execution from one running in another process or instance.
+The platform finalizes the task when it exceeds `maxTaskProcessingSeconds`, and
+the following delivery finds it in `Failed` and acknowledges the event. The
+interrupted occurrence is skipped rather than executed twice. The next cron
+occurrence runs normally.
+
+## How delivery works
+
+The rest of this page describes how the SDK answers schedule deliveries. A
+handler does not depend on it directly.
+
+### Delivery body
 
 The Extension Framework delivers a schedule as a task event, and also provides
 the platform task identifier in the `MPT-Task-Id` header:
@@ -27,21 +186,9 @@ the platform task identifier in the `MPT-Task-Id` header:
 ```
 
 Both are required: the SDK takes the task identifier from the header and the
-event from the body, and rejects a delivery that is missing either. Handlers read
-the delivery through the schedule metadata:
+event from the body, and rejects a delivery that is missing either.
 
-| `ctx.meta` field | Source |
-| --- | --- |
-| `schedule_id` | The registered schedule identifier |
-| `task_id` | The `MPT-Task-Id` header |
-| `event_id` | The event identifier from the body |
-| `enqueue_time` | When the framework enqueued the event |
-| `correlation_id` | The request correlation identifier |
-
-The event identifier is also part of the logging context, which is what joins an
-extension log line with the framework worker log for the same delivery.
-
-## Delivery protocol
+### Delivery protocol
 
 The event is the durable timer of a schedule execution: every delivery of a
 non-final task is answered with `Defer`, so the event returns later as a
@@ -81,7 +228,7 @@ Transient failures (task fetch, context creation, task start) return `Defer`
 with the 5-minute default delay. If submission fails after the task starts, the
 SDK reschedules the task and returns `Defer`.
 
-## Claiming an execution
+### Claiming an execution
 
 Starting the platform task is the claim. The platform accepts that transition
 only from a retryable state, so it rejects every delivery of a task that is
@@ -95,7 +242,7 @@ locally, but only to spare the round trip when a redelivery lands on the
 process already running it. See [configuration.md](../configuration.md) for
 the worker count settings.
 
-## Delivery failures
+### Delivery failures
 
 A delivery the extension does not answer is retried by the Extension Framework
 five times, about 120 seconds apart. When the last retry fails the event goes to
@@ -107,113 +254,3 @@ An extension therefore has about two minutes to answer each delivery, and no
 more than ten minutes of unanswered deliveries before the execution is lost.
 This is why the SDK answers the delivery as soon as it has submitted the
 handler, instead of holding the request open for the business logic.
-
-## Schedule Tasks
-
-Use `task(...)` to register a schedule handler. The SDK starts the platform
-task, submits the handler to its application-scoped runner, and answers the
-delivery without waiting for the business logic to finish.
-
-```python
-from mpt_extension_sdk.pipeline import ScheduleContext
-from mpt_extension_sdk.routing import ScheduleRouter
-
-schedule_router = ScheduleRouter(prefix="/schedules")
-
-
-@schedule_router.task(
-    "/agreements/sync",
-    id="agreements.sync",
-    name="agreements-sync",
-    description="Synchronize agreements",
-    cron="*/15 * * * *",
-)
-async def sync_agreements(ctx: ScheduleContext) -> None:
-    await synchronize_agreements(ctx)
-```
-
-For example, a full synchronization can process many agreements and report
-progress without holding the schedule invocation open:
-
-```python
-@schedule_router.task(
-    "/agreements/full-sync",
-    id="agreements.full-sync",
-    name="agreements-full-sync",
-    description="Synchronize all agreements",
-    cron="0 * * * *",
-)
-async def full_sync(ctx: ScheduleContext) -> None:
-    agreements = await load_agreements(ctx)
-    total = len(agreements)
-    for position, agreement in enumerate(agreements, start=1):
-        await synchronize_agreement(ctx, agreement)
-        await ctx.task.progress(position / total * 100)
-```
-
-The developer does not call task lifecycle methods. The application-scoped
-runner maps handler outcomes to platform task transitions:
-
-- successful return: complete the task;
-- `DeferError`: reschedule the task. This is a pure state transition — the
-  task carries no timing. The handler is re-executed from the beginning on the
-  next event delivery (watchdog cadence), so it must re-check its precondition
-  on every execution and raise `DeferError` again if the condition still
-  holds;
-- `CancelError`, `FailError`, `ExtRuntimeError`, or an unexpected exception:
-  apply `Cancel` response semantics, which transitions the platform task to
-  `Failed`. See
-  [error-handling.md](error-handling.md) for error-to-outcome mappings and
-  failure logging behavior.
-
-The platform publishes the task-lifetime limits under `parameters`:
-
-```json
-"parameters": {
-  "extensionId": "EXT-7847-1229",
-  "maxTaskProcessingSeconds": 7200,
-  "maxTaskLifetimeSeconds": 86400
-}
-```
-
-The SDK reads them from there, so it measures the same budget the platform
-enforces. The Extension Framework does not accept per-schedule timeout
-overrides, so these limits cannot be configured from the SDK.
-
-Each limit is handled independently. A limit the task does not publish is logged
-as an error and falls back to the SDK safety net — 2 hours of processing, a
-24-hour total lifespan — while a limit the task does publish is still used as
-sent. The safety net exists so a handler cannot run unbounded; it is not a copy
-of the platform budget, and once it applies to a limit the SDK is no longer
-guaranteed to finalize the task before the platform does.
-
-The SDK uses the smaller of the two — counting the lifespan already consumed by
-the task — minus a safety margin as its local execution deadline. If the handler
-exceeds that deadline, the SDK fails the platform task with an explicit
-processing timeout reason.
-
-Operations that cannot reliably finish within the fixed processing budget must
-make progress across separate cron occurrences: persist a progress cursor
-outside the platform task, complete each task once its chunk is done, and let
-the next occurrence resume with a fresh processing window. `DeferError` does not
-extend the budget, since `Processing` and `Rescheduled` share the same clock.
-
-Progress reporting is optional and best-effort. The SDK logs progress update
-errors without failing the business operation. Progress does not extend the
-task timeout limits.
-
-Schedule identifiers must be unique within an extension. The SDK validates
-this when routers are included and when extension metadata is validated.
-
-Schedule handlers must be idempotent and must not rely on process-local state.
-If an extension instance shuts down gracefully during execution, the SDK fails
-the platform task with an explicit interruption reason and the next cron
-occurrence executes normally.
-
-After an abrupt termination (crash, OOM) no lifecycle call is possible and the
-task stays in `Processing`. The SDK does not restart it, because a delivery
-cannot tell a lost execution from one running in another process or instance.
-The platform finalizes the task when it exceeds `maxTaskProcessingSeconds`, and
-the following delivery finds it in `Failed` and acknowledges the event. The
-interrupted occurrence is skipped rather than executed twice. The next cron
-occurrence runs normally.

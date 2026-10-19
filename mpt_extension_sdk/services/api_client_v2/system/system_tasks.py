@@ -28,6 +28,10 @@ class AsyncTasksService(  # noqa: WPS215
         """Complete the task."""
         await self._resource(resource_id).post("complete", json=resource_data)
 
+    async def create_log(self, resource_id: str, resource_data: ResourceData) -> Task:
+        """Create a log record for the task."""
+        return await self._resource(resource_id).post("logs", json=resource_data)
+
     async def fail(self, resource_id: str, resource_data: ResourceData | None = None) -> None:
         """Fail the task."""
         if resource_data is None:

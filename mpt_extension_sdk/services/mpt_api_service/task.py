@@ -1,8 +1,8 @@
-from mpt_extension_sdk.models.task import Task
+from mpt_extension_sdk.models.task import Task, TaskLog
 from mpt_extension_sdk.services.mpt_api_service.base import BaseService
 
 
-class TaskService(BaseService[Task]):
+class TaskService(BaseService[Task]):  # noqa: WPS214
     """Task service."""
 
     async def get(self, task_id: str) -> Task:
@@ -20,6 +20,19 @@ class TaskService(BaseService[Task]):
             task_id: Unique identifier of the platform task.
         """
         await self._client.system.tasks.complete(task_id, {})
+
+    async def create_log(self, task_id: str, task_log: TaskLog) -> TaskLog:
+        """Write a log record to a platform task.
+
+        Args:
+            task_id: Unique identifier of the platform task.
+            task_log: Log record to create.
+
+        Returns:
+            The log record created by the platform.
+        """
+        created = await self._client.system.tasks.create_log(task_id, task_log.to_dict())
+        return TaskLog.from_payload(created)
 
     async def fail(self, task_id: str, reason: str | None = None) -> None:
         """Signal the platform that a task has failed.

@@ -1,6 +1,7 @@
 import asyncio
 
 from mpt_extension_sdk.errors.pipeline import CancelError, DeferError
+from mpt_extension_sdk.models import TaskLogSeverity
 from mpt_extension_sdk.pipeline import ScheduleContext
 from mpt_extension_sdk.routing import ScheduleRouter
 
@@ -17,18 +18,23 @@ FULL_PROGRESS = 100
     "/use-cases/ok",
     id="mock.use-cases.ok",
     name="schedule-use-case-ok",
-    description="Report progress, then complete successfully",
+    description="Log and report progress, then complete successfully",
     cron="*/5 * * * *",
 )
 async def handle_ok(ctx: ScheduleContext) -> None:
-    """Report progress, then return normally so the SDK completes the platform task.
+    """Log and report progress, then return normally so the SDK completes the platform task.
 
-    Progress is best-effort: a failed report neither fails the handler nor extends
-    the task lifetime limits.
+    Task logs and progress are best-effort: a failed write neither fails the handler
+    nor extends the task lifetime limits.
     """
+    await ctx.task.log(
+        "Starting schedule '{{ScheduleId}}'",
+        parameters={"ScheduleId": ctx.meta.schedule_id},
+    )
     await ctx.task.progress(HALFWAY_PROGRESS)
     await asyncio.sleep(1)
     await ctx.task.progress(FULL_PROGRESS)
+    await ctx.task.log("Schedule finished")
     ctx.logger.info("Schedule ok: task %s reported progress and completed", ctx.meta.task_id)
 
 
@@ -52,7 +58,7 @@ async def handle_cancel(ctx: ScheduleContext) -> None:  # ruff:ignore[unused-asy
     description="Reschedule the task by raising DeferError",
     cron="*/2 * * * *",
 )
-async def handle_defer(ctx: ScheduleContext) -> None:  # ruff:ignore[unused-async] - schedule handlers are async by contract
+async def handle_defer(ctx: ScheduleContext) -> None:
     """Raise DeferError so the SDK reschedules the platform task.
 
     The precondition never clears, so the event is redelivered on the watchdog
@@ -60,6 +66,10 @@ async def handle_defer(ctx: ScheduleContext) -> None:  # ruff:ignore[unused-asyn
     time, which is why it must re-check its precondition on each delivery.
     """
     ctx.logger.info("Schedule defer: task %s will be rescheduled", ctx.meta.task_id)
+    await ctx.task.log(
+        "Prerequisite not ready; retrying on the next delivery",
+        severity=TaskLogSeverity.WARNING,
+    )
     raise DeferError("Prerequisite not ready; retry on the next delivery")
 
 
