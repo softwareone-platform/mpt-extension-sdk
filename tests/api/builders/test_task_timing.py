@@ -3,67 +3,12 @@ import datetime as dt
 import pytest
 from freezegun import freeze_time
 
-from mpt_extension_sdk.api.builders.schedule_timing import (
+from mpt_extension_sdk.api.builders.task_timing import (
     FALLBACK_MAX_TASK_PROCESSING,
-    MAX_WATCHDOG_DELAY_SECONDS,
-    MIN_WATCHDOG_DELAY_SECONDS,
     TASK_TIMEOUT_SAFETY_MARGIN,
     delivery_latency_seconds,
     get_execution_deadline,
-    watchdog_delay_seconds,
 )
-
-
-@pytest.fixture
-def enqueued_at():
-    def factory(seconds_ago=0):
-        return dt.datetime.now(dt.UTC) - dt.timedelta(seconds=seconds_ago)
-
-    return factory
-
-
-@pytest.mark.parametrize(
-    ("started_seconds_ago", "expected_delay"),
-    [
-        (0, MIN_WATCHDOG_DELAY_SECONDS),
-        (600, 600),
-        (7200, MAX_WATCHDOG_DELAY_SECONDS),
-    ],
-)
-@freeze_time("2024-06-01")
-def test_watchdog_delay_backoff(task_factory, enqueued_at, started_seconds_ago, expected_delay):
-    task = task_factory("Processing", started_seconds_ago=started_seconds_ago)
-
-    result = watchdog_delay_seconds(task, enqueued_at=enqueued_at())
-
-    assert result == expected_delay
-
-
-@freeze_time("2024-06-01")
-def test_watchdog_delay_capped_by_retention(task_factory, enqueued_at):
-    task = task_factory("Processing", started_seconds_ago=3600)
-
-    result = watchdog_delay_seconds(task, enqueued_at=enqueued_at(604700))
-
-    assert result == 40
-
-
-@freeze_time("2024-06-01")
-def test_watchdog_delay_floors_near_expiry(task_factory, enqueued_at):
-    task = task_factory("Processing", started_seconds_ago=3600)
-
-    result = watchdog_delay_seconds(task, enqueued_at=enqueued_at(604770))
-
-    assert result == 1
-
-
-@freeze_time("2024-06-01")
-def test_watchdog_retention_ignores_task_age(task_factory, enqueued_at):
-    task = task_factory("Processing", created_seconds_ago=604700, started_seconds_ago=600)
-
-    result = watchdog_delay_seconds(task, enqueued_at=enqueued_at(10))
-
-    assert result == 600
 
 
 def test_delivery_latency_between_timestamps():
@@ -94,7 +39,7 @@ def test_deadline_subtracts_elapsed_processing(task_factory):
 
 @freeze_time("2024-06-01")
 def test_deadline_uses_published_processing(task_factory, mocker):
-    logger = mocker.patch("mpt_extension_sdk.api.builders.schedule_timing.logger")
+    logger = mocker.patch("mpt_extension_sdk.api.builders.task_timing.logger")
     task = task_factory("Queued", task_parameters={"maxTaskProcessingSeconds": 3600})
 
     result = get_execution_deadline(task)
@@ -106,7 +51,7 @@ def test_deadline_uses_published_processing(task_factory, mocker):
 
 @freeze_time("2024-06-01")
 def test_deadline_uses_published_lifetime(task_factory, mocker):
-    logger = mocker.patch("mpt_extension_sdk.api.builders.schedule_timing.logger")
+    logger = mocker.patch("mpt_extension_sdk.api.builders.task_timing.logger")
     task = task_factory(
         "Processing", created_seconds_ago=42000, task_parameters={"maxTaskLifetimeSeconds": 43200}
     )
@@ -120,7 +65,7 @@ def test_deadline_uses_published_lifetime(task_factory, mocker):
 
 @freeze_time("2024-06-01")
 def test_deadline_reports_error_on_missing_limits(task_factory, mocker):
-    logger = mocker.patch("mpt_extension_sdk.api.builders.schedule_timing.logger")
+    logger = mocker.patch("mpt_extension_sdk.api.builders.task_timing.logger")
     task = task_factory("Queued")
 
     result = get_execution_deadline(task)

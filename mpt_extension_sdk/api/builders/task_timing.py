@@ -18,33 +18,6 @@ MIN_WATCHDOG_DELAY_SECONDS = 300
 MAX_WATCHDOG_DELAY_SECONDS = 1800
 
 
-def watchdog_delay_seconds(task: Task, *, enqueued_at: dt.datetime) -> int:
-    """Return the delay until the event should be redelivered.
-
-    The delay never removes the safety margin from the event's remaining
-    retention, so the watchdog is always scheduled before the event expires.
-    Near retention expiry this can fall below the normal minimum cadence to
-    keep the redelivery inside the retention window.
-
-    Args:
-        task: The platform task of the delivery.
-        enqueued_at: When the framework enqueued the event, from the delivery body.
-
-    Returns:
-        The number of seconds to ask for in the Delay answer.
-    """
-    now = dt.datetime.now(dt.UTC)
-    elapsed = _elapsed_seconds(task.started_at, now)
-    remaining_retention = EVENT_RETENTION_SECONDS - _elapsed_seconds(enqueued_at, now)
-    schedulable = remaining_retention - TASK_TIMEOUT_SAFETY_MARGIN
-    delay = min(
-        max(elapsed, MIN_WATCHDOG_DELAY_SECONDS),
-        MAX_WATCHDOG_DELAY_SECONDS,
-        schedulable,
-    )
-    return max(int(delay), 1)
-
-
 def get_execution_deadline(task: Task) -> float:
     """Return the local execution deadline before platform auto-finalization.
 

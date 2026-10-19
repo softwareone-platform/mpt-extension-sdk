@@ -6,8 +6,8 @@ from freezegun import freeze_time
 from mpt_api_client.exceptions import MPTError
 
 from mpt_extension_sdk.api.auth import AuthenticationError
-from mpt_extension_sdk.api.builders.schedule_executor import ScheduleTaskExecutor
-from mpt_extension_sdk.api.builders.schedule_timing import EVENT_RETENTION_SECONDS
+from mpt_extension_sdk.api.builders.schedule_delivery import ScheduleDeliveryHandler
+from mpt_extension_sdk.api.builders.task_timing import EVENT_RETENTION_SECONDS
 from mpt_extension_sdk.api.models.events import EventResponse, ResponseEnum
 from mpt_extension_sdk.errors.runtime import AsyncTasksRunnerError, ConfigError
 from mpt_extension_sdk.extension_app import ExtensionApp
@@ -19,8 +19,8 @@ DELIVERED_AT = "2026-08-11T17:05:00Z"
 
 
 @pytest.fixture
-def executor(schedule_route, task_service, async_task_runner, logger):
-    return ScheduleTaskExecutor(
+def delivery_handler(schedule_route, task_service, async_task_runner, logger):
+    return ScheduleDeliveryHandler(
         route=schedule_route,
         extension_app=ExtensionApp(),
         task_service=task_service,
@@ -30,11 +30,11 @@ def executor(schedule_route, task_service, async_task_runner, logger):
 
 
 @pytest.fixture
-def run(mocker, executor, task_event):
+def run(mocker, delivery_handler, task_event):
     http_request = mocker.Mock(spec=Request)
 
     async def factory(event=task_event):
-        return await executor.execute(request=http_request, task_id="TSK-001", event=event)
+        return await delivery_handler.execute(request=http_request, task_id="TSK-001", event=event)
 
     return factory
 
@@ -42,11 +42,11 @@ def run(mocker, executor, task_event):
 @pytest.fixture
 def build_schedule_context(mocker, schedule_context):
     mocker.patch(
-        "mpt_extension_sdk.api.builders.schedule_executor.RequestAuthenticationService.authenticate",
+        "mpt_extension_sdk.api.builders.task_delivery.RequestAuthenticationService.authenticate",
         autospec=True,
     )
     factory = mocker.patch(
-        "mpt_extension_sdk.api.builders.schedule_executor.RouteContextFactory.from_service_type",
+        "mpt_extension_sdk.api.builders.schedule_delivery.RouteContextFactory.from_service_type",
         autospec=True,
     )
     factory.return_value.build_schedule_context = mocker.AsyncMock(return_value=schedule_context)
@@ -185,6 +185,17 @@ async def test_defers_when_submit_fails(
     task_service.reschedule.assert_awaited_once_with("TSK-001")
 
 
+async def test_defers_when_reschedule_fails(
+    build_schedule_context, run, task_service, async_task_runner
+):
+    async_task_runner.submit.return_value = False
+    task_service.reschedule.side_effect = MPTError("tasks API unavailable")
+
+    result = await run()
+
+    assert result == EventResponse.reschedule()
+
+
 async def test_defers_when_submit_rejected(
     build_schedule_context, run, task_service, async_task_runner
 ):
@@ -201,6 +212,14 @@ async def test_defers_when_fetch_fails(build_schedule_context, run, task_service
     result = await run()
 
     assert result == EventResponse.reschedule()
+
+
+async def test_fetch_failure_log_names_handler(build_schedule_context, run, task_service, caplog):
+    task_service.get.side_effect = MPTError("tasks API unavailable")
+
+    await run()  # act
+
+    assert "Schedule task could not be fetched" in caplog.messages
 
 
 async def test_fetch_failure_skips_runner(
@@ -231,7 +250,7 @@ async def test_defers_on_start_error(build_schedule_context, run, task_service):
 
 async def test_cancels_on_auth_failure(mocker, run):
     mocker.patch(
-        "mpt_extension_sdk.api.builders.schedule_executor.RequestAuthenticationService.authenticate",
+        "mpt_extension_sdk.api.builders.task_delivery.RequestAuthenticationService.authenticate",
         side_effect=AuthenticationError,
     )
 
@@ -243,7 +262,7 @@ async def test_cancels_on_auth_failure(mocker, run):
 async def test_final_task_ok_without_auth(mocker, run, task_service, task_factory):
     task_service.get.return_value = task_factory("Completed")
     mocker.patch(
-        "mpt_extension_sdk.api.builders.schedule_executor.RequestAuthenticationService.authenticate",
+        "mpt_extension_sdk.api.builders.task_delivery.RequestAuthenticationService.authenticate",
         side_effect=AuthenticationError,
     )
 
@@ -252,12 +271,47 @@ async def test_final_task_ok_without_auth(mocker, run, task_service, task_factor
     assert result == EventResponse.ok()
 
 
-async def test_cancels_non_recoverable_context(build_schedule_context, run):
-    build_schedule_context.side_effect = ConfigError("invalid extension configuration")
+@pytest.mark.parametrize(
+    ("error", "expected_reason"),
+    [
+        (ConfigError("invalid extension configuration"), "Non-recoverable context error"),
+        (AuthenticationError("token rejected"), "Authentication failed"),
+    ],
+)
+async def test_cancels_unrecoverable_context(build_schedule_context, run, error, expected_reason):
+    build_schedule_context.side_effect = error
 
     result = await run()
 
-    assert result == EventResponse.cancel(reason="Non-recoverable context error")
+    assert result == EventResponse.cancel(reason=expected_reason)
+
+
+@pytest.mark.parametrize(
+    ("started_seconds_ago", "expected_delay"),
+    [(None, 300), (600, 600), (7200, 1800)],
+)
+@freeze_time(DELIVERED_AT)
+def test_watchdog_delay_backoff(
+    delivery_handler, task_factory, task_event, started_seconds_ago, expected_delay
+):
+    task = task_factory("Processing", started_seconds_ago=started_seconds_ago)
+
+    result = delivery_handler.watchdog_delay(task, task_event)
+
+    assert result == expected_delay
+
+
+def test_watchdog_delay_floors_near_expiry(delivery_handler, task_factory, task_event):
+    thirty_seconds_left = task_event.details.enqueue_time + dt.timedelta(
+        seconds=EVENT_RETENTION_SECONDS - 30
+    )
+
+    with freeze_time(thirty_seconds_left):
+        result = delivery_handler.watchdog_delay(
+            task_factory("Processing", started_seconds_ago=3600), task_event
+        )
+
+    assert result == 1
 
 
 async def test_watchdog_capped_by_event_retention(build_schedule_context, run, task_event):

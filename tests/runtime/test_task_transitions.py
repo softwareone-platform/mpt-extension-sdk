@@ -1,11 +1,11 @@
 import logging
 
 import pytest
-from mpt_api_client.exceptions import MPTError, MPTHttpError
+from mpt_api_client.exceptions import MPTAPIError, MPTError, MPTHttpError
 
 from mpt_extension_sdk.errors.pipeline import CancelError, DeferError
 from mpt_extension_sdk.models.task import Task
-from mpt_extension_sdk.runtime.task_transitions import SafeTaskTransitions
+from mpt_extension_sdk.runtime.task_transitions import ClaimOutcome, SafeTaskTransitions
 
 
 @pytest.fixture
@@ -24,6 +24,31 @@ def task_in(task_service):
         task_service.get.return_value = Task(id="TSK-1", status=status)
 
     return factory
+
+
+async def test_claim_starts_task(transitions, task_service):
+    result = await transitions.claim("TSK-1")
+
+    assert result == ClaimOutcome.CLAIMED
+    task_service.start.assert_awaited_once_with("TSK-1")
+
+
+@pytest.mark.parametrize(
+    ("error", "expected_outcome"),
+    [
+        (
+            MPTAPIError(status_code=409, message="conflict", payload={}),
+            ClaimOutcome.ALREADY_CLAIMED,
+        ),
+        (MPTError("tasks API unavailable"), ClaimOutcome.FAILED),
+    ],
+)
+async def test_claim_reports_rejected_start(transitions, task_service, error, expected_outcome):
+    task_service.start.side_effect = error
+
+    result = await transitions.claim("TSK-1")
+
+    assert result == expected_outcome
 
 
 async def test_complete_calls_service(transitions, task_service):

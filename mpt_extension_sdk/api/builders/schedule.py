@@ -4,8 +4,8 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Header, Request, status
 
 from mpt_extension_sdk.api.builders.dependencies import get_tasks_service
-from mpt_extension_sdk.api.builders.schedule_executor import ScheduleTaskExecutor
-from mpt_extension_sdk.api.builders.schedule_timing import delivery_latency_seconds
+from mpt_extension_sdk.api.builders.schedule_delivery import ScheduleDeliveryHandler
+from mpt_extension_sdk.api.builders.task_timing import delivery_latency_seconds
 from mpt_extension_sdk.api.models.events import EventResponse, TaskEvent
 from mpt_extension_sdk.extension_app import ExtensionApp
 from mpt_extension_sdk.routing import ScheduleRouteDefinition
@@ -31,7 +31,7 @@ def create_schedule_route(route: ScheduleRouteDefinition, extension_app: Extensi
             delivery_latency_seconds(event.details.enqueue_time, event.details.delivery_time),
             request.headers.get("x-envoy-original-path", request.url.path),
         )
-        return await ScheduleTaskExecutor(
+        return await ScheduleDeliveryHandler(
             route=route,
             extension_app=extension_app,
             task_service=task_service,
