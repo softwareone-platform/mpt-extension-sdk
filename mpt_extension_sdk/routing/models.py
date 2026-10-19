@@ -40,6 +40,7 @@ class APIRouteDefinition(BaseRouteDefinition):
     callback: APIRouteCallback
     method: HTTPMethod = HTTPMethod.GET
     body_validator_type: type[BaseSchema] | None = None
+    deferrable: bool = False
 
 
 @dataclass(frozen=True)

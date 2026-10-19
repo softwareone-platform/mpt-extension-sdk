@@ -10,7 +10,7 @@ from mpt_extension_sdk import APIRouter, EventRouter, Plug, PlugRouter, Schedule
 from mpt_extension_sdk.api import APIResponse
 from mpt_extension_sdk.errors.runtime import ConfigError
 from mpt_extension_sdk.extension_app import ExtensionApp
-from mpt_extension_sdk.routing import BaseRouteDefinition, RouteType
+from mpt_extension_sdk.routing import APIRouteDefinition, BaseRouteDefinition, RouteType
 from mpt_extension_sdk.runtime import app as runtime_app
 from mpt_extension_sdk.runtime.async_tasks import AsyncTaskRunner
 
@@ -268,6 +268,35 @@ def test_register_api_ext_routes(api_extension_app):
 
     api_route = next(route for route in app.routes if route.path == "/api/v1/auth/fake")
     assert "GET" in api_route.methods
+
+
+@pytest.mark.parametrize(
+    ("deferrable", "expected_builder", "other_builder"),
+    [
+        (True, "create_deferrable_route", "create_api_route"),
+        (False, "create_api_route", "create_deferrable_route"),
+    ],
+)
+def test_register_api_route_builder(
+    mocker, dummy_handler, deferrable, expected_builder, other_builder
+):
+    expected = mocker.patch.object(runtime_app, expected_builder, autospec=True)
+    other = mocker.patch.object(runtime_app, other_builder, autospec=True)
+    expected.return_value = FastAPI().router
+    extension_app = ExtensionApp(prefix="/api/v1")
+    route = APIRouteDefinition(
+        name="agreements-sync",
+        path="/agreements/sync",
+        route_type=RouteType.API,
+        callback=dummy_handler,
+        deferrable=deferrable,
+    )
+    extension_app._routes.append(route)
+
+    runtime_app.register_extension_routes(FastAPI(), extension_app)  # act
+
+    expected.assert_called_once_with(route, extension_app)
+    other.assert_not_called()
 
 
 def test_register_ext_routes_ignores_plugs(plug_extension_app):
