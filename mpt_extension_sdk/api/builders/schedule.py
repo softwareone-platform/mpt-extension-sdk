@@ -37,6 +37,6 @@ def create_schedule_route(route: ScheduleRouteDefinition, extension_app: Extensi
             task_service=task_service,
             runner=request.app.state.async_task_runner,
             handler_logger=handler_logger,
-        ).execute(request=request, task_id=task_id, event=event)
+        ).execute(request=request, task_id=task_id, delivery=event)
 
     return router

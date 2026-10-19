@@ -123,6 +123,45 @@ def test_submit_raises_when_creation_fails(mocker, submit, failing_create_task):
         submit(runner, mocker.AsyncMock())
 
 
+def test_runner_without_limit_has_capacity():
+    runner = AsyncTaskRunner()
+
+    with runner.reserve("TSK-1"), runner.reserve("TSK-2"):
+        has_capacity = runner.has_capacity()  # act
+
+    assert has_capacity is True
+
+
+@pytest.mark.parametrize(("max_concurrent", "expected"), [(2, True), (1, False)])
+def test_runner_capacity_counts_reserved_tasks(max_concurrent, expected):
+    runner = AsyncTaskRunner(max_concurrent=max_concurrent)
+
+    with runner.reserve("TSK-1"):
+        has_capacity = runner.has_capacity()  # act
+
+    assert has_capacity is expected
+
+
+def test_reserve_rejected_at_capacity():
+    runner = AsyncTaskRunner(max_concurrent=1)
+
+    with runner.reserve("TSK-1"), runner.reserve("TSK-2") as second:
+        reserved = second  # act
+
+    assert reserved is False
+
+
+@pytest.mark.parametrize(("reserved_task_id", "expected"), [("TSK-1", True), ("TSK-2", False)])
+async def test_submit_respects_capacity(mocker, submit, reserved_task_id, expected):
+    runner = AsyncTaskRunner(max_concurrent=1)
+
+    with runner.reserve(reserved_task_id):
+        result = submit(runner, mocker.AsyncMock())
+
+    assert result is expected
+    await asyncio.sleep(0)
+
+
 def test_runner_reserves_task_atomically():
     runner = AsyncTaskRunner()
 

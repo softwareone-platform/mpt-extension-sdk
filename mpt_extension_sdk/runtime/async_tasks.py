@@ -34,14 +34,21 @@ class RunningTask:
     transitions: SafeTaskTransitions
 
 
-class AsyncTaskRunner:
+class AsyncTaskRunner:  # noqa: WPS214
     """Run SDK-managed tasks outside the HTTP request lifecycle."""
 
-    def __init__(self) -> None:
-        """Initialize an empty local task registry."""
+    def __init__(self, max_concurrent: int | None = None) -> None:
+        self._max_concurrent = max_concurrent
         self._reserved: dict[str, asyncio.Task[object] | None] = {}
         self._running: dict[str, RunningTask] = {}
         self._shutting_down = False
+
+    def has_capacity(self) -> bool:
+        """Return whether this process can accept another execution."""
+        if self._max_concurrent is None:
+            return True
+
+        return len(self._running) + len(self._reserved) < self._max_concurrent
 
     def is_running(self, task_id: str) -> bool:
         """Return whether this process is already executing a task."""
@@ -49,8 +56,12 @@ class AsyncTaskRunner:
 
     @contextmanager
     def reserve(self, task_id: str) -> Generator[bool]:
-        """Atomically reserve a task while it is being accepted."""
+        """Atomically reserve a task while it is being accepted, within the capacity."""
         if self._shutting_down or task_id in self._reserved or self.is_running(task_id):
+            yield False
+            return
+
+        if not self.has_capacity():
             yield False
             return
 
@@ -74,6 +85,10 @@ class AsyncTaskRunner:
             return False
 
         if task_id not in self._reserved:
+            # A reserved task submits into its own slot; any other task needs a free one.
+            if not self.has_capacity():
+                return False
+
             self._reserved[task_id] = self._get_current_task()
 
         try:
