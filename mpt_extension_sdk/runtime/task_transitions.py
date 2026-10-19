@@ -1,4 +1,5 @@
 import logging
+from enum import StrEnum
 
 from mpt_api_client.exceptions import MPTAPIError, MPTError, MPTHttpError
 
@@ -11,7 +12,15 @@ TASK_CONFLICT_STATUS_CODE = 409
 LIFECYCLE_REJECTION_STATUS_CODES = frozenset((MISSING_TASK_STATUS_CODE, TASK_CONFLICT_STATUS_CODE))
 
 
-class SafeTaskTransitions:
+class ClaimOutcome(StrEnum):
+    """Result of claiming a platform task."""
+
+    ALREADY_CLAIMED = "already_claimed"
+    CLAIMED = "claimed"
+    FAILED = "failed"
+
+
+class SafeTaskTransitions:  # noqa: WPS214
     """Platform Task lifecycle transitions tolerant of finalized-task rejections.
 
     A transition rejected because the platform already finalized the task is not an
@@ -29,6 +38,20 @@ class SafeTaskTransitions:
         """Initialize the transitions with their collaborators."""
         self.task_service = task_service
         self.handler_logger = handler_logger
+
+    async def claim(self, task_id: str) -> ClaimOutcome:
+        """Start a task, reporting whether another execution already holds it."""
+        try:
+            await self.task_service.start(task_id)
+        except MPTError as error:
+            if getattr(error, "status_code", None) == TASK_CONFLICT_STATUS_CODE:
+                self.handler_logger.info("Task %s is already claimed by another execution", task_id)
+                return ClaimOutcome.ALREADY_CLAIMED
+
+            self.handler_logger.exception("Task %s claim failed", task_id)
+            return ClaimOutcome.FAILED
+
+        return ClaimOutcome.CLAIMED
 
     async def complete(self, task_id: str) -> None:
         """Complete a task and ignore final-state lifecycle rejections."""
