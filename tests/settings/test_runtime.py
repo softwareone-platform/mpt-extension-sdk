@@ -127,6 +127,7 @@ def test_load_reads_runtime_env(
         4,
         False,
     )
+    assert result.max_concurrent_tasks is None
 
 
 def test_load_uses_explicit_runtime_overrides(
@@ -148,6 +149,7 @@ def test_load_uses_explicit_runtime_overrides(
             "SDK_LOCAL_WORKERS": "3",
             "SDK_ZITI_WORKERS": "8",
             "SDK_ZITI_RELOAD": "true",
+            "SDK_MAX_CONCURRENT_TASKS": "5",
         },
     )
     mocker.patch(
@@ -187,6 +189,37 @@ def test_load_uses_explicit_runtime_overrides(
         8,
         True,
     )
+    assert result.max_concurrent_tasks == 5
+
+
+def test_load_accepts_zero_task_limit(
+    mocker, runtime_env, settings_loader_state, fake_package, meta_config
+):
+    mocker.patch.dict("os.environ", {"SDK_MAX_CONCURRENT_TASKS": "0"})
+    mocker.patch(
+        "mpt_extension_sdk.settings.runtime.import_module",
+        autospec=True,
+        return_value=mocker.Mock(ext_app=FakeExtensionApp(meta_config)),
+    )
+
+    result = RuntimeSettings.load()
+
+    assert result.max_concurrent_tasks == 0
+
+
+@pytest.mark.parametrize("task_limit", ["many", "-1"])
+def test_load_rejects_invalid_task_limit(
+    mocker, runtime_env, settings_loader_state, fake_package, meta_config, task_limit
+):
+    mocker.patch.dict("os.environ", {"SDK_MAX_CONCURRENT_TASKS": task_limit})
+    mocker.patch(
+        "mpt_extension_sdk.settings.runtime.import_module",
+        autospec=True,
+        return_value=mocker.Mock(ext_app=FakeExtensionApp(meta_config)),
+    )
+
+    with pytest.raises(ConfigError, match="SDK_MAX_CONCURRENT_TASKS"):
+        RuntimeSettings.load()
 
 
 def test_load_prefers_traces_otlp_endpoint(

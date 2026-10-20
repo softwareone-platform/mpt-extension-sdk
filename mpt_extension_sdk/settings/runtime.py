@@ -39,6 +39,7 @@ class RuntimeSettings(BaseSettings):
     otel_otlp_endpoint: str
     ziti_workers: int
     ziti_reload: bool
+    max_concurrent_tasks: int | None = None
 
     @property
     def extension_package(self) -> str:
@@ -87,6 +88,7 @@ class RuntimeSettings(BaseSettings):
             local_workers=cls.int_env("SDK_LOCAL_WORKERS", default=1),
             ziti_workers=cls.int_env("SDK_ZITI_WORKERS", default=4),
             ziti_reload=cls.bool_env("SDK_ZITI_RELOAD", default=False),
+            max_concurrent_tasks=cls.optional_int_env("SDK_MAX_CONCURRENT_TASKS", minimum=0),
         )
 
     @classmethod
