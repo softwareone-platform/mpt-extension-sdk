@@ -34,11 +34,24 @@ class BaseSettings(ABC):  # noqa: WPS214
     @classmethod
     def int_env(cls, env_key: str, *, default: int) -> int:
         """Parse an integer environment variable and raise ConfigError on failure."""
-        raw_value = os.getenv(env_key, str(default))
-        try:
-            return int(raw_value)
-        except ValueError as error:
-            raise ConfigError(f"Invalid integer in {env_key}: {raw_value}") from error
+        return cls._parse_int(env_key, os.getenv(env_key, str(default)))
+
+    @classmethod
+    def optional_int_env(cls, env_key: str, *, minimum: int | None = None) -> int | None:
+        """Parse an optional integer environment variable, None when it is unset.
+
+        Raises:
+            ConfigError: If the value is not an integer, or is below `minimum`.
+        """
+        raw_value = os.getenv(env_key, "").strip()
+        if not raw_value:
+            return None
+
+        env_value = cls._parse_int(env_key, raw_value)
+        if minimum is not None and env_value < minimum:
+            raise ConfigError(f"{env_key} must be at least {minimum}: {env_value}")
+
+        return env_value
 
     @classmethod
     def list_env(cls, env_key: str, *, default: str = "") -> list[str]:
@@ -70,3 +83,10 @@ class BaseSettings(ABC):  # noqa: WPS214
 
         error_msg = ", ".join(errors)
         raise ConfigError(f"Missing required environment variables: {error_msg}")
+
+    @classmethod
+    def _parse_int(cls, env_key: str, raw_value: str) -> int:
+        try:
+            return int(raw_value)
+        except ValueError as error:
+            raise ConfigError(f"Invalid integer in {env_key}: {raw_value}") from error

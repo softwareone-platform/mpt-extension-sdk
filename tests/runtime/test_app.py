@@ -1,4 +1,5 @@
 import asyncio
+from dataclasses import replace
 from types import ModuleType
 
 import pytest
@@ -205,6 +206,20 @@ def test_lifespan_shuts_down_async_task_runner(mocker, built_runtime_app, run_li
     run_lifespan(app)  # act
 
     app.state.async_task_runner.shutdown.assert_awaited_once_with()
+
+
+@pytest.mark.parametrize(("max_concurrent_tasks", "expected"), [(None, True), (1, False)])
+def test_runtime_app_runner_applies_task_limit(
+    runtime_settings, runtime_app_patches, max_concurrent_tasks, expected
+):
+    app = runtime_app.create_runtime_app(
+        replace(runtime_settings, max_concurrent_tasks=max_concurrent_tasks)
+    )
+
+    with app.state.async_task_runner.reserve("TSK-1"):
+        has_capacity = app.state.async_task_runner.has_capacity()  # act
+
+    assert has_capacity is expected
 
 
 def test_ready_follows_app_lifespan(built_runtime_app):

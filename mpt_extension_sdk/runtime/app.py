@@ -72,7 +72,9 @@ def create_runtime_app(runtime_settings: RuntimeSettings) -> FastAPI:
     ObservabilityBootstrap.bootstrap(observability_config)
     extension_app = load_extension_app(runtime_settings.app_module)
 
-    app = _create_fastapi_app(extension_app)
+    app = _create_fastapi_app(
+        extension_app, max_concurrent_tasks=runtime_settings.max_concurrent_tasks
+    )
     _configure_observability(app, observability_config)
     _configure_middlewares(app)
     _register_builtin_routes(app)
@@ -106,7 +108,9 @@ def register_extension_routes(app: FastAPI, extension_app: ExtensionApp) -> None
                 raise ConfigError("Only event, api, schedule, and plug routes are supported")
 
 
-def _create_fastapi_app(extension_app: ExtensionApp) -> FastAPI:
+def _create_fastapi_app(
+    extension_app: ExtensionApp, *, max_concurrent_tasks: int | None
+) -> FastAPI:
     """Create the base FastAPI application for the extension runtime."""
 
     @asynccontextmanager
@@ -135,7 +139,7 @@ def _create_fastapi_app(extension_app: ExtensionApp) -> FastAPI:
         lifespan=runtime_lifespan,
     )
     app.state.ready = False
-    app.state.async_task_runner = AsyncTaskRunner()
+    app.state.async_task_runner = AsyncTaskRunner(max_concurrent=max_concurrent_tasks)
     return app
 
 

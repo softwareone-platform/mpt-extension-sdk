@@ -81,3 +81,41 @@ def test_base_settings_json_env_vars_invalid(monkeypatch):
 
     with pytest.raises(ConfigError, match="Invalid JSON in TEST_ENV_JSON"):
         BaseSettings.json_env("TEST_ENV_JSON")
+
+
+@pytest.mark.parametrize(
+    ("env_value", "expected"),
+    [
+        ("4", 4),
+        ("", None),
+        ("  ", None),
+    ],
+)
+def test_optional_int_env_vars(env_value, expected, monkeypatch):
+    monkeypatch.setenv("TEST_ENV_OPTIONAL_INT", env_value)
+
+    result = BaseSettings.optional_int_env("TEST_ENV_OPTIONAL_INT")
+
+    assert result == expected
+
+
+def test_optional_int_env_vars_unset(monkeypatch):
+    monkeypatch.delenv("TEST_ENV_OPTIONAL_INT", raising=False)
+
+    result = BaseSettings.optional_int_env("TEST_ENV_OPTIONAL_INT")
+
+    assert result is None
+
+
+def test_optional_int_env_vars_invalid(monkeypatch):
+    monkeypatch.setenv("TEST_ENV_OPTIONAL_INT", "many")
+
+    with pytest.raises(ConfigError, match="Invalid integer in TEST_ENV_OPTIONAL_INT: many"):
+        BaseSettings.optional_int_env("TEST_ENV_OPTIONAL_INT")
+
+
+def test_optional_int_env_vars_below_minimum(monkeypatch):
+    monkeypatch.setenv("TEST_ENV_OPTIONAL_INT", "0")
+
+    with pytest.raises(ConfigError, match="TEST_ENV_OPTIONAL_INT must be at least 1: 0"):
+        BaseSettings.optional_int_env("TEST_ENV_OPTIONAL_INT", minimum=1)
