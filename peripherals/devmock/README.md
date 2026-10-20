@@ -68,6 +68,9 @@ footgun rather than a problem.
   the next delivery ends the event.
 - `POST /public/v1/system/tasks/{id}/reschedule` → releases the claim, so the next
   delivery executes the handler again instead of being rejected.
+- `POST /public/v1/system/tasks/{id}/logs` → the created Task Log Record: the request
+  body plus an `id`, the `task` reference, and a `timestamp`, so the SDK can parse it
+  as a `TaskLog`.
 - everything else → `200 {}`, so an unstubbed call never breaks a demo.
 
 ## State, and why it is needed

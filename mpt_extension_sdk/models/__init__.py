@@ -28,7 +28,7 @@ from mpt_extension_sdk.models.subscription import (
     SubscriptionLine,
     SubscriptionStatus,
 )
-from mpt_extension_sdk.models.task import Task
+from mpt_extension_sdk.models.task import Task, TaskLog, TaskLogSeverity
 from mpt_extension_sdk.models.template import Template
 
 __all__ = [  # noqa: WPS410
@@ -63,6 +63,8 @@ __all__ = [  # noqa: WPS410
     "SubscriptionLine",
     "SubscriptionStatus",
     "Task",
+    "TaskLog",
+    "TaskLogSeverity",
     "Template",
     "UnknownExtensionStatusWarning",
     "UnknownInstallationInvitationStatusWarning",

@@ -1,8 +1,11 @@
 import logging
 from dataclasses import dataclass
+from typing import Any
 
 from mpt_api_client.exceptions import MPTError
+from pydantic import ValidationError
 
+from mpt_extension_sdk.models.task import TaskLog, TaskLogSeverity
 from mpt_extension_sdk.services.mpt_api_service.task import TaskService
 
 logger = logging.getLogger(__name__)
@@ -10,10 +13,29 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class TaskHandle:
-    """Platform Task id and progress reporting, without access to the task lifecycle."""
+    """Platform Task id, logging, and progress reporting, without access to the task lifecycle."""
 
     id: str
     task_service: TaskService
+
+    async def log(
+        self,
+        message: str,
+        severity: TaskLogSeverity = TaskLogSeverity.INFO,
+        parameters: dict[str, Any] | None = None,  # noqa: WPS110
+    ) -> None:
+        """Write a best-effort log record to the platform task.
+
+        Args:
+            message: Log message, optionally a template with `{{Name}}` placeholders.
+            severity: Severity of the log record.
+            parameters: Values that fill the message template placeholders.
+        """
+        task_log = TaskLog(message=message, severity=severity, parameters=parameters)
+        try:
+            await self.task_service.create_log(self.id, task_log)
+        except (MPTError, ValidationError) as error:
+            logger.warning("Could not write log record for task %s", self.id, exc_info=error)
 
     async def progress(self, progress: float) -> None:
         """Report best-effort task progress to the platform.
