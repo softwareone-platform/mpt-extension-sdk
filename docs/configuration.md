@@ -20,6 +20,7 @@ The SDK runtime relies on these settings:
 | `SDK_LOCAL_WORKERS` | `1` | `2` | Worker count for local Uvicorn mode |
 | `SDK_ZITI_WORKERS` | `4` | `8` | Worker count for Ziticorn platform runtime |
 | `SDK_ZITI_RELOAD` | `false` | `true` | Enables Ziticorn reload mode |
+| `SDK_MAX_CONCURRENT_TASKS` | unbounded | `10` | Maximum task executions, schedule and deferred together, that each worker process runs at the same time; `0` runs none |
 | `LOG_LEVEL` | `INFO` | `DEBUG` | Default runtime log level |
 | `SDK_OBSERVABILITY_ENABLED` | `true` | `false` | Enables SDK observability bootstrap |
 | `SDK_APPLICATIONINSIGHTS_CONNECTION_STRING` | - | `InstrumentationKey=...` | Azure Monitor connection string used by the SDK observability bootstrap |
@@ -82,6 +83,12 @@ LOG_LEVEL=INFO
 - Worker count does not duplicate schedule executions: they are claimed in the
   platform, which covers every worker process and every instance, as described
   in [sdk_usage/schedules.md](sdk_usage/schedules.md).
+- `SDK_MAX_CONCURRENT_TASKS` limits each worker process on its own, so an
+  instance runs up to that value times its worker count. A delivery that
+  arrives while the process is at the limit is answered `Defer` with the
+  watchdog cadence, without claiming its task, so `0` stops the process from
+  running any task. A negative or non-integer value raises `ConfigError` when
+  the runtime settings load.
 - [`mpt_extension_sdk/runtime/bootstrap/registration.py`](../mpt_extension_sdk/runtime/bootstrap/registration.py)
   registers the running extension instance and persists the returned identity
   when present.

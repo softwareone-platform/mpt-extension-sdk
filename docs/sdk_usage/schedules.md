@@ -55,6 +55,7 @@ final state. The SDK decides each response from the platform task state:
 | `Processing`, running in this process | None — this is the watchdog | `Defer` (watchdog cadence) |
 | `Processing`, running elsewhere | None — the platform rejects the claim | `Defer` (watchdog cadence) |
 | `Completed` / `Failed` | None | `OK` — the event is acknowledged |
+| `Queued` / `Rescheduled`, this process at `SDK_MAX_CONCURRENT_TASKS` | None — the task is not claimed | `Defer` (watchdog cadence) |
 
 The watchdog cadence is an exponential backoff derived from the elapsed
 processing time, clamped between 5 and 30 minutes and capped by the event's

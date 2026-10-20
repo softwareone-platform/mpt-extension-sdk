@@ -34,7 +34,9 @@ def run(mocker, delivery_handler, task_event):
     http_request = mocker.Mock(spec=Request)
 
     async def factory(event=task_event):
-        return await delivery_handler.execute(request=http_request, task_id="TSK-001", event=event)
+        return await delivery_handler.execute(
+            request=http_request, task_id="TSK-001", delivery=event
+        )
 
     return factory
 
@@ -204,6 +206,18 @@ async def test_defers_when_submit_rejected(
     await run()  # act
 
     task_service.reschedule.assert_awaited_once_with("TSK-001")
+
+
+@freeze_time(DELIVERED_AT)
+async def test_defers_when_runner_at_capacity(
+    build_schedule_context, run, task_service, async_task_runner
+):
+    async_task_runner.has_capacity.return_value = False
+
+    result = await run()
+
+    assert result == EventResponse.reschedule(300)
+    task_service.start.assert_not_awaited()
 
 
 async def test_defers_when_fetch_fails(build_schedule_context, run, task_service):

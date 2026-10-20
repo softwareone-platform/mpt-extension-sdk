@@ -46,6 +46,8 @@ def task_service(mocker, task_factory):
 @pytest.fixture
 def async_task_runner(mocker):
     runner = mocker.MagicMock(spec=AsyncTaskRunner)
+    runner.has_capacity.return_value = True
+    runner.is_running.return_value = False
     runner.reserve.return_value.__enter__.return_value = True
     runner.submit.return_value = True
     return runner
