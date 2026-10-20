@@ -14,6 +14,15 @@ The `migrations` topic here covers SDK compatibility changes that require consum
 
 ## Current Migration Notes
 
+### `APIRouter.endpoint` is deprecated
+
+`APIRouter.endpoint` now emits a `DeprecationWarning` when a route is
+registered with it. It still registers an authenticated GET route, but it
+supports neither a body validator nor a deferrable endpoint.
+
+Consumer action: replace `@router.endpoint(path=..., name=...)` with
+`@router.get(path=..., name=...)`. The registered route is the same.
+
 ### OTLP exporter is no longer enabled unconditionally
 
 The observability bootstrap used to register the OTLP span exporter whenever

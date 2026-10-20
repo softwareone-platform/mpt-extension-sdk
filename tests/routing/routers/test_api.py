@@ -1,6 +1,6 @@
 import pytest
 
-from mpt_extension_sdk.routing import APIRouter, HTTPMethod
+from mpt_extension_sdk.routing import APIRouter, HTTPMethod, TaskTimeouts
 from mpt_extension_sdk.schemas import BaseSchema
 
 
@@ -21,10 +21,10 @@ class FakePayloadSchema(BaseSchema):
         ("/events", "/orders", "/events/orders"),
     ],
 )
-def test_api_router_endpoint_normalizes_path(prefix, path, expected, route_handler):
+def test_api_router_normalizes_path(prefix, path, expected, route_handler):
     router = APIRouter(prefix=prefix)
 
-    router.endpoint(path=path, name="orders")(route_handler)  # act
+    router.get(path=path, name="orders")(route_handler)  # act
 
     route = router.routes[0]
     assert route.path == expected
@@ -35,12 +35,23 @@ def test_api_router_rejects_empty_path():
     router = APIRouter(prefix="/events")
 
     with pytest.raises(ValueError, match="Route path cannot be empty"):
-        router.endpoint(path="   ", name="orders")
+        router.get(path="   ", name="orders")
+
+
+def test_api_router_endpoint_warns_deprecated(route_handler):
+    router = APIRouter(prefix="/api")
+
+    with pytest.warns(DeprecationWarning, match="use APIRouter.get instead"):
+        router.endpoint(path="orders", name="orders")(route_handler)
+
+    route = router.routes[0]
+    assert route.path == "/api/orders"
+    assert route.method == HTTPMethod.GET
 
 
 def test_prefixed_routes_returns_prefixed_copies(route_handler):
     router = APIRouter(prefix="/api")
-    router.endpoint(path="orders", name="orders")(route_handler)
+    router.get(path="orders", name="orders")(route_handler)
 
     result = router.prefixed_routes("/v1")
 
@@ -94,3 +105,55 @@ def test_api_router_rejects_duplicate_method_path(route_handler):
         match="Route path '/api/orders' is already registered for method 'GET'",
     ):
         action(route_handler)
+
+
+@pytest.mark.parametrize(
+    ("register", "method"),
+    [
+        ("delete", HTTPMethod.DELETE),
+        ("get", HTTPMethod.GET),
+        ("patch", HTTPMethod.PATCH),
+        ("post", HTTPMethod.POST),
+        ("put", HTTPMethod.PUT),
+    ],
+)
+def test_api_router_registers_deferrable(register, method, route_handler):
+    router = APIRouter(prefix="/agreements")
+    timeouts = TaskTimeouts(max_task_lifespan=7200, max_task_processing=3600)
+
+    getattr(router, register)(
+        path="orders", name="orders-sync", deferrable=True, timeouts=timeouts
+    )(route_handler)  # act
+
+    route = router.routes[0]
+    assert route.method == method
+    assert route.deferrable is True
+    assert route.timeouts is timeouts
+
+
+@pytest.mark.parametrize("register", ["delete", "get", "patch", "post", "put"])
+def test_api_router_defaults_to_not_deferrable(register, route_handler):
+    router = APIRouter(prefix="/agreements")
+
+    getattr(router, register)(path="orders", name="orders-sync")(route_handler)  # act
+
+    route = router.routes[0]
+    assert route.deferrable is False
+    assert route.timeouts is None
+
+
+@pytest.mark.parametrize("register", ["delete", "get", "patch", "post", "put"])
+def test_api_router_rejects_positional_options(register):
+    router = APIRouter(prefix="/agreements")
+    timeouts = TaskTimeouts(max_task_lifespan=7200)
+
+    with pytest.raises(TypeError, match="positional argument"):
+        getattr(router, register)("orders", "orders-sync", None, timeouts)
+
+
+@pytest.mark.parametrize("option", ["deferrable", "timeouts"])
+def test_api_router_endpoint_rejects_deferrable(option):
+    router = APIRouter(prefix="/agreements")
+
+    with pytest.raises(TypeError, match=option):
+        router.endpoint(path="orders", name="orders", **{option: None})
