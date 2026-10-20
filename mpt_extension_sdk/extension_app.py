@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from mpt_extension_sdk.extension_validator import ExtensionValidator
-from mpt_extension_sdk.routing import BaseRouteDefinition, EventRouteDefinition
+from mpt_extension_sdk.routing import APIRouteDefinition, BaseRouteDefinition, EventRouteDefinition
 from mpt_extension_sdk.routing.routers.base import BaseExtensionRouter
 from mpt_extension_sdk.routing.validators import RouteValidator
 from mpt_extension_sdk.runtime.builders import MetaConfigBuilder
@@ -123,6 +123,11 @@ class ExtensionApp:
     def include_router(self, router: BaseExtensionRouter) -> None:
         """Include a router in the extension app."""
         for route in router.prefixed_routes(self.prefix):
+            if isinstance(route, APIRouteDefinition):
+                # The app prefix can add a path parameter the router could not see
+                RouteValidator.validate_deferrable_options(
+                    path=route.path, deferrable=route.deferrable, timeouts=route.timeouts
+                )
             RouteValidator.validate_route_uniqueness(route=route, routes=self._routes)
             self._routes.append(route)
 

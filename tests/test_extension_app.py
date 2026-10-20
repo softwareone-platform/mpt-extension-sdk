@@ -104,6 +104,27 @@ def test_ext_app_include_router_applies_prefix(dummy_handler, extension_router):
     assert app.routes[0].path == "/api/v1/events/orders/purchase"
 
 
+def test_ext_app_rejects_deferrable_prefix_param(mocker):
+    router = APIRouter(prefix="/agreements")
+    router.post(path="sync", name="agreements-sync", deferrable=True)(mocker.AsyncMock())
+    app = ExtensionApp(prefix="/{account_id}")
+
+    with pytest.raises(ValueError, match="cannot declare path parameters"):
+        app.include_router(router)
+
+    assert app.routes == []
+
+
+def test_ext_app_includes_plain_prefix_param(mocker):
+    router = APIRouter(prefix="/agreements")
+    router.post(path="sync", name="agreements-sync")(mocker.Mock())
+    app = ExtensionApp(prefix="/{account_id}")
+
+    app.include_router(router)  # act
+
+    assert app.routes[0].path == "/{account_id}/agreements/sync"
+
+
 def test_meta_config_ignores_non_event_routes(dummy_handler):
     event_router = EventRouter(prefix="/events/orders")
     api_router = APIRouter(prefix="/api")

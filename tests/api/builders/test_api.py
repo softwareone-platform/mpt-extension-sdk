@@ -514,8 +514,9 @@ def test_api_route_exposes_body_without_validator(
     assert result.json()["data"] == request_body
 
 
+@pytest.mark.parametrize("request_body", [b"{invalid", b"\x80"])
 def test_api_route_maps_invalid_json_body_errors(
-    api_route_dependencies, auth_headers, api_app_factory, ok_handler
+    api_route_dependencies, auth_headers, api_app_factory, ok_handler, request_body
 ):
     client = api_app_factory(
         route_handler=ok_handler,
@@ -527,7 +528,7 @@ def test_api_route_maps_invalid_json_body_errors(
 
     result = client.post(
         "/adobe/orders",
-        content="{invalid",
+        content=request_body,
         headers=auth_headers,
     )
 

@@ -136,8 +136,12 @@ class APIRouter(BaseExtensionRouter):
         """Create a decorator for an authenticated API route."""
         normalized_path = self._join_paths(self.prefix, path)
         RouteValidator.validate_body_validator_type(body_validator)
+        RouteValidator.validate_deferrable_options(
+            path=normalized_path, deferrable=deferrable, timeouts=timeouts
+        )
 
         def decorator(route_handler: APIRouteCallback) -> APIRouteCallback:
+            RouteValidator.validate_deferrable_handler(route_handler, deferrable=deferrable)
             self._register_base_route(
                 APIRouteDefinition(
                     name=name,

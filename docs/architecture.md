@@ -87,7 +87,9 @@ deferred API calls: an API route marked `deferrable` serves both modes on one pa
 A request without the `MPT-Task-Id` header runs as a direct call; a request with it
 is a deferred delivery of that platform task, answered with an event response. The
 `APIRouter` method decorators declare it with the keyword-only `deferrable` and
-`timeouts` (`TaskTimeouts`) arguments; the generated metadata does not publish
+`timeouts` (`TaskTimeouts`) arguments. Registration rejects a deferrable route whose
+handler is not a coroutine function or whose path declares a parameter, and task
+timeouts on a route that is not deferrable. The generated metadata does not publish
 deferrable routes yet. Each route family
 documents its own contract: [sdk_usage/events.md](sdk_usage/events.md),
 [sdk_usage/schedules.md](sdk_usage/schedules.md),
