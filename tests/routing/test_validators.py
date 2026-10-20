@@ -80,3 +80,52 @@ def test_validate_deferrable_rejects_timeouts():
         RouteValidator.validate_deferrable_options(
             path="/agreements/sync", deferrable=False, timeouts=timeouts
         )
+
+
+@pytest.mark.parametrize(
+    ("existing_path", "duplicate_path"),
+    [
+        ("/orders", "/orders/"),
+        ("/orders/{id}", "/orders/{order_id}"),
+        ("/orders/{id:int}", "/orders/{order_id}"),
+    ],
+)
+def test_validate_rejects_equivalent_api_path(api_route_factory, existing_path, duplicate_path):
+    existing = api_route_factory(name="orders-first", path=existing_path)
+    duplicate = api_route_factory(name="orders-second", path=duplicate_path)
+
+    with pytest.raises(ValueError, match="is already registered for method 'POST'"):
+        RouteValidator.validate_route_uniqueness(route=duplicate, routes=[existing])
+
+
+def test_validate_accepts_distinct_api_path(api_route_factory):
+    existing = api_route_factory(name="orders-detail", path="/orders/{order_id}")
+    route = api_route_factory(name="orders-lines", path="/orders/{order_id}/lines")
+
+    result = RouteValidator.validate_route_uniqueness(route=route, routes=[existing])
+
+    assert result is None
+
+
+@pytest.mark.parametrize(
+    "method_paths",
+    [
+        [("POST", "/agreements/sync"), ("POST", "/agreements/sync/")],
+        [("POST", "/agreements/{id}/sync"), ("POST", "/agreements/{agreement_id:str}/sync")],
+    ],
+)
+def test_validate_rejects_duplicate_deferrable(method_paths):
+    with pytest.raises(ValueError, match="is already declared for method 'POST'"):
+        RouteValidator.validate_deferrable_uniqueness(method_paths)
+
+
+def test_validate_accepts_unique_deferrables():
+    method_paths = [
+        ("POST", "/agreements/sync"),
+        ("PUT", "/agreements/sync"),
+        ("POST", "/orders/sync"),
+    ]
+
+    result = RouteValidator.validate_deferrable_uniqueness(method_paths)
+
+    assert result is None

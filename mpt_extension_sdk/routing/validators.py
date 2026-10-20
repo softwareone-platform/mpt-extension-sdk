@@ -1,4 +1,5 @@
 import inspect
+from collections.abc import Iterable
 from typing import TYPE_CHECKING
 
 from mpt_extension_sdk.context import ContextAdapter
@@ -12,7 +13,7 @@ if TYPE_CHECKING:
     from mpt_extension_sdk.routing.models import BaseRouteDefinition
 
 
-class RouteValidator:
+class RouteValidator:  # noqa: WPS214
     """Validation helpers for route registration."""
 
     @classmethod
@@ -70,6 +71,18 @@ class RouteValidator:
             )
 
     @classmethod
+    def validate_deferrable_uniqueness(cls, method_paths: Iterable[tuple[str, str]]) -> None:
+        """Validate that each method and path pair is declared once in the deferrables block."""
+        seen_method_paths: set[tuple[str, str]] = set()
+        for method, path in method_paths:
+            method_path = (method, RoutePath.normalize(path))
+            if method_path in seen_method_paths:
+                raise ValueError(
+                    f"Deferrable path '{path}' is already declared for method '{method}'"
+                )
+            seen_method_paths.add(method_path)
+
+    @classmethod
     def validate_route_uniqueness(
         cls, *, route: "BaseRouteDefinition", routes: list["BaseRouteDefinition"]
     ) -> None:
@@ -77,8 +90,11 @@ class RouteValidator:
         if any(existing_route.name == route.name for existing_route in routes):
             raise ValueError(f"Route name '{route.name}' is already registered")
 
+        route_path = RoutePath.normalize(route.path)
         existing_path_routes = [
-            existing_route for existing_route in routes if existing_route.path == route.path
+            existing_route
+            for existing_route in routes
+            if RoutePath.normalize(existing_route.path) == route_path
         ]
         if route.route_type == RouteType.API:
             cls._validate_api_route_uniqueness(route, existing_path_routes)

@@ -2,9 +2,11 @@ from pathlib import Path
 
 import pytest
 import yaml
+from pydantic import ValidationError
 
 from mpt_extension_sdk.errors.runtime import ConfigError
-from mpt_extension_sdk.runtime.models import MetaConfig, MetaPlug, MetaSchedule
+from mpt_extension_sdk.routing import HTTPMethod
+from mpt_extension_sdk.runtime.models import MetaConfig, MetaDeferrable, MetaPlug, MetaSchedule
 
 
 @pytest.fixture
@@ -49,10 +51,23 @@ def test_meta_config_to_file_writes_yaml(meta_config, metadata_path):
     meta_config.to_file(metadata_path)  # act
 
     assert Path(metadata_path).read_text(encoding="utf-8") == yaml.safe_dump(
-        meta_config.model_dump(exclude_none=True, by_alias=True),
+        meta_config.model_dump(exclude_none=True, by_alias=True, mode="json"),
         sort_keys=False,
         allow_unicode=False,
     )
+
+
+def test_meta_config_to_file_writes_deferrables(metadata_path):
+    meta_config = MetaConfig(
+        openapi="/openapi.json",
+        events=[],
+        deferrables=[MetaDeferrable(path="/api/v2/agreements/sync", method=HTTPMethod.POST)],
+    )
+
+    meta_config.to_file(metadata_path)  # act
+
+    written = yaml.safe_load(metadata_path.read_text(encoding="utf-8"))
+    assert written["deferrables"] == [{"path": "/api/v2/agreements/sync", "method": "POST"}]
 
 
 def test_meta_config_supports_plugs(metadata_path):
@@ -221,3 +236,36 @@ def test_meta_schedule_rejects_short_cron():
             cron="* * * *",
             path="/schedule/daily",
         )
+
+
+def test_meta_config_supports_deferrables():
+    deferrables = [
+        {
+            "path": "/api/v2/agreements/sync",
+            "method": "POST",
+            "timeouts": {"maxTaskLifespan": 7200, "maxTaskProcessing": 3600},
+        },
+        {"path": "/api/v2/orders/sync", "method": "POST"},
+    ]
+    payload = {"openapi": "/openapi.json", "events": [], "deferrables": deferrables}
+
+    result = MetaConfig.model_validate(payload, by_alias=True)
+
+    assert result.model_dump(exclude_none=True, by_alias=True)["deferrables"] == deferrables
+
+
+@pytest.mark.parametrize(
+    "deferrables",
+    [
+        [{"path": "/api/v2/agreements/sync", "method": "POST", "unknown": True}],
+        [{"path": "/sync", "method": "POST", "timeouts": {"maxTaskLifespan": 1, "unknown": 1}}],
+        [{"path": "/sync", "method": "POST"}, {"path": "/sync/", "method": "POST"}],
+        [{"path": "/agreements/{agreement_id}/sync", "method": "POST"}],
+        [{"path": "/sync", "method": "POST", "timeouts": {}}],
+    ],
+)
+def test_meta_config_rejects_invalid_deferrables(deferrables):
+    payload = {"openapi": "/openapi.json", "events": [], "deferrables": deferrables}
+
+    with pytest.raises(ValidationError):
+        MetaConfig.model_validate(payload, by_alias=True)

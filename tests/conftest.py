@@ -17,7 +17,7 @@ from mpt_extension_sdk.api.auth.constants import (
 from mpt_extension_sdk.api.models.events import Event, TaskEvent
 from mpt_extension_sdk.models.agreement import Agreement
 from mpt_extension_sdk.models.order import Order
-from mpt_extension_sdk.routing import EventRouter
+from mpt_extension_sdk.routing import APIRouteDefinition, EventRouter, HTTPMethod, RouteType
 from mpt_extension_sdk.runtime.models import MetaConfig, MetaEvent
 from mpt_extension_sdk.services.mpt_api_service import MPTAPIService
 from mpt_extension_sdk.services.mpt_api_service.task import TaskService
@@ -176,6 +176,29 @@ def runtime_settings(meta_config):
         ziti_workers=4,
         ziti_reload=False,
     )
+
+
+@pytest.fixture
+def api_route_factory(mocker):
+    def factory(  # noqa: WPS211
+        *,
+        name="agreements-sync",
+        path="/agreements/sync",
+        method=HTTPMethod.POST,
+        deferrable=False,
+        timeouts=None,
+    ):
+        return APIRouteDefinition(
+            name=name,
+            path=path,
+            route_type=RouteType.API,
+            callback=mocker.AsyncMock(),
+            method=method,
+            deferrable=deferrable,
+            timeouts=timeouts,
+        )
+
+    return factory
 
 
 @pytest.fixture

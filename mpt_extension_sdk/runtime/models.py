@@ -5,6 +5,9 @@ import yaml
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
 from mpt_extension_sdk.errors.runtime import ConfigError
+from mpt_extension_sdk.routing.enums import HTTPMethod
+from mpt_extension_sdk.routing.models import TaskTimeouts
+from mpt_extension_sdk.routing.validators import RouteValidator
 
 
 class MetaEvent(BaseModel):
@@ -67,6 +70,51 @@ class MetaSchedule(BaseModel):
         return cron
 
 
+class MetaTaskTimeouts(BaseModel):
+    """Task lifetime limits of a deferrable endpoint, in seconds."""
+
+    # Keep the order of fields in the model consistent with the order in the metadata file
+    max_task_lifespan: int | None = Field(
+        default=None,
+        serialization_alias="maxTaskLifespan",
+        validation_alias="maxTaskLifespan",
+    )
+    max_task_processing: int | None = Field(
+        default=None,
+        serialization_alias="maxTaskProcessing",
+        validation_alias="maxTaskProcessing",
+    )
+
+    model_config = ConfigDict(extra="forbid", validate_by_name=True)
+
+    @model_validator(mode="after")
+    def validate_limits(self) -> Self:
+        """Reject a timeouts declaration that carries no limit."""
+        TaskTimeouts(
+            max_task_lifespan=self.max_task_lifespan,
+            max_task_processing=self.max_task_processing,
+        )
+        return self
+
+
+class MetaDeferrable(BaseModel):
+    """Metadata model for an endpoint that accepts deferred calls."""
+
+    # Keep the order of fields in the model consistent with the order in the metadata file
+    path: str = Field(min_length=1)
+    method: HTTPMethod
+    timeouts: MetaTaskTimeouts | None = None
+
+    model_config = ConfigDict(extra="forbid")
+
+    @field_validator("path")
+    @classmethod
+    def validate_path(cls, path: str) -> str:
+        """Reject a path parameter, which the platform does not resolve for a deferred call."""
+        RouteValidator.validate_deferrable_options(path=path, deferrable=True, timeouts=None)
+        return path
+
+
 class MetaConfig(BaseModel):
     """MetaConfig model for loading metadata."""
 
@@ -77,8 +125,17 @@ class MetaConfig(BaseModel):
     events: list[MetaEvent]
     schedules: list[MetaSchedule] | None = None
     plugs: list[MetaPlug] | None = None
+    deferrables: list[MetaDeferrable] | None = None
 
     model_config = ConfigDict(extra="forbid")
+
+    @model_validator(mode="after")
+    def validate_unique_deferrables(self) -> Self:
+        """Reject a method and path pair declared twice in the deferrables block."""
+        RouteValidator.validate_deferrable_uniqueness(
+            (deferrable.method, deferrable.path) for deferrable in self.deferrables or []
+        )
+        return self
 
     @classmethod
     def from_file(cls, path: Path) -> Self:
@@ -104,7 +161,7 @@ class MetaConfig(BaseModel):
         """
         path.write_text(
             yaml.safe_dump(
-                self.model_dump(exclude_none=True, by_alias=True),
+                self.model_dump(exclude_none=True, by_alias=True, mode="json"),
                 sort_keys=False,
                 allow_unicode=False,
             ),

@@ -106,6 +106,21 @@ such as extra OpenTelemetry instrumentation (see
 
 Registering no hooks keeps the previous startup behavior unchanged.
 
+## Operational Endpoints
+
+The runtime registers built-in endpoints under the `/bypass` prefix, next to the
+extension routes:
+
+| Endpoint | Purpose |
+| --- | --- |
+| `/bypass/health` | Status plus the extension version |
+| `/bypass/live` | Liveness probe |
+| `/bypass/ready` | Readiness probe: `503` until application startup completes, startup hooks included, and again once shutdown begins |
+| `ExtensionApp.openapi` (default `/bypass/openapi.json`) | The OpenAPI document, with `/bypass/docs` and `/bypass/redoc` as its viewers |
+
+The runtime registers these endpoints itself, without authentication, so the
+platform can check the instance.
+
 ## Configure The Runtime
 
 The SDK commonly relies on:
