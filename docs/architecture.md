@@ -45,7 +45,7 @@ The main package lives under [`mpt_extension_sdk/`](../mpt_extension_sdk).
 
 - [`mpt_extension_sdk/extension_app.py`](../mpt_extension_sdk/extension_app.py): exposes `ExtensionApp`
 - [`mpt_extension_sdk/routing/`](../mpt_extension_sdk/routing): defines route-family routers and route metadata types
-- [`mpt_extension_sdk/api/builders/`](../mpt_extension_sdk/api/builders): FastAPI route builders for API, event, and schedule routes
+- [`mpt_extension_sdk/api/builders/`](../mpt_extension_sdk/api/builders): FastAPI route builders for API, deferrable API, event, and schedule routes
 - [`mpt_extension_sdk/runtime/app.py`](../mpt_extension_sdk/runtime/app.py): creates the FastAPI app, loads the exported extension app, and mounts routes
 - [`mpt_extension_sdk/runtime/main.py`](../mpt_extension_sdk/runtime/main.py): exports the ASGI application instance
 - [`mpt_extension_sdk/runtime/runner.py`](../mpt_extension_sdk/runtime/runner.py): runs the extension locally with `uvicorn` or on the platform with `ziticorn`
@@ -82,7 +82,11 @@ static asset exposure under `/static`.
 
 Schedule handlers are executed asynchronously by an application-scoped runner,
 so durable dispatch and the claim on an execution stay with the Extension
-Framework and the platform task rather than with the SDK. Each route family
+Framework and the platform task rather than with the SDK. The same runner executes
+deferred API calls: an API route marked `deferrable` serves both modes on one path.
+A request without the `MPT-Task-Id` header runs as a direct call; a request with it
+is a deferred delivery of that platform task, answered with an event response. The
+route decorators do not expose `deferrable` yet. Each route family
 documents its own contract: [sdk_usage/events.md](sdk_usage/events.md),
 [sdk_usage/schedules.md](sdk_usage/schedules.md),
 [sdk_usage/api.md](sdk_usage/api.md) and [sdk_usage/plugs.md](sdk_usage/plugs.md),

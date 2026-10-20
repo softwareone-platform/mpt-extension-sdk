@@ -10,6 +10,7 @@ from fastapi.staticfiles import StaticFiles
 
 from mpt_extension_sdk.api.builders import (
     create_api_route,
+    create_deferrable_route,
     create_event_route,
     create_schedule_route,
 )
@@ -87,7 +88,7 @@ def create_runtime_app(runtime_settings: RuntimeSettings) -> FastAPI:
     return app
 
 
-def register_extension_routes(app: FastAPI, extension_app: ExtensionApp) -> None:  # noqa: WPS231
+def register_extension_routes(app: FastAPI, extension_app: ExtensionApp) -> None:  # noqa: WPS231  # ruff:ignore[complex-structure] - one case per route family
     """Register all decorated handlers on the FastAPI app.
 
     Args:
@@ -100,6 +101,8 @@ def register_extension_routes(app: FastAPI, extension_app: ExtensionApp) -> None
                 continue
             case EventRouteDefinition():
                 app.include_router(create_event_route(registered_route, extension_app))
+            case APIRouteDefinition(deferrable=True):
+                app.include_router(create_deferrable_route(registered_route, extension_app))
             case APIRouteDefinition():
                 app.include_router(create_api_route(registered_route, extension_app))
             case ScheduleRouteDefinition():

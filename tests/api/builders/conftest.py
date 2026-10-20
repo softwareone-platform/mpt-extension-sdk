@@ -8,6 +8,7 @@ from mpt_extension_sdk.models.task import Task
 from mpt_extension_sdk.pipeline import ScheduleContext
 from mpt_extension_sdk.routing import RouteType, ScheduleRouteDefinition
 from mpt_extension_sdk.runtime.async_tasks import AsyncTaskRunner
+from mpt_extension_sdk.services.mpt_api_service import MPTAPIService
 from mpt_extension_sdk.services.mpt_api_service.task import TaskService
 
 
@@ -74,3 +75,45 @@ def schedule_route(schedule_callback):
 @pytest.fixture
 def schedule_context(mocker):
     return mocker.Mock(spec=ScheduleContext)
+
+
+@pytest.fixture
+def auth_token(auth_claims_factory, jwt_token_factory):
+    return jwt_token_factory(auth_claims_factory(modules={"billing": ["edit"]}))
+
+
+@pytest.fixture
+def auth_headers(auth_token):
+    return {"Authorization": f"Bearer {auth_token}"}
+
+
+@pytest.fixture
+def mock_api_service(mocker):
+    return mocker.AsyncMock(spec=MPTAPIService)
+
+
+@pytest.fixture
+def api_service_type_factory(mocker):
+    def factory(fake_service):
+        class FakeAPIService(MPTAPIService):  # noqa: WPS431
+            from_auth_context = mocker.AsyncMock(return_value=fake_service)
+            from_vendor_account = mocker.AsyncMock(return_value=fake_service)
+
+        fake_service.service_type = FakeAPIService
+        return FakeAPIService
+
+    return factory
+
+
+@pytest.fixture
+def api_route_dependencies(mocker, runtime_settings):
+    mocker.patch(
+        "mpt_extension_sdk.pipeline.factory.get_runtime_settings",
+        autospec=True,
+        return_value=runtime_settings,
+    )
+    mocker.patch(
+        "mpt_extension_sdk.pipeline.factory.get_extension_settings",
+        autospec=True,
+        return_value=mocker.sentinel.extension_settings,
+    )

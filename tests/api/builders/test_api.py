@@ -15,7 +15,6 @@ from mpt_extension_sdk.extension_app import ExtensionApp
 from mpt_extension_sdk.routing import APIRouteDefinition, APIRouter, HTTPMethod, RouteType
 from mpt_extension_sdk.runtime import app as runtime_app
 from mpt_extension_sdk.schemas import BaseSchema
-from mpt_extension_sdk.services.mpt_api_service import MPTAPIService
 
 MALFORMED_AUTH_TOKEN = "not-a-jwt"
 EXPIRED_EXP_TIMESTAMP = 1000000000
@@ -92,48 +91,6 @@ def invalid_response_handler(ctx):
 
 def unhandled_error_handler(ctx):
     raise ValueError("Unexpected")
-
-
-@pytest.fixture
-def auth_token(auth_claims_factory, jwt_token_factory):
-    return jwt_token_factory(auth_claims_factory(modules={"billing": ["edit"]}))
-
-
-@pytest.fixture
-def auth_headers(auth_token):
-    return {"Authorization": f"Bearer {auth_token}"}
-
-
-@pytest.fixture
-def mock_api_service(mocker):
-    return mocker.AsyncMock(spec=MPTAPIService)
-
-
-@pytest.fixture
-def api_service_type_factory(mocker):
-    def factory(fake_service):
-        class FakeAPIService(MPTAPIService):  # noqa: WPS431
-            from_auth_context = mocker.AsyncMock(return_value=fake_service)
-            from_vendor_account = mocker.AsyncMock(return_value=fake_service)
-
-        fake_service.service_type = FakeAPIService
-        return FakeAPIService
-
-    return factory
-
-
-@pytest.fixture
-def api_route_dependencies(mocker, runtime_settings):
-    mocker.patch(
-        "mpt_extension_sdk.pipeline.factory.get_runtime_settings",
-        autospec=True,
-        return_value=runtime_settings,
-    )
-    mocker.patch(
-        "mpt_extension_sdk.pipeline.factory.get_extension_settings",
-        autospec=True,
-        return_value=mocker.sentinel.extension_settings,
-    )
 
 
 @pytest.fixture
