@@ -7,6 +7,7 @@ from mpt_extension_sdk.routing import (
     Plug,
     PlugRouter,
     ScheduleRouter,
+    TaskTimeouts,
 )
 
 __all__ = [  # noqa: WPS410
@@ -18,4 +19,5 @@ __all__ = [  # noqa: WPS410
     "Plug",
     "PlugRouter",
     "ScheduleRouter",
+    "TaskTimeouts",
 ]

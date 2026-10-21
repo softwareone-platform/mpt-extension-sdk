@@ -5,6 +5,7 @@ from mpt_extension_sdk.routing.models import (
     EventRouteDefinition,
     PlugRouteDefinition,
     ScheduleRouteDefinition,
+    TaskTimeouts,
 )
 from mpt_extension_sdk.routing.plugs import STATIC_PATH_PREFIX, ModalPlug, NavigationPlug, Plug
 from mpt_extension_sdk.routing.routers.api import APIRouter
@@ -35,4 +36,5 @@ __all__ = [  # noqa: WPS410
     "RouteType",
     "ScheduleRouteDefinition",
     "ScheduleRouter",
+    "TaskTimeouts",
 ]

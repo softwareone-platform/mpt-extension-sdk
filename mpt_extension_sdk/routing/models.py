@@ -13,6 +13,21 @@ from mpt_extension_sdk.schemas import BaseSchema
 
 
 @dataclass(frozen=True)
+class TaskTimeouts:
+    """Task lifetime limits a deferrable API route declares, in seconds."""
+
+    max_task_lifespan: int | None = None
+    max_task_processing: int | None = None
+
+    def __post_init__(self) -> None:
+        """Reject a declaration that carries no limit."""
+        if self.max_task_lifespan is None and self.max_task_processing is None:
+            raise ValueError(
+                "Task timeouts must declare max_task_lifespan, max_task_processing or both"
+            )
+
+
+@dataclass(frozen=True)
 class BaseRouteDefinition:
     """Base route definition owned by an extension application."""
 
@@ -41,6 +56,7 @@ class APIRouteDefinition(BaseRouteDefinition):
     method: HTTPMethod = HTTPMethod.GET
     body_validator_type: type[BaseSchema] | None = None
     deferrable: bool = False
+    timeouts: TaskTimeouts | None = None
 
 
 @dataclass(frozen=True)
