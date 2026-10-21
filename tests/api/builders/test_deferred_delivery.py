@@ -120,6 +120,16 @@ async def test_defers_without_claiming(
     task_service.start.assert_not_awaited()
 
 
+async def test_running_elsewhere_skips_context(
+    delivery_handler, http_request, context_factory, task_service, task_factory
+):
+    task_service.get.return_value = task_factory(TaskStatus.PROCESSING, started_seconds_ago=600)
+
+    await delivery_handler.execute(request=http_request, task_id="TSK-001", delivery=None)  # act
+
+    context_factory.build_api_context.assert_not_awaited()
+
+
 @pytest.mark.parametrize(
     ("error", "expected"),
     [

@@ -8,7 +8,7 @@ from mpt_extension_sdk.api.builders.arguments import APIHandlerArgumentsBuilder
 from mpt_extension_sdk.api.builders.deferred_handler import build_deferred_callback
 from mpt_extension_sdk.api.builders.task_delivery import TaskDeliveryHandler, TaskHandlerType
 from mpt_extension_sdk.api.context import AuthenticatedRequestContext
-from mpt_extension_sdk.models.task import Task, TaskStatus
+from mpt_extension_sdk.models.task import Task
 from mpt_extension_sdk.pipeline import RouteContextFactory
 from mpt_extension_sdk.routing.models import APIRouteDefinition
 from mpt_extension_sdk.runtime.async_tasks import AsyncTaskHandler, AsyncTaskRunner
@@ -59,14 +59,3 @@ class DeferredCallHandler(TaskDeliveryHandler[None]):
             task_service=self.task_service,
             task_id=task.id,
         )
-
-    @override
-    def can_claim(self, task: Task) -> bool:
-        """Return whether no other instance runs the task and the runner has capacity."""
-        if task.status == TaskStatus.PROCESSING and not self.runner.is_running(task.id):
-            self.handler_logger.info(
-                "Deferred call task %s is running elsewhere: deferring the delivery", task.id
-            )
-            return False
-
-        return super().can_claim(task)

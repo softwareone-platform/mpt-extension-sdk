@@ -19,7 +19,7 @@ from mpt_extension_sdk.api.builders.task_timing import (
 from mpt_extension_sdk.api.errors import APIError
 from mpt_extension_sdk.api.models.events import EventResponse
 from mpt_extension_sdk.errors.runtime import AsyncTasksRunnerError, ConfigError, ValidationError
-from mpt_extension_sdk.models.task import Task
+from mpt_extension_sdk.models.task import Task, TaskStatus
 from mpt_extension_sdk.runtime.async_tasks import AsyncTaskHandler, AsyncTaskRunner, TaskExecution
 from mpt_extension_sdk.runtime.task_transitions import ClaimOutcome, SafeTaskTransitions
 from mpt_extension_sdk.services.mpt_api_service.task import TaskService
@@ -82,7 +82,16 @@ class TaskDeliveryHandler[DeliveryT](ABC):  # noqa: WPS214
         """Return the call the runner executes for this delivery."""
 
     def can_claim(self, task: Task) -> bool:
-        """Return whether this instance should try to claim the task now."""
+        """Return whether no other instance runs the task and the runner has capacity."""
+        # A Processing task is already claimed: the platform would reject the claim.
+        if task.status == TaskStatus.PROCESSING and not self.runner.is_running(task.id):
+            self.handler_logger.info(
+                "%s task %s is running elsewhere: deferring the delivery",
+                self.handler_type,
+                task.id,
+            )
+            return False
+
         if self.runner.has_capacity():
             return True
 

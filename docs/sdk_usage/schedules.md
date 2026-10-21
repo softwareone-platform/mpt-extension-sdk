@@ -200,7 +200,7 @@ final state. The SDK decides each response from the platform task state:
 | `Queued` (first delivery) | Start task, submit handler | `Defer` (watchdog cadence) |
 | `Rescheduled` | Start task, submit handler | `Defer` (watchdog cadence) |
 | `Processing`, running in this process | None — this is the watchdog | `Defer` (watchdog cadence) |
-| `Processing`, running elsewhere | None — the platform rejects the claim | `Defer` (watchdog cadence) |
+| `Processing`, running elsewhere | None — the task is not claimed and the handler is not called | `Defer` (watchdog cadence) |
 | `Completed` / `Failed` | None | `OK` — the event is acknowledged |
 | `Queued` / `Rescheduled`, this process at `SDK_MAX_CONCURRENT_TASKS` | None — the task is not claimed | `Defer` (watchdog cadence) |
 
@@ -231,9 +231,13 @@ SDK reschedules the task and returns `Defer`.
 ### Claiming an execution
 
 Starting the platform task is the claim. The platform accepts that transition
-only from a retryable state, so it rejects every delivery of a task that is
-already being executed, and the SDK answers the rejection with `Defer` at the
-watchdog cadence.
+only from a retryable state, so a task that is already being executed cannot be
+claimed again. A delivery that finds the task in `Processing` on a process that
+is not running it is therefore answered with `Defer` at the watchdog cadence
+without building the handler context, calling the handler, or changing the
+task state. A claim the platform still rejects, because another execution
+claimed the task after the SDK read it, gets the same answer. Deferred API
+calls follow the same rule.
 
 A delivery can reach any instance of the extension, and any of its worker
 processes. Keeping the claim in the platform is what limits a task to one
