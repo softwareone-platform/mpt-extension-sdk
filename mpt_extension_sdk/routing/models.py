@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 from mpt_extension_sdk.context import ContextAdapter
+from mpt_extension_sdk.routing.decorators import is_only_deferrable
 from mpt_extension_sdk.routing.enums import EventDeliveryMode, HTTPMethod, RouteType
 from mpt_extension_sdk.routing.types import (
     APIRouteCallback,
@@ -57,6 +58,19 @@ class APIRouteDefinition(BaseRouteDefinition):
     body_validator_type: type[BaseSchema] | None = None
     deferrable: bool = False
     timeouts: TaskTimeouts | None = None
+
+    def __post_init__(self) -> None:
+        """Reject an only-deferrable handler on a route that is not deferrable."""
+        if self.only_deferrable and not self.deferrable:
+            raise TypeError(
+                f"Route '{self.path}' has an only-deferrable handler but is not deferrable: "
+                "set deferrable=True"
+            )
+
+    @property
+    def only_deferrable(self) -> bool:
+        """Whether the handler is restricted to deferred delivery."""
+        return is_only_deferrable(self.callback)
 
 
 @dataclass(frozen=True)

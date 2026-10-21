@@ -3,6 +3,7 @@ from collections.abc import Iterable
 from typing import TYPE_CHECKING
 
 from mpt_extension_sdk.context import ContextAdapter
+from mpt_extension_sdk.routing.decorators import is_only_deferrable
 from mpt_extension_sdk.routing.enums import RouteType
 from mpt_extension_sdk.routing.models import TaskTimeouts
 from mpt_extension_sdk.routing.paths import RoutePath
@@ -43,9 +44,12 @@ class RouteValidator:  # noqa: WPS214
         cls, route_handler: APIRouteCallback, *, deferrable: bool
     ) -> None:
         """Validate that a deferrable API handler can be awaited by the task runner."""
-        if not deferrable or inspect.iscoroutinefunction(route_handler):
+        unwrapped_handler = inspect.unwrap(
+            route_handler, stop=lambda layer: not is_only_deferrable(layer)
+        )
+        if not deferrable or inspect.iscoroutinefunction(unwrapped_handler):
             return
-        handler_name = getattr(route_handler, "__qualname__", repr(route_handler))
+        handler_name = getattr(unwrapped_handler, "__qualname__", repr(unwrapped_handler))
         raise TypeError(
             f"Deferrable API handler '{handler_name}' must be a coroutine function "
             "(async def): the task runner only accepts an awaitable"

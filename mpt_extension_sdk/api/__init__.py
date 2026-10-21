@@ -5,6 +5,7 @@ from mpt_extension_sdk.api.context import (
 )
 from mpt_extension_sdk.api.errors import (
     APIError,
+    AsynchronousCallRequiredError,
     ForbiddenError,
     NotFoundError,
     UnauthorizedError,
@@ -20,6 +21,7 @@ __all__ = [  # noqa: WPS410
     "APIContext",
     "APIError",
     "APIResponse",
+    "AsynchronousCallRequiredError",
     "AuthenticatedRequestContext",
     "ErrorDetail",
     "ForbiddenError",

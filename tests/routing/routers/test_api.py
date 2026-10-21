@@ -1,6 +1,15 @@
+from functools import wraps
+
 import pytest
 
-from mpt_extension_sdk.routing import APIRouter, HTTPMethod, TaskTimeouts
+from mpt_extension_sdk.routing import (
+    APIRouteDefinition,
+    APIRouter,
+    HTTPMethod,
+    RouteType,
+    TaskTimeouts,
+    only_deferrable,
+)
 from mpt_extension_sdk.schemas import BaseSchema
 
 
@@ -128,6 +137,7 @@ def test_api_router_registers_deferrable(register, method, async_route_handler):
     route = router.routes[0]
     assert route.method == method
     assert route.deferrable is True
+    assert route.only_deferrable is False
     assert route.timeouts is timeouts
 
 
@@ -170,19 +180,21 @@ def test_api_router_rejects_sync_deferrable(route_handler):
     assert router.routes == []
 
 
-def test_api_router_rejects_deferrable_path_param():
+def test_api_router_rejects_deferrable_path_param(async_route_handler):
     router = APIRouter()
+    action = router.post(path="{agreement_id}/sync", name="agreements-sync", deferrable=True)
 
     with pytest.raises(ValueError, match="take the input from the request body"):
-        router.post(path="{agreement_id}/sync", name="agreements-sync", deferrable=True)
+        action(async_route_handler)
 
 
-def test_api_router_rejects_plain_timeouts():
+def test_api_router_rejects_plain_timeouts(async_route_handler):
     router = APIRouter()
     timeouts = TaskTimeouts(max_task_lifespan=7200)
+    action = router.post(path="sync", name="agreements-sync", timeouts=timeouts)
 
     with pytest.raises(TypeError, match="declares task timeouts but is not deferrable"):
-        router.post(path="sync", name="agreements-sync", timeouts=timeouts)
+        action(async_route_handler)
 
 
 def test_api_router_keeps_plain_validation(route_handler):
@@ -193,3 +205,77 @@ def test_api_router_keeps_plain_validation(route_handler):
     route = router.routes[0]
     assert route.path == "/{agreement_id}"
     assert route.deferrable is False
+
+
+@pytest.mark.parametrize(
+    ("register", "method"),
+    [
+        ("delete", HTTPMethod.DELETE),
+        ("get", HTTPMethod.GET),
+        ("patch", HTTPMethod.PATCH),
+        ("post", HTTPMethod.POST),
+        ("put", HTTPMethod.PUT),
+    ],
+)
+def test_api_router_registers_only_deferrable(register, method, async_route_handler):
+    router = APIRouter(prefix="/agreements")
+    timeouts = TaskTimeouts(max_task_processing=3600)
+    route_handler = only_deferrable(async_route_handler)
+
+    getattr(router, register)(path="sync", name="agreements-sync", timeouts=timeouts)(
+        route_handler
+    )  # act
+
+    assert router.routes == [
+        APIRouteDefinition(
+            name="agreements-sync",
+            path="/agreements/sync",
+            route_type=RouteType.API,
+            callback=route_handler,
+            method=method,
+            deferrable=True,
+            timeouts=timeouts,
+        )
+    ]
+
+
+def test_api_router_rejects_sync_only_deferrable(route_handler):
+    router = APIRouter()
+    route_handler.__qualname__ = "sync_agreements"
+    action = router.post(path="sync", name="agreements-sync")
+
+    with pytest.raises(TypeError, match="'sync_agreements' must be a coroutine function"):
+        action(only_deferrable(route_handler))
+
+    assert router.routes == []
+
+
+def test_api_router_rejects_sync_wrapper(async_route_handler):
+    router = APIRouter()
+    async_route_handler.__qualname__ = "sync_agreements"
+    sync_wrapper = wraps(async_route_handler)(lambda *args, **kwargs: None)
+    action = router.post(path="sync", name="agreements-sync")
+
+    with pytest.raises(TypeError, match="'sync_agreements' must be a coroutine function"):
+        action(only_deferrable(sync_wrapper))
+
+    assert router.routes == []
+
+
+def test_api_router_rejects_only_deferrable_param(async_route_handler):
+    router = APIRouter()
+    action = router.post(path="{agreement_id}/sync", name="agreements-sync")
+
+    with pytest.raises(ValueError, match="take the input from the request body"):
+        action(only_deferrable(async_route_handler))
+
+
+def test_api_router_keeps_shared_handler_modes(async_route_handler):
+    router = APIRouter()
+    router.post(path="sync", name="agreements-sync", deferrable=True)(async_route_handler)
+
+    router.post(path="sync-background", name="agreements-sync-background")(
+        only_deferrable(async_route_handler)
+    )  # act
+
+    assert [route.only_deferrable for route in router.routes] == [False, True]

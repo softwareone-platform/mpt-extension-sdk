@@ -29,7 +29,7 @@ Typical extension usage starts with creating an `ExtensionApp`, registering one 
 The main package lives under [`mpt_extension_sdk/`](../mpt_extension_sdk).
 
 - [`extension_app.py`](../mpt_extension_sdk/extension_app.py): public SDK entrypoint that defines `ExtensionApp`
-- [`routing/`](../mpt_extension_sdk/routing): route-family routers and route definition models used by the SDK contract
+- [`routing/`](../mpt_extension_sdk/routing): route-family routers, route definition models, and route decorators used by the SDK contract
 - [`api/`](../mpt_extension_sdk/api): FastAPI payload models and builder helpers that adapt SDK routes to HTTP
 - [`pipeline/`](../mpt_extension_sdk/pipeline): execution contexts, context factory helpers, decorators, pipeline base classes, and steps
 - [`runtime/`](../mpt_extension_sdk/runtime): FastAPI app assembly, runtime startup, logging context, and platform bootstrap helpers
@@ -102,7 +102,8 @@ so durable dispatch and the claim on an execution stay with the Extension
 Framework and the platform task rather than with the SDK. The same runner executes
 deferred API calls: a deferrable API route serves both modes on one path. A request
 without the `MPT-Task-Id` header runs as a direct call; a request with it is a
-deferred delivery of that platform task, answered with an event response. The
+deferred delivery of that platform task, answered with an event response. A route
+restricted to deferred delivery answers a direct call with `405 Method Not Allowed`. The
 declaration and its registration rules are described in
 [sdk_usage/api.md](sdk_usage/api.md#deferrable-endpoints).
 

@@ -10,7 +10,7 @@ from mpt_extension_sdk.api.builders.dependencies import get_tasks_service
 from mpt_extension_sdk.api.builders.execution import APIRequestExecutor
 from mpt_extension_sdk.api.models.events import EventResponse
 from mpt_extension_sdk.extension_app import ExtensionApp
-from mpt_extension_sdk.routing import APIRouteDefinition, HTTPMethod, RouteType
+from mpt_extension_sdk.routing import APIRouteDefinition, HTTPMethod, RouteType, only_deferrable
 
 
 @pytest.fixture
@@ -31,6 +31,11 @@ def deferrable_route_factory():
 @pytest.fixture
 def deferrable_route(deferrable_route_factory):
     return deferrable_route_factory(lambda ctx: APIResponse.no_content())
+
+
+@pytest.fixture
+def only_deferrable_route(deferrable_route_factory):
+    return deferrable_route_factory(only_deferrable(lambda ctx: None))
 
 
 @pytest.fixture
@@ -138,3 +143,42 @@ def test_deferred_delivery_sets_log_context(mocker, deferrable_client, deferred_
     deferrable_client.post("/agreements/sync", headers={"MPT-Task-Id": "TSK-001"})  # act
 
     set_event_context.assert_called_once_with(task_id="TSK-001")
+
+
+def test_only_deferrable_refuses_direct_call(
+    mocker, deferrable_client_factory, only_deferrable_route, deferred_call_handler
+):
+    execute = mocker.patch.object(APIRequestExecutor, "execute", autospec=True)
+    client = deferrable_client_factory(only_deferrable_route)
+
+    result = client.post("/agreements/sync")
+
+    assert result.status_code == HTTPStatus.METHOD_NOT_ALLOWED
+    assert result.headers["content-type"] == "application/problem+json"
+    assert result.headers["allow"] == "POST"
+    assert result.headers["cache-control"] == "no-store"
+    assert result.json() == {
+        "type": "about:blank",
+        "status": HTTPStatus.METHOD_NOT_ALLOWED,
+        "title": "Method not allowed",
+        "detail": (
+            "This endpoint only accepts a deferred call: send the request with the "
+            "MPT-Async: true header"
+        ),
+        "instance": "/agreements/sync",
+    }
+    execute.assert_not_called()
+    deferred_call_handler.assert_not_called()
+
+
+def test_only_deferrable_runs_deferred_delivery(
+    mocker, deferrable_client_factory, only_deferrable_route, deferred_call_handler
+):
+    client = deferrable_client_factory(only_deferrable_route)
+
+    result = client.post("/agreements/sync", headers={"MPT-Task-Id": "TSK-001"})
+
+    assert result.json() == {"response": "Delay", "cancelReason": None, "delay": 60}
+    deferred_call_handler.return_value.execute.assert_awaited_once_with(
+        request=mocker.ANY, task_id="TSK-001", delivery=None
+    )

@@ -265,6 +265,49 @@ the next delivery, and `CancelError`, `FailError`, or any other exception fails
 it. In the direct branch these errors are not API errors, so the caller gets a
 `500`; raise `APIError` subclasses there instead.
 
+### Deferred-only endpoints
+
+A deferrable endpoint serves both call modes. When an operation takes longer
+than one HTTP request allows, a direct call cannot complete it. Restrict such an
+endpoint to deferred delivery with `only_deferrable`, applied below the
+`APIRouter` method decorator:
+
+```python
+from mpt_extension_sdk import APIRouter, only_deferrable
+from mpt_extension_sdk.api import APIContext
+
+agreements_api = APIRouter(prefix="/agreements")
+
+
+@agreements_api.post(path="/rebuild", name="agreements-rebuild")
+@only_deferrable
+async def rebuild_agreements(ctx: APIContext) -> None:
+    await rebuild_with_progress(ctx)
+```
+
+The decorator declares the route deferrable on its own, so `deferrable=True` is
+not needed, and `timeouts` is accepted as for any deferrable endpoint. A
+deferred delivery runs the handler normally, with `ctx.task` always set. A
+direct call, one sent without `MPT-Async: true`, never reaches the handler. The
+SDK answers it with `AsynchronousCallRequiredError`, a `405 Method Not Allowed`
+problem-details response whose `detail` tells the caller to send the
+`MPT-Async: true` header. The SDK does not answer `409 Conflict`, because the
+Extension Service already uses it for a deferred call to an endpoint that is not
+deferrable.
+
+Apply `only_deferrable` below the router decorator: the router reads the marker
+when it registers the handler, so an `only_deferrable` placed above it has no
+effect.
+
+A deferrable endpoint can also refuse the direct call from its own handler:
+
+```python
+from mpt_extension_sdk.api import AsynchronousCallRequiredError
+
+if ctx.task is None:
+    raise AsynchronousCallRequiredError
+```
+
 ### Task result
 
 The Task `result` is an optional relative URI. Return `None` when the Task status
@@ -313,4 +356,5 @@ mistake surfaces when the extension starts:
 - the path cannot declare path parameters, because the platform does not
   resolve them for a deferred call. Take the input from the request body, and
   keep it small: the platform limits a deferred request body to 4 KB;
-- `timeouts` is only accepted together with `deferrable=True`.
+- `timeouts` is only accepted on a deferrable route: with `deferrable=True` or
+  on a `only_deferrable` handler.

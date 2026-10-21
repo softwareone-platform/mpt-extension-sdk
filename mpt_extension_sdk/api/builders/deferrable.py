@@ -8,7 +8,9 @@ from mpt_extension_sdk.api.auth import RequestAuthenticationService
 from mpt_extension_sdk.api.builders.arguments import APIHandlerArgumentsBuilder
 from mpt_extension_sdk.api.builders.deferred_delivery import DeferredCallHandler
 from mpt_extension_sdk.api.builders.dependencies import get_tasks_service
+from mpt_extension_sdk.api.builders.errors import APIErrorResponseBuilder
 from mpt_extension_sdk.api.builders.execution import APIRequestExecutor
+from mpt_extension_sdk.api.errors import AsynchronousCallRequiredError
 from mpt_extension_sdk.extension_app import ExtensionApp
 from mpt_extension_sdk.pipeline import RouteContextFactory
 from mpt_extension_sdk.routing.models import APIRouteDefinition
@@ -23,7 +25,8 @@ def create_deferrable_route(route: APIRouteDefinition, extension_app: ExtensionA
 
     A request without the `MPT-Task-Id` header runs as a direct API call. A request
     with it is a deferred delivery of that platform task, answered with an
-    `EventResponse`.
+    `EventResponse`. A route restricted to deferred delivery answers a request
+    without it with `405 Method Not Allowed`.
     """
     handler_logger = logging.getLogger(route.callback.__module__)
     executor = APIRequestExecutor(
@@ -43,6 +46,13 @@ def create_deferrable_route(route: APIRouteDefinition, extension_app: ExtensionA
     ) -> Response:
         if not task_id:
             logger.debug("Received API request: %s %s", request.method, request.url.path)
+            if route.only_deferrable:
+                response = APIErrorResponseBuilder.build(
+                    AsynchronousCallRequiredError(), instance=request.url.path
+                )
+                response.headers["Allow"] = route.method.value
+                response.headers["Cache-Control"] = "no-store"
+                return response
             return await executor.execute(request)
 
         set_event_context(task_id=task_id)

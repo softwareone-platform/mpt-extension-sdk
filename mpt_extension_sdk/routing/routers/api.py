@@ -2,6 +2,7 @@ import warnings
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from mpt_extension_sdk.routing.decorators import is_only_deferrable
 from mpt_extension_sdk.routing.enums import HTTPMethod, RouteType
 from mpt_extension_sdk.routing.models import APIRouteDefinition, TaskTimeouts
 from mpt_extension_sdk.routing.routers.base import BaseExtensionRouter
@@ -136,12 +137,13 @@ class APIRouter(BaseExtensionRouter):
         """Create a decorator for an authenticated API route."""
         normalized_path = self._join_paths(self.prefix, path)
         RouteValidator.validate_body_validator_type(body_validator)
-        RouteValidator.validate_deferrable_options(
-            path=normalized_path, deferrable=deferrable, timeouts=timeouts
-        )
 
         def decorator(route_handler: APIRouteCallback) -> APIRouteCallback:
-            RouteValidator.validate_deferrable_handler(route_handler, deferrable=deferrable)
+            route_deferrable = deferrable or is_only_deferrable(route_handler)
+            RouteValidator.validate_deferrable_options(
+                path=normalized_path, deferrable=route_deferrable, timeouts=timeouts
+            )
+            RouteValidator.validate_deferrable_handler(route_handler, deferrable=route_deferrable)
             self._register_base_route(
                 APIRouteDefinition(
                     name=name,
@@ -150,7 +152,7 @@ class APIRouter(BaseExtensionRouter):
                     callback=route_handler,
                     method=method,
                     body_validator_type=body_validator,
-                    deferrable=deferrable,
+                    deferrable=route_deferrable,
                     timeouts=timeouts,
                 )
             )

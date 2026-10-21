@@ -23,6 +23,21 @@ class APIError(Exception):
         self.errors = errors or []
 
 
+class AsynchronousCallRequiredError(APIError):
+    """405 problem-details error for a direct call to an endpoint that only runs deferred."""
+
+    def __init__(
+        self,
+        detail: str = (
+            "This endpoint only accepts a deferred call: send the request with the "
+            "MPT-Async: true header"
+        ),
+    ) -> None:
+        super().__init__(
+            detail, status_code=HTTPStatus.METHOD_NOT_ALLOWED, title="Method not allowed"
+        )
+
+
 class ForbiddenError(APIError):
     """403 forbidden problem-details error."""
 
