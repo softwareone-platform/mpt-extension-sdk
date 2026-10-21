@@ -19,7 +19,7 @@ from mpt_extension_sdk.tasks import TaskHandle
 class DeferredCallHandler(TaskDeliveryHandler[None]):
     """Answer deferred API call deliveries."""
 
-    def __init__(
+    def __init__(  # noqa: WPS211
         self,
         *,
         route: APIRouteDefinition,
@@ -27,12 +27,14 @@ class DeferredCallHandler(TaskDeliveryHandler[None]):
         task_service: TaskService,
         runner: AsyncTaskRunner,
         handler_logger: logging.Logger,
+        instance_id: str | None = None,
     ) -> None:
         super().__init__(
             handler_type=TaskHandlerType.DEFERRED_CALL,
             task_service=task_service,
             runner=runner,
             handler_logger=handler_logger,
+            instance_id=instance_id,
         )
         self.route = route
         self.context_factory = context_factory

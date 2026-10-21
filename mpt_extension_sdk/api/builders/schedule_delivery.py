@@ -23,7 +23,7 @@ from mpt_extension_sdk.services.mpt_api_service.task import TaskService
 class ScheduleDeliveryHandler(TaskDeliveryHandler[TaskEvent]):
     """Answer schedule deliveries."""
 
-    def __init__(
+    def __init__(  # noqa: WPS211
         self,
         *,
         route: ScheduleRouteDefinition,
@@ -31,12 +31,14 @@ class ScheduleDeliveryHandler(TaskDeliveryHandler[TaskEvent]):
         task_service: TaskService,
         runner: AsyncTaskRunner,
         handler_logger: logging.Logger,
+        instance_id: str | None = None,
     ) -> None:
         super().__init__(
             handler_type=TaskHandlerType.SCHEDULE,
             task_service=task_service,
             runner=runner,
             handler_logger=handler_logger,
+            instance_id=instance_id,
         )
         self.route = route
         self.extension_app = extension_app

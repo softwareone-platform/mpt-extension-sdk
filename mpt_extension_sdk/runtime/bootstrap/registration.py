@@ -17,6 +17,12 @@ class RegistrationResult:
 
     instance: dict[str, Any]
 
+    @property
+    def instance_id(self) -> str | None:
+        """The id the platform assigned to the registered instance, when it returns one."""
+        instance_id = self.instance.get("id")
+        return str(instance_id) if instance_id else None
+
 
 def register_instance(settings: RuntimeSettings) -> RegistrationResult:
     """Register an extension instance and persist identity if provided."""

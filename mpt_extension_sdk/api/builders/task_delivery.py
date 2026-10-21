@@ -45,12 +45,13 @@ class TaskDeliveryHandler[DeliveryT](ABC):  # noqa: WPS214
         task_service: TaskService,
         runner: AsyncTaskRunner,
         handler_logger: logging.Logger,
+        instance_id: str | None = None,
     ) -> None:
         self.handler_type = handler_type
         self.task_service = task_service
         self.runner = runner
         self.handler_logger = handler_logger
-        self._transitions = SafeTaskTransitions(task_service, handler_logger)
+        self._transitions = SafeTaskTransitions(task_service, handler_logger, instance_id)
 
     async def execute(
         self, *, request: Request, task_id: str, delivery: DeliveryT

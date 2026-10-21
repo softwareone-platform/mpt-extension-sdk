@@ -6,6 +6,7 @@ from mpt_api_client.exceptions import MPTAPIError, MPTError, MPTHttpError
 from mpt_extension_sdk.errors.mapping import map_exception_to_event_response
 from mpt_extension_sdk.errors.pipeline import DeferError
 from mpt_extension_sdk.services.mpt_api_service.task import TaskService
+from mpt_extension_sdk.tasks import TaskHandle
 
 MISSING_TASK_STATUS_CODE = 404
 TASK_CONFLICT_STATUS_CODE = 409
@@ -34,13 +35,29 @@ class SafeTaskTransitions:  # noqa: WPS214
     handler outcome has already been decided.
     """
 
-    def __init__(self, task_service: TaskService, handler_logger: logging.Logger) -> None:
-        """Initialize the transitions with their collaborators."""
+    def __init__(
+        self,
+        task_service: TaskService,
+        handler_logger: logging.Logger,
+        instance_id: str | None = None,
+    ) -> None:
+        """Initialize the transitions with their collaborators.
+
+        Args:
+            task_service: Tasks API service the transitions call.
+            handler_logger: Logger of the handler that owns the task.
+            instance_id: Registered extension instance recorded on claimed tasks, if any.
+        """
         self.task_service = task_service
         self.handler_logger = handler_logger
+        self.instance_id = instance_id
 
     async def claim(self, task_id: str) -> ClaimOutcome:
-        """Start a task, reporting whether another execution already holds it."""
+        """Start a task, reporting whether another execution already holds it.
+
+        A claimed task records the instance id in its `instanceId` parameter. Recording
+        it is best-effort: a failure is logged and the claim still counts.
+        """
         try:
             await self.task_service.start(task_id)
         except MPTError as error:
@@ -51,6 +68,8 @@ class SafeTaskTransitions:  # noqa: WPS214
             self.handler_logger.exception("Task %s claim failed", task_id)
             return ClaimOutcome.FAILED
 
+        if self.instance_id:
+            await self._record_instance(task_id, self.instance_id)
         return ClaimOutcome.CLAIMED
 
     async def complete(self, task_id: str) -> None:
@@ -86,6 +105,15 @@ class SafeTaskTransitions:  # noqa: WPS214
         self.handler_logger.info("Async task %s cancelled: %s", task_id, outcome.cancel_reason)
         # A Cancel event outcome transitions a task-based execution to Failed.
         await self.fail(task_id, reason=outcome.cancel_reason)
+
+    async def _record_instance(self, task_id: str, instance_id: str) -> None:
+        task = TaskHandle(id=task_id, task_service=self.task_service)
+        try:
+            await task.set_parameter("instanceId", instance_id)
+        except MPTError as error:
+            self.handler_logger.warning(
+                "Could not record instance %s on task %s", instance_id, task_id, exc_info=error
+            )
 
     async def _report_lifecycle_rejection(
         self, task_id: str, error: MPTHttpError | MPTAPIError

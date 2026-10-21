@@ -128,6 +128,7 @@ def test_load_reads_runtime_env(
         False,
     )
     assert result.max_concurrent_tasks is None
+    assert result.instance_id is None
 
 
 def test_load_uses_explicit_runtime_overrides(
@@ -150,6 +151,7 @@ def test_load_uses_explicit_runtime_overrides(
             "SDK_ZITI_WORKERS": "8",
             "SDK_ZITI_RELOAD": "true",
             "SDK_MAX_CONCURRENT_TASKS": "5",
+            "SDK_EXTENSION_INSTANCE_ID": "EXI-1",
         },
     )
     mocker.patch(
@@ -190,6 +192,7 @@ def test_load_uses_explicit_runtime_overrides(
         True,
     )
     assert result.max_concurrent_tasks == 5
+    assert result.instance_id == "EXI-1"
 
 
 def test_load_accepts_zero_task_limit(

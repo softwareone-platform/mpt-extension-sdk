@@ -8,6 +8,13 @@ from mpt_extension_sdk.services.mpt_api_service.task import TaskService
 from mpt_extension_sdk.settings.runtime import RuntimeSettings, get_runtime_settings
 
 
+def get_instance_id(
+    runtime_settings: Annotated[RuntimeSettings, Depends(get_runtime_settings)],
+) -> str | None:
+    """Return the registered extension instance id, or `None` when none is registered."""
+    return runtime_settings.instance_id
+
+
 def get_tasks_service(
     runtime_settings: Annotated[RuntimeSettings, Depends(get_runtime_settings)],
 ) -> TaskService:

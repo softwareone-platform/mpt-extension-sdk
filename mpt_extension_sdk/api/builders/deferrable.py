@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse, Response
 from mpt_extension_sdk.api.auth import RequestAuthenticationService
 from mpt_extension_sdk.api.builders.arguments import APIHandlerArgumentsBuilder
 from mpt_extension_sdk.api.builders.deferred_delivery import DeferredCallHandler
-from mpt_extension_sdk.api.builders.dependencies import get_tasks_service
+from mpt_extension_sdk.api.builders.dependencies import get_instance_id, get_tasks_service
 from mpt_extension_sdk.api.builders.errors import APIErrorResponseBuilder
 from mpt_extension_sdk.api.builders.execution import APIRequestExecutor
 from mpt_extension_sdk.api.errors import AsynchronousCallRequiredError
@@ -41,6 +41,7 @@ def create_deferrable_route(route: APIRouteDefinition, extension_app: ExtensionA
     @router.api_route(route.path, methods=[route.method.value], name=route.name)
     async def handle_deferrable_request(  # noqa: WPS430
         request: Request,
+        instance_id: Annotated[str | None, Depends(get_instance_id)],
         task_service: Annotated[TaskService, Depends(get_tasks_service)],
         task_id: Annotated[str | None, Header(alias="MPT-Task-Id")] = None,
     ) -> Response:
@@ -67,6 +68,7 @@ def create_deferrable_route(route: APIRouteDefinition, extension_app: ExtensionA
             task_service=task_service,
             runner=request.app.state.async_task_runner,
             handler_logger=handler_logger,
+            instance_id=instance_id,
         ).execute(request=request, task_id=task_id, delivery=None)
         return JSONResponse(content=event_response.model_dump(mode="json"))
 

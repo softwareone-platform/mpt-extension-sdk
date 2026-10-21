@@ -1,10 +1,15 @@
+import os
 from pathlib import Path
 
 import uvicorn
 from mrok.agent import ziticorn
 
 from mpt_extension_sdk.runtime.bootstrap.registration import register_instance
-from mpt_extension_sdk.settings.runtime import RuntimeSettings, get_runtime_settings
+from mpt_extension_sdk.settings.runtime import (
+    INSTANCE_ID_ENV_VAR,
+    RuntimeSettings,
+    get_runtime_settings,
+)
 
 DEFAULT_ZITI_LOAD_TIMEOUT_MS = 50000
 
@@ -16,6 +21,8 @@ def run_extension(*, local: bool) -> None:
         local: When `True`, run with Uvicorn for local development;
             otherwise run with Ziticorn for OpenZiti connectivity.
     """
+    # Only this run's registration sets the instance id: drop an inherited one before settings load.
+    os.environ.pop(INSTANCE_ID_ENV_VAR, None)
     settings = get_runtime_settings()
     if local:
         run_fastapi(
@@ -27,7 +34,10 @@ def run_extension(*, local: bool) -> None:
         )
         return
 
-    register_instance(settings=settings)
+    registration = register_instance(settings=settings)
+    if registration.instance_id:
+        # Ziticorn workers inherit the environment, so they read the id from their settings.
+        os.environ[INSTANCE_ID_ENV_VAR] = registration.instance_id
     run_ziti(
         "mpt_extension_sdk.runtime.main:app",
         settings.identity_file_path,

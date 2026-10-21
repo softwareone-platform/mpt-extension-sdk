@@ -3,7 +3,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, Request, status
 
-from mpt_extension_sdk.api.builders.dependencies import get_tasks_service
+from mpt_extension_sdk.api.builders.dependencies import get_instance_id, get_tasks_service
 from mpt_extension_sdk.api.builders.schedule_delivery import ScheduleDeliveryHandler
 from mpt_extension_sdk.api.builders.task_timing import delivery_latency_seconds
 from mpt_extension_sdk.api.models.events import EventResponse, TaskEvent
@@ -22,6 +22,7 @@ def create_schedule_route(route: ScheduleRouteDefinition, extension_app: Extensi
         request: Request,
         event: TaskEvent,
         task_id: Annotated[str, Header(alias="MPT-Task-Id")],
+        instance_id: Annotated[str | None, Depends(get_instance_id)],
         task_service: Annotated[TaskService, Depends(get_tasks_service)],
     ) -> EventResponse:
         handler_logger.info(
@@ -37,6 +38,7 @@ def create_schedule_route(route: ScheduleRouteDefinition, extension_app: Extensi
             task_service=task_service,
             runner=request.app.state.async_task_runner,
             handler_logger=handler_logger,
+            instance_id=instance_id,
         ).execute(request=request, task_id=task_id, delivery=event)
 
     return router
