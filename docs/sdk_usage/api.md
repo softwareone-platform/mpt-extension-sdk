@@ -254,9 +254,11 @@ implements both branches. `ctx.task` tells them apart:
 | `None` | Direct call | An `APIResponse`, sent to the caller |
 | A `TaskHandle` | Deferred delivery | `None` or a `TaskResult`; the caller already got `202` |
 
-`ctx.task.progress(...)` and `ctx.task.log(...)` report to the Task, as for
-schedules (see [schedules.md](schedules.md#reporting-to-the-task)). They are
-best-effort and only exist in the deferred branch.
+`ctx.task.progress(...)`, `ctx.task.log(...)`, and the task parameter methods
+report to the Task, as for schedules (see
+[schedules.md](schedules.md#reporting-to-the-task)), and only exist in the
+deferred branch. Progress and logging are best-effort; the parameter methods
+raise on failure.
 
 The outcome of the deferred branch drives the Task, as for schedules (see
 [schedules.md](schedules.md#handler-outcomes)): a return completes it,

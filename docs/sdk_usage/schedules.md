@@ -109,6 +109,23 @@ back, the SDK logs it locally, the handler keeps running, and the task outcome
 is unchanged. Other exceptions propagate to the handler. Neither extends the
 task time limits.
 
+`ctx.task.set_parameter(name, value)` adds a parameter to the task, or
+overwrites it, and `ctx.task.remove_parameter(name)` removes one:
+
+```python
+await ctx.task.set_parameter("syncCursor", agreement.id)
+```
+
+The platform replaces the whole `parameters` object on every update, so each
+parameter call reads the task, changes that one parameter, and writes back all
+of them. The other parameters are kept, but two writers on the same task at the
+same time can overwrite each other's change. `extensionId`,
+`maxTaskProcessingSeconds`, and `maxTaskLifetimeSeconds` are published by the
+platform (see [Time limits](#time-limits)): setting or removing them raises
+`ValueError` and the task is not updated. Unlike progress and logging, the
+parameter calls are not best-effort: an `MPTError` from reading or updating the
+task propagates to the handler. They do not extend the task time limits either.
+
 ## Time limits
 
 The platform publishes the task-lifetime limits under `parameters`:

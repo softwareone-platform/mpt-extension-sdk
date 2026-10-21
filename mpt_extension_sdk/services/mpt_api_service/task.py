@@ -1,4 +1,4 @@
-from mpt_extension_sdk.models.task import Task, TaskLog
+from mpt_extension_sdk.models.task import Task, TaskLog, TaskParameters
 from mpt_extension_sdk.services.mpt_api_service.base import BaseService
 
 
@@ -60,6 +60,18 @@ class TaskService(BaseService[Task]):  # noqa: WPS214
             task_id: Unique identifier of the platform task.
         """
         await self._client.system.tasks.reschedule(task_id)
+
+    async def set_parameters(self, task_id: str, parameters: TaskParameters) -> None:  # noqa: WPS110
+        """Replace the parameters of a task.
+
+        The platform replaces the whole `parameters` object, so `parameters`
+        must hold every parameter the task keeps.
+
+        Args:
+            task_id: Unique identifier of the platform task.
+            parameters: Complete set of task parameters.
+        """
+        await self._client.system.tasks.update(task_id, {"parameters": parameters.to_dict()})
 
     async def set_result(self, task_id: str, result: str) -> None:
         """Point the task result at the resource that holds its outcome.
