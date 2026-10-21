@@ -2,13 +2,21 @@ from dataclasses import dataclass, field
 
 from mpt_extension_sdk.routing.enums import EventDeliveryMode
 from mpt_extension_sdk.routing.models import (
+    APIRouteDefinition,
     BaseRouteDefinition,
     EventRouteDefinition,
     PlugRouteDefinition,
     ScheduleRouteDefinition,
 )
 from mpt_extension_sdk.routing.plugs import ModalPlug, NavigationPlug, Plug
-from mpt_extension_sdk.runtime.models import MetaConfig, MetaEvent, MetaPlug, MetaSchedule
+from mpt_extension_sdk.runtime.models import (
+    MetaConfig,
+    MetaDeferrable,
+    MetaEvent,
+    MetaPlug,
+    MetaSchedule,
+    MetaTaskTimeouts,
+)
 
 DeclaredPlug = Plug | NavigationPlug | ModalPlug
 
@@ -99,7 +107,26 @@ class MetaConfigBuilder:
             events=self._build_events(),
             schedules=self._build_schedules() or None,
             plugs=self._build_plugs() or None,
+            deferrables=self._build_deferrables() or None,
         )
+
+    def _build_deferrables(self) -> list[MetaDeferrable]:
+        return [
+            MetaDeferrable(
+                path=route.path,
+                method=route.method,
+                timeouts=(
+                    None
+                    if route.timeouts is None
+                    else MetaTaskTimeouts(
+                        max_task_lifespan=route.timeouts.max_task_lifespan,
+                        max_task_processing=route.timeouts.max_task_processing,
+                    )
+                ),
+            )
+            for route in self.routes
+            if isinstance(route, APIRouteDefinition) and route.deferrable
+        ]
 
     def _build_events(self) -> list[MetaEvent]:
         """Build event metadata from registered event routes."""

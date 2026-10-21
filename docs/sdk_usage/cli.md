@@ -21,9 +21,8 @@ mpt-ext meta validate
 - `mpt-ext run` registers the extension instance and starts the platform
   runtime (`mrok`/`ziticorn`).
 
-Both modes load the same ASGI application, and importing it writes `meta.yaml`
-from the extension app before the server starts. Writing the metadata artifact
-is therefore a property of runtime startup, not of a specific `run` mode.
+How each mode starts the runtime, and when `meta.yaml` is written, is described
+in [architecture.md](../architecture.md#run-modes).
 
 ## Metadata (`meta.yaml`)
 
@@ -38,6 +37,10 @@ maintained by hand. The generated document contains:
 - `schedules` — one entry per registered schedule route (`id`, `name`,
   `description`, `cron`, `path`), when the extension declares any
 - `plugs` — one entry per registered plug, when the extension declares any
+- `deferrables` — one entry per deferrable API route (`path`, `method`, and
+  `timeouts` with `maxTaskLifespan` and `maxTaskProcessing` when the route
+  declares them), when the extension declares any. The `path` is the full
+  mounted path, and each `(method, path)` pair is declared once
 
 ```yaml
 openapi: /bypass/openapi.json
@@ -60,6 +63,12 @@ plugs:
     icon: /static/adobe.png
     socket: commerce.agreements.agreement
     href: /static/main-menu.js
+deferrables:
+  - path: /api/v2/agreements/sync
+    method: POST
+    timeouts:
+      maxTaskLifespan: 7200
+      maxTaskProcessing: 3600
 ```
 
 ### `mpt-ext meta generate`

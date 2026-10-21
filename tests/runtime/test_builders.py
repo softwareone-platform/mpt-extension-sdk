@@ -6,8 +6,9 @@ from mpt_extension_sdk.routing import (
     Plug,
     PlugRouteDefinition,
     RouteType,
+    TaskTimeouts,
 )
-from mpt_extension_sdk.runtime.builders import PlugMetadataBuilder
+from mpt_extension_sdk.runtime.builders import MetaConfigBuilder, PlugMetadataBuilder
 
 
 def test_plug_metadata_builder_reuse(mocker):
@@ -151,3 +152,33 @@ def test_builder_rejects_duplicate_id_mixed_types(mocker):
 
     with pytest.raises(ValueError, match="Plug id 'adobe' is already registered"):
         plug_metadata_builder.build()
+
+
+@pytest.mark.parametrize(
+    ("timeouts", "expected_timeouts"),
+    [
+        (None, None),
+        (TaskTimeouts(max_task_lifespan=7200), {"maxTaskLifespan": 7200}),
+        (
+            TaskTimeouts(max_task_lifespan=7200, max_task_processing=3600),
+            {"maxTaskLifespan": 7200, "maxTaskProcessing": 3600},
+        ),
+    ],
+)
+def test_builder_emits_deferrable(api_route_factory, timeouts, expected_timeouts):
+    route = api_route_factory(path="/api/v2/agreements/sync/", deferrable=True, timeouts=timeouts)
+    expected = {"path": "/api/v2/agreements/sync/", "method": "POST"}
+    if expected_timeouts is not None:
+        expected["timeouts"] = expected_timeouts
+
+    result = MetaConfigBuilder(openapi="/openapi.json", routes=[route]).build()
+
+    assert result.model_dump(exclude_none=True, by_alias=True)["deferrables"] == [expected]
+
+
+def test_builder_omits_empty_deferrables(api_route_factory):
+    route = api_route_factory(path="/api/v2/agreements")
+
+    result = MetaConfigBuilder(openapi="/openapi.json", routes=[route]).build()
+
+    assert "deferrables" not in result.model_dump(exclude_none=True, by_alias=True)

@@ -6,6 +6,24 @@ from mpt_extension_sdk.routing.paths import RoutePath
 @pytest.mark.parametrize(
     ("path", "expected"),
     [
+        ("/", "/"),
+        ("/orders", "/orders"),
+        ("/orders/", "/orders"),
+        ("/orders/{order_id}", "/orders/{}"),
+        ("/orders/{order_id:int}/", "/orders/{}"),
+        ("/orders/{order_id}/lines/{line_id}", "/orders/{}/lines/{}"),
+        ("/orders/{sync-all}", "/orders/{sync-all}"),
+    ],
+)
+def test_normalize(path, expected):
+    result = RoutePath.normalize(path)
+
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    ("path", "expected"),
+    [
         ("/agreements/sync", []),
         ("/agreements/{agreement_id}", ["agreement_id"]),
         ("/agreements/{agreement_id:int}/lines/{line_id}", ["agreement_id", "line_id"]),

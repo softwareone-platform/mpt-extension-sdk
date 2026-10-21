@@ -54,6 +54,8 @@ The main package lives under [`mpt_extension_sdk/`](../mpt_extension_sdk).
 
 ## Runtime Model
 
+### Run modes
+
 The SDK runtime has two main execution surfaces:
 
 - local development through `FastAPI + uvicorn`
@@ -62,39 +64,47 @@ The SDK runtime has two main execution surfaces:
 `runtime/main.py` writes `meta.yaml` while the ASGI application is imported, so it happens in both run modes,
 using the metadata-file writer from `runtime/runner.py`. In platform mode `runtime/runner.py` registers the
 extension instance, persists the returned identity when present, and starts the exported ASGI app through Ziticorn.
+Ziticorn serves `/bypass/*` over plain HTTP instead of over the OpenZiti overlay, so platform probes reach the
+operational endpoints.
+
+### Application assembly
+
 `runtime/app.py` assembles the FastAPI app, configures middleware and observability,
-loads the extension's exported `ext_app`, and mounts every registered route.
+loads the extension's exported `ext_app`, and mounts every registered route through
+the builder of its family in `api/builders/`. It also registers the operational
+endpoints under `/bypass` (see
+[sdk_usage/application.md](sdk_usage/application.md#operational-endpoints)).
 Its lifespan runs the startup hooks registered through `ExtensionApp.on_startup`
 before the app reports itself as ready, so serve-time initialization stays out of
 `app.py` import time and never runs during metadata generation.
-It also registers built-in operational endpoints under the `/bypass` prefix:
-`/bypass/health` (status plus extension version), `/bypass/live` (liveness probe),
-and `/bypass/ready` (readiness probe, returning `503` until application startup
-completes and after shutdown begins). The `/bypass` prefix keeps these endpoints
-reachable by Kubernetes probes over plain HTTP, because Ziticorn serves `/bypass/*`
-directly instead of over the OpenZiti overlay.
+
+### Route families
 
 The `event`, `api`, and `schedule` route families are implemented end-to-end in
-runtime request handling. Event and schedule routes are emitted into
-`meta.yaml`, schedules with their cron expression, since the platform owns the
-timer. The `plug` route family is implemented as declarative metadata with
-static asset exposure under `/static`.
+runtime request handling. The `plug` route family is implemented as declarative
+metadata with static asset exposure under `/static`. What each family publishes in
+`meta.yaml` is described in [sdk_usage/cli.md](sdk_usage/cli.md#metadata-metayaml).
+
+Each route family documents its own contract:
+
+- events: [sdk_usage/events.md](sdk_usage/events.md)
+- schedules: [sdk_usage/schedules.md](sdk_usage/schedules.md)
+- API routes, deferrable endpoints included: [sdk_usage/api.md](sdk_usage/api.md)
+- plugs: [sdk_usage/plugs.md](sdk_usage/plugs.md)
+
+Error mapping for all of them is described in
+[sdk_usage/error-handling.md](sdk_usage/error-handling.md).
+
+### Task execution
 
 Schedule handlers are executed asynchronously by an application-scoped runner,
 so durable dispatch and the claim on an execution stay with the Extension
 Framework and the platform task rather than with the SDK. The same runner executes
-deferred API calls: an API route marked `deferrable` serves both modes on one path.
-A request without the `MPT-Task-Id` header runs as a direct call; a request with it
-is a deferred delivery of that platform task, answered with an event response. The
-`APIRouter` method decorators declare it with the keyword-only `deferrable` and
-`timeouts` (`TaskTimeouts`) arguments. Registration rejects a deferrable route whose
-handler is not a coroutine function or whose path declares a parameter, and task
-timeouts on a route that is not deferrable. The generated metadata does not publish
-deferrable routes yet. Each route family
-documents its own contract: [sdk_usage/events.md](sdk_usage/events.md),
-[sdk_usage/schedules.md](sdk_usage/schedules.md),
-[sdk_usage/api.md](sdk_usage/api.md) and [sdk_usage/plugs.md](sdk_usage/plugs.md),
-with error mapping in [sdk_usage/error-handling.md](sdk_usage/error-handling.md).
+deferred API calls: a deferrable API route serves both modes on one path. A request
+without the `MPT-Task-Id` header runs as a direct call; a request with it is a
+deferred delivery of that platform task, answered with an event response. The
+declaration and its registration rules are described in
+[sdk_usage/api.md](sdk_usage/api.md#deferrable-endpoints).
 
 ## Boundaries
 
