@@ -117,13 +117,13 @@ def test_api_router_rejects_duplicate_method_path(route_handler):
         ("put", HTTPMethod.PUT),
     ],
 )
-def test_api_router_registers_deferrable(register, method, route_handler):
+def test_api_router_registers_deferrable(register, method, async_route_handler):
     router = APIRouter(prefix="/agreements")
     timeouts = TaskTimeouts(max_task_lifespan=7200, max_task_processing=3600)
 
     getattr(router, register)(
         path="orders", name="orders-sync", deferrable=True, timeouts=timeouts
-    )(route_handler)  # act
+    )(async_route_handler)  # act
 
     route = router.routes[0]
     assert route.method == method
@@ -157,3 +157,39 @@ def test_api_router_endpoint_rejects_deferrable(option):
 
     with pytest.raises(TypeError, match=option):
         router.endpoint(path="orders", name="orders", **{option: None})
+
+
+def test_api_router_rejects_sync_deferrable(route_handler):
+    router = APIRouter()
+    route_handler.__qualname__ = "sync_agreements"
+    action = router.post(path="sync", name="agreements-sync", deferrable=True)
+
+    with pytest.raises(TypeError, match="'sync_agreements' must be a coroutine function"):
+        action(route_handler)
+
+    assert router.routes == []
+
+
+def test_api_router_rejects_deferrable_path_param():
+    router = APIRouter()
+
+    with pytest.raises(ValueError, match="take the input from the request body"):
+        router.post(path="{agreement_id}/sync", name="agreements-sync", deferrable=True)
+
+
+def test_api_router_rejects_plain_timeouts():
+    router = APIRouter()
+    timeouts = TaskTimeouts(max_task_lifespan=7200)
+
+    with pytest.raises(TypeError, match="declares task timeouts but is not deferrable"):
+        router.post(path="sync", name="agreements-sync", timeouts=timeouts)
+
+
+def test_api_router_keeps_plain_validation(route_handler):
+    router = APIRouter()
+
+    router.get(path="{agreement_id}", name="agreements-detail")(route_handler)  # act
+
+    route = router.routes[0]
+    assert route.path == "/{agreement_id}"
+    assert route.deferrable is False

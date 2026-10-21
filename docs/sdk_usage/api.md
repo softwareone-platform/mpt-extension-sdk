@@ -131,7 +131,8 @@ async def sync_agreement(
 ```
 
 If body validation fails, the SDK returns `422 Unprocessable Content` using the
-problem-details error format. Invalid JSON payloads also return `422`.
+problem-details error format. Invalid JSON payloads, including bodies that cannot
+be decoded, also return `422`.
 
 ## Responses
 

@@ -89,7 +89,9 @@ async def test_answers_task_state(
 ):
     task_service.get.configure_mock(**task_lookup)
 
-    result = await delivery_handler.execute(request=http_request, task_id="TSK-001", delivery=None)
+    result = await delivery_handler.execute(  # noqa: WPS204
+        request=http_request, task_id="TSK-001", delivery=None
+    )
 
     assert result == expected
     task_service.start.assert_not_awaited()
@@ -138,6 +140,19 @@ async def test_answers_failed_context_build(
     result = await delivery_handler.execute(request=http_request, task_id="TSK-001", delivery=None)
 
     assert result == expected
+    task_service.start.assert_not_awaited()
+
+
+async def test_cancels_invalid_request_body(
+    delivery_handler, http_request, arguments_builder, task_service
+):
+    arguments_builder.parse_request_body.side_effect = ValidationError(
+        errors=[ErrorDetail(pointer="#", detail="Invalid JSON payload")]
+    )
+
+    result = await delivery_handler.execute(request=http_request, task_id="TSK-001", delivery=None)
+
+    assert result == EventResponse.cancel(reason="Invalid request payload")
     task_service.start.assert_not_awaited()
 
 

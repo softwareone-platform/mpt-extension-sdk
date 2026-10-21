@@ -2,7 +2,7 @@ from collections.abc import Callable
 
 import pytest
 
-from mpt_extension_sdk.routing import RouteType, ScheduleRouteDefinition
+from mpt_extension_sdk.routing import RouteType, ScheduleRouteDefinition, TaskTimeouts
 from mpt_extension_sdk.routing.validators import RouteValidator
 
 
@@ -28,3 +28,55 @@ def test_validate_rejects_duplicate_schedule_id(schedule_route):
 
     with pytest.raises(ValueError, match="Schedule id 'sync' is already registered"):
         RouteValidator.validate_route_uniqueness(route=duplicate, routes=[existing])
+
+
+@pytest.mark.parametrize(
+    ("handler_type", "deferrable"),
+    [("AsyncMock", True), ("AsyncMock", False), ("Mock", False)],
+)
+def test_validate_deferrable_handler_accepts(mocker, handler_type, deferrable):
+    route_handler = getattr(mocker, handler_type)(spec=Callable)
+
+    result = RouteValidator.validate_deferrable_handler(route_handler, deferrable=deferrable)
+
+    assert result is None
+
+
+def test_validate_deferrable_handler_rejects_sync(mocker):
+    route_handler = mocker.Mock(spec=Callable)
+    route_handler.__qualname__ = "sync_agreements"
+
+    with pytest.raises(TypeError, match="'sync_agreements' must be a coroutine function"):
+        RouteValidator.validate_deferrable_handler(route_handler, deferrable=True)
+
+
+@pytest.mark.parametrize(
+    ("path", "deferrable", "timeouts"),
+    [
+        ("/agreements/sync", True, None),
+        ("/agreements/sync", True, TaskTimeouts(max_task_processing=3600)),
+        ("/agreements/{agreement_id}", False, None),
+        ("/agreements/{sync-all}", True, None),
+    ],
+)
+def test_validate_deferrable_options_accepts(path, deferrable, timeouts):
+    result = RouteValidator.validate_deferrable_options(
+        path=path, deferrable=deferrable, timeouts=timeouts
+    )
+
+    assert result is None
+
+
+@pytest.mark.parametrize("path", ["/agreements/{agreement_id}", "/agreements/{agreement_id:int}"])
+def test_validate_deferrable_rejects_path_param(path):
+    with pytest.raises(ValueError, match="cannot declare path parameters"):
+        RouteValidator.validate_deferrable_options(path=path, deferrable=True, timeouts=None)
+
+
+def test_validate_deferrable_rejects_timeouts():
+    timeouts = TaskTimeouts(max_task_lifespan=7200)
+
+    with pytest.raises(TypeError, match="declares task timeouts but is not deferrable"):
+        RouteValidator.validate_deferrable_options(
+            path="/agreements/sync", deferrable=False, timeouts=timeouts
+        )

@@ -1,4 +1,3 @@
-import re
 from inspect import signature
 from json import JSONDecodeError
 from typing import Any
@@ -11,12 +10,11 @@ from mpt_extension_sdk.api.error_mapping import PydanticValidationErrorMapper
 from mpt_extension_sdk.api.errors import ValidationError
 from mpt_extension_sdk.api.models.errors import ErrorDetail
 from mpt_extension_sdk.routing.models import APIRouteDefinition
+from mpt_extension_sdk.routing.paths import RoutePath
 
 
 class APIHandlerArgumentsBuilder:
     """Build the arguments passed to authenticated API handlers."""
-
-    _path_parameter_pattern = re.compile(r"\{([^:}]+)(?::[^}]+)?\}")
 
     def __init__(self, route: APIRouteDefinition) -> None:
         self._route = route
@@ -26,11 +24,6 @@ class APIHandlerArgumentsBuilder:
         )
 
     @classmethod
-    def extract_path_parameter_names(cls, path: str) -> list[str]:
-        """Extract path parameter names from a FastAPI route path."""
-        return cls._path_parameter_pattern.findall(path)
-
-    @classmethod
     async def parse_request_body(cls, request: Request) -> Any:
         """Parse the incoming JSON payload when the request has a body."""
         raw_body = await request.body()
@@ -38,13 +31,13 @@ class APIHandlerArgumentsBuilder:
             return None
         try:
             return await request.json()
-        except JSONDecodeError as error:
+        except (JSONDecodeError, UnicodeDecodeError) as error:
             raise ValidationError(
                 errors=[ErrorDetail(pointer="#", detail="Invalid JSON payload")]
             ) from error
 
     @classmethod
-    def resolve_body_parameter_name(  # noqa: WPS231
+    def resolve_body_parameter_name(
         cls, route: APIRouteDefinition, context_parameter_name: str
     ) -> str | None:
         """Resolve the handler parameter that should receive the validated body."""
@@ -52,22 +45,17 @@ class APIHandlerArgumentsBuilder:
         if body_validator_type is None:
             return None
 
-        path_parameters = set(cls.extract_path_parameter_names(route.path))
-        callback_parameters = list(signature(route.callback).parameters.values())
-        for parameter in callback_parameters:
-            if parameter.name in path_parameters or parameter.name == context_parameter_name:
-                continue
+        excluded_names = {*RoutePath.parameter_names(route.path), context_parameter_name}
+        body_parameters = [
+            parameter
+            for parameter in signature(route.callback).parameters.values()
+            if parameter.name not in excluded_names
+        ]
+        for parameter in body_parameters:
             if parameter.annotation is body_validator_type:
                 return parameter.name
-
-        remaining_parameters = [
-            callback_parameter.name
-            for callback_parameter in callback_parameters
-            if callback_parameter.name not in path_parameters
-            and callback_parameter.name != context_parameter_name
-        ]
-        if len(remaining_parameters) == 1:
-            return remaining_parameters[0]
+        if len(body_parameters) == 1:
+            return body_parameters[0].name
 
         raise TypeError(
             "API handlers that declare a body validator must expose exactly one body parameter"

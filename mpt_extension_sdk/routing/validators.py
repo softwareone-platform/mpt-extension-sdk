@@ -1,7 +1,11 @@
+import inspect
 from typing import TYPE_CHECKING
 
 from mpt_extension_sdk.context import ContextAdapter
 from mpt_extension_sdk.routing.enums import RouteType
+from mpt_extension_sdk.routing.models import TaskTimeouts
+from mpt_extension_sdk.routing.paths import RoutePath
+from mpt_extension_sdk.routing.types import APIRouteCallback
 from mpt_extension_sdk.schemas import BaseSchema
 
 if TYPE_CHECKING:
@@ -31,6 +35,38 @@ class RouteValidator:
             raise TypeError(
                 f"Configured context type '{context_type.__name__}' must implement "
                 f"'{ContextAdapter.__name__}'"
+            )
+
+    @classmethod
+    def validate_deferrable_handler(
+        cls, route_handler: APIRouteCallback, *, deferrable: bool
+    ) -> None:
+        """Validate that a deferrable API handler can be awaited by the task runner."""
+        if not deferrable or inspect.iscoroutinefunction(route_handler):
+            return
+        handler_name = getattr(route_handler, "__qualname__", repr(route_handler))
+        raise TypeError(
+            f"Deferrable API handler '{handler_name}' must be a coroutine function "
+            "(async def): the task runner only accepts an awaitable"
+        )
+
+    @classmethod
+    def validate_deferrable_options(
+        cls, *, path: str, deferrable: bool, timeouts: TaskTimeouts | None
+    ) -> None:
+        """Validate the deferrable declaration of an API route."""
+        if not deferrable:
+            if timeouts is not None:
+                raise TypeError(
+                    f"Route '{path}' declares task timeouts but is not deferrable: "
+                    "set deferrable=True or remove timeouts"
+                )
+            return
+        if RoutePath.parameter_names(path):
+            raise ValueError(
+                f"Deferrable route '{path}' cannot declare path parameters: take the input "
+                "from the request body, the platform does not resolve path parameters "
+                "for a deferred call"
             )
 
     @classmethod
