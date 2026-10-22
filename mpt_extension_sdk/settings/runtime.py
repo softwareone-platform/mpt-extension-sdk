@@ -12,6 +12,7 @@ from mpt_extension_sdk.runtime.models import MetaConfig
 from mpt_extension_sdk.settings.base import BaseSettings
 
 DEFAULT_LOCAL_PORT = 8080
+INSTANCE_ID_ENV_VAR = "SDK_EXTENSION_INSTANCE_ID"
 
 
 @dataclass(frozen=True)
@@ -39,6 +40,7 @@ class RuntimeSettings(BaseSettings):
     otel_otlp_endpoint: str
     ziti_workers: int
     ziti_reload: bool
+    instance_id: str | None = None
     max_concurrent_tasks: int | None = None
 
     @property
@@ -88,6 +90,7 @@ class RuntimeSettings(BaseSettings):
             local_workers=cls.int_env("SDK_LOCAL_WORKERS", default=1),
             ziti_workers=cls.int_env("SDK_ZITI_WORKERS", default=4),
             ziti_reload=cls.bool_env("SDK_ZITI_RELOAD", default=False),
+            instance_id=os.getenv(INSTANCE_ID_ENV_VAR) or None,
             max_concurrent_tasks=cls.optional_int_env("SDK_MAX_CONCURRENT_TASKS", minimum=0),
         )
 

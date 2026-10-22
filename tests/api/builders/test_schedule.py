@@ -3,8 +3,8 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from mpt_extension_sdk.api.builders import schedule as schedule_builder
-from mpt_extension_sdk.api.builders.dependencies import get_tasks_service
-from mpt_extension_sdk.api.models.events import ResponseEnum
+from mpt_extension_sdk.api.builders.dependencies import get_instance_id, get_tasks_service
+from mpt_extension_sdk.api.models.events import EventResponse, ResponseEnum
 from mpt_extension_sdk.extension_app import ExtensionApp
 
 
@@ -18,6 +18,7 @@ def schedule_client(schedule_route, task_service, async_task_runner):
     app = FastAPI()
     app.state.async_task_runner = async_task_runner
     app.include_router(schedule_builder.create_schedule_route(schedule_route, ExtensionApp()))
+    app.dependency_overrides[get_instance_id] = lambda: None
     app.dependency_overrides[get_tasks_service] = lambda: task_service
     return TestClient(app, raise_server_exceptions=False)
 
@@ -90,3 +91,17 @@ def test_route_reads_task_id_from_header(
     )
 
     task_service.get.assert_awaited_once_with("TSK-001")
+
+
+def test_route_passes_instance_id(
+    mocker, schedule_client, schedule_route, task_headers, task_event_payload
+):
+    handler_type = mocker.patch.object(schedule_builder, "ScheduleDeliveryHandler", autospec=True)
+    handler_type.return_value.execute.return_value = EventResponse.reschedule(60)
+    schedule_client.app.dependency_overrides[get_instance_id] = lambda: "EXI-1"
+
+    schedule_client.post(  # act
+        schedule_route.path, json=task_event_payload(), headers=task_headers
+    )
+
+    assert handler_type.call_args.kwargs["instance_id"] == "EXI-1"

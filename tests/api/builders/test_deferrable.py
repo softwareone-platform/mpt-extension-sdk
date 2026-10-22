@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 
 from mpt_extension_sdk.api import APIResponse, ForbiddenError
 from mpt_extension_sdk.api.builders import deferrable as deferrable_builder
-from mpt_extension_sdk.api.builders.dependencies import get_tasks_service
+from mpt_extension_sdk.api.builders.dependencies import get_instance_id, get_tasks_service
 from mpt_extension_sdk.api.builders.execution import APIRequestExecutor
 from mpt_extension_sdk.api.models.events import EventResponse
 from mpt_extension_sdk.extension_app import ExtensionApp
@@ -60,6 +60,7 @@ def deferrable_client_factory(
         app = FastAPI()
         app.state.async_task_runner = async_task_runner
         app.include_router(deferrable_builder.create_deferrable_route(route, extension_app))
+        app.dependency_overrides[get_instance_id] = lambda: "EXI-1"
         app.dependency_overrides[get_tasks_service] = lambda: task_service
         return TestClient(app, raise_server_exceptions=False)
 
@@ -131,6 +132,7 @@ def test_deferred_delivery_answers_event_response(
         task_service=task_service,
         runner=async_task_runner,
         handler_logger=mocker.ANY,
+        instance_id="EXI-1",
     )
     deferred_call_handler.return_value.execute.assert_awaited_once_with(
         request=mocker.ANY, task_id="TSK-001", delivery=None

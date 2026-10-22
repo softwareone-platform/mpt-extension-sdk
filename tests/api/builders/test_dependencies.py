@@ -1,3 +1,5 @@
+import dataclasses
+
 import pytest
 
 from mpt_extension_sdk.api.builders import dependencies
@@ -8,6 +10,14 @@ def clear_service_cache():
     dependencies._cached_tasks_service.cache_clear()
     yield
     dependencies._cached_tasks_service.cache_clear()
+
+
+def test_get_instance_id(runtime_settings):
+    settings = dataclasses.replace(runtime_settings, instance_id="EXI-1")
+
+    result = dependencies.get_instance_id(settings)
+
+    assert result == "EXI-1"
 
 
 def test_get_tasks_service(mocker, runtime_settings):

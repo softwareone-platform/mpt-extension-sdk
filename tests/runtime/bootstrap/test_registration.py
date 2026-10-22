@@ -72,6 +72,20 @@ def test_register_instance_reuses_identity(runtime_settings, registration_patche
     )
 
 
+@pytest.mark.parametrize(
+    ("instance", "expected"),
+    [
+        ({"id": "EXI-1"}, "EXI-1"),
+        ({"id": ""}, None),
+        ({}, None),
+    ],
+)
+def test_registration_result_instance_id(instance, expected):
+    result = RegistrationResult(instance=instance).instance_id
+
+    assert result == expected
+
+
 def test_register_on_reload_registers_again(runtime_settings, mocker):
     register = mocker.patch(
         "mpt_extension_sdk.runtime.bootstrap.registration.register_instance", autospec=True

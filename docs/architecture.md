@@ -64,6 +64,8 @@ The SDK runtime has two main execution surfaces:
 `runtime/main.py` writes `meta.yaml` while the ASGI application is imported, so it happens in both run modes,
 using the metadata-file writer from `runtime/runner.py`. In platform mode `runtime/runner.py` registers the
 extension instance, persists the returned identity when present, and starts the exported ASGI app through Ziticorn.
+Registration runs in the runner process before Ziticorn starts the workers, so the runner hands the registered
+instance id to the workers through the environment (see [configuration.md](configuration.md)).
 Ziticorn serves `/bypass/*` over plain HTTP instead of over the OpenZiti overlay, so platform probes reach the
 operational endpoints.
 
@@ -106,6 +108,11 @@ deferred delivery of that platform task, answered with an event response. A rout
 restricted to deferred delivery answers a direct call with `405 Method Not Allowed`. The
 declaration and its registration rules are described in
 [sdk_usage/api.md](sdk_usage/api.md#deferrable-endpoints).
+
+Every task the SDK claims, whatever route family delivered it, records the
+instance that ran it: after a successful claim, `runtime/task_transitions.py`
+writes the instance id to the task's `instanceId` parameter. Recording it is best-effort: a failure is logged as a
+warning and the claim still counts.
 
 ## Boundaries
 

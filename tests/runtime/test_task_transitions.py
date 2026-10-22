@@ -4,7 +4,7 @@ import pytest
 from mpt_api_client.exceptions import MPTAPIError, MPTError, MPTHttpError
 
 from mpt_extension_sdk.errors.pipeline import CancelError, DeferError
-from mpt_extension_sdk.models.task import Task
+from mpt_extension_sdk.models.task import Task, TaskParameters
 from mpt_extension_sdk.runtime.task_transitions import ClaimOutcome, SafeTaskTransitions
 
 
@@ -31,6 +31,41 @@ async def test_claim_starts_task(transitions, task_service):
 
     assert result == ClaimOutcome.CLAIMED
     task_service.start.assert_awaited_once_with("TSK-1")
+
+
+async def test_claim_without_instance_skips_record(transitions, task_service):
+    await transitions.claim("TSK-1")  # act
+
+    task_service.set_parameters.assert_not_awaited()
+
+
+async def test_claim_records_instance(task_service, handler_logger):
+    task_service.get.return_value = Task(
+        id="TSK-1",
+        status="Processing",
+        parameters=TaskParameters.from_payload({"syncCursor": "AGR-0001"}),
+    )
+    transitions = SafeTaskTransitions(task_service, handler_logger, "EXI-1")
+
+    result = await transitions.claim("TSK-1")
+
+    assert result == ClaimOutcome.CLAIMED
+    task_service.set_parameters.assert_awaited_once_with(
+        "TSK-1",
+        TaskParameters.from_payload({"syncCursor": "AGR-0001", "instanceId": "EXI-1"}),
+    )
+
+
+@pytest.mark.parametrize("failing_method", ["get", "set_parameters"])
+async def test_claim_tolerates_record_failure(task_service, handler_logger, failing_method):
+    task_service.get.return_value = Task(id="TSK-1", status="Processing")
+    getattr(task_service, failing_method).side_effect = MPTError("MPT unavailable")
+    transitions = SafeTaskTransitions(task_service, handler_logger, "EXI-1")
+
+    result = await transitions.claim("TSK-1")
+
+    assert result == ClaimOutcome.CLAIMED
+    handler_logger.warning.assert_called_once()
 
 
 @pytest.mark.parametrize(

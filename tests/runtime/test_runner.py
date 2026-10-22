@@ -1,8 +1,9 @@
 import pytest
 
 from mpt_extension_sdk.runtime import runner
+from mpt_extension_sdk.runtime.bootstrap.registration import RegistrationResult
 from mpt_extension_sdk.runtime.models import MetaConfig
-from mpt_extension_sdk.settings.runtime import RuntimeSettings
+from mpt_extension_sdk.settings.runtime import INSTANCE_ID_ENV_VAR, RuntimeSettings
 
 
 @pytest.fixture
@@ -10,11 +11,17 @@ def runner_patches(mocker, runtime_settings):
     mocker.patch.object(
         runner, "get_runtime_settings", autospec=True, return_value=runtime_settings
     )
+    mocker.patch.dict("os.environ", clear=True)
 
     return {
         "create_meta_file": mocker.patch.object(runner, "create_meta_file", autospec=True),
         "run_fastapi": mocker.patch.object(runner, "run_fastapi", autospec=True),
-        "register_instance": mocker.patch.object(runner, "register_instance", autospec=True),
+        "register_instance": mocker.patch.object(
+            runner,
+            "register_instance",
+            autospec=True,
+            return_value=RegistrationResult(instance={"id": "EXI-1"}),
+        ),
         "run_ziti": mocker.patch.object(runner, "run_ziti", autospec=True),
     }
 
@@ -56,6 +63,29 @@ def test_run_extension_platform_mode(runtime_settings, runner_patches):
         workers=runtime_settings.ziti_workers,
     )
     run_fastapi.assert_not_called()
+
+
+def test_run_extension_exposes_instance_id(runner_patches):
+    runner.run_extension(local=False)  # act
+
+    assert runner.os.environ[INSTANCE_ID_ENV_VAR] == "EXI-1"
+
+
+def test_run_extension_without_instance_id(mocker, runner_patches):
+    mocker.patch.dict("os.environ", {INSTANCE_ID_ENV_VAR: "EXI-STALE"})
+    runner_patches["register_instance"].return_value = RegistrationResult(instance={})
+
+    runner.run_extension(local=False)  # act
+
+    assert INSTANCE_ID_ENV_VAR not in runner.os.environ
+
+
+def test_run_extension_local_clears_instance_id(mocker, runner_patches):
+    mocker.patch.dict("os.environ", {INSTANCE_ID_ENV_VAR: "EXI-STALE"})
+
+    runner.run_extension(local=True)  # act
+
+    assert INSTANCE_ID_ENV_VAR not in runner.os.environ
 
 
 def test_create_meta_file_persists_config(mocker, runtime_settings):

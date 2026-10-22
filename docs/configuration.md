@@ -91,7 +91,11 @@ LOG_LEVEL=INFO
   the runtime settings load.
 - [`mpt_extension_sdk/runtime/bootstrap/registration.py`](../mpt_extension_sdk/runtime/bootstrap/registration.py)
   registers the running extension instance and persists the returned identity
-  when present.
+  when present. The runner then exports the instance `id` from the registration
+  response as `SDK_EXTENSION_INSTANCE_ID` for the Ziticorn workers, which
+  record it on the tasks they claim. The SDK sets this variable itself and
+  clears any value inherited from the environment, so in local mode, or when
+  registration returns no `id`, it is unset and no instance is recorded.
 - With `SDK_ZITI_RELOAD=true`, every reloaded worker registers the instance
   again, so plug, event, and schedule metadata changes reach the platform
   without a full restart. Reload is a development setting; with it off, the
