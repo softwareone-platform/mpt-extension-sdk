@@ -2,8 +2,8 @@
 
 [WireMock](https://wiremock.org/) service that stands in for the Marketplace API so
 the schedule demo (`mock_app`) can run end-to-end without a real backend, and that
-also plays the part of the Extension Framework: it delivers the schedule event and
-keeps re-delivering it until the extension acknowledges it.
+also plays the part of the Extension Framework: it delivers a schedule event or a
+deferred call and keeps re-delivering it until the extension acknowledges it.
 
 ## Run
 
@@ -18,8 +18,8 @@ http://localhost:16686).
 
 ## The two lifecycles
 
-A schedule execution has two independent lifecycles, and the harness models them
-separately:
+A schedule execution or a deferred call has two independent lifecycles, and the
+harness models them separately:
 
 - **the event** is the delivery. It is answered with `Defer` while its task is not
   final, so it has to come back; it is acknowledged with `OK` once the task is final.
@@ -33,6 +33,7 @@ Postman does not deliver the event. It starts the flow, and the devmock does the
 
 ```text
 POST {{devmock_url}}/devmock/flows/{use-case}/{task-id}     (once, from Postman)
+POST {{devmock_url}}/devmock/calls/{task-id}                 (or, for a deferred call)
       → devmock records the flow and delivers the event to the extension
       → SDK reads the task, claims it with execute, submits the handler, answers Defer
       → the non-final task-read stub schedules the next delivery
@@ -52,16 +53,22 @@ footgun rather than a problem.
 
 ## What it stubs
 
-- `POST /devmock/flows/{use-case}/{task-id}` → the entry point above. Records the use
-  case and the enqueue time for the task id, then fires the first delivery.
+- `POST /devmock/flows/{use-case}/{task-id}` → the schedule entry point above. Records
+  the use case and the enqueue time for the task id, then fires the first delivery.
+- `POST /devmock/calls/{task-id}` with `{"path": "/api/v2/..."}` → the deferred call
+  entry point. Records the extension path and the enqueue time for the task id, then
+  delivers that path with `MPT-Task-Id`, as the Extension Service does for a call made
+  with `MPT-Async: true`.
 - `POST /public/v1/integration/installations/-/token` → an unsigned demo JWT
   (`extensionId=EXT-1111-1111`) used by the SDK for its outbound API calls. It is
   assembled by the `base64` template helper from readable claims, in
   `__files/mpt/account_token.json.hbs`, so no token literal is committed. The delivery
-  webhook builds its `Authorization` header the same way.
-- `GET /public/v1/system/tasks/{id}` → the task, in one of two branches: the status the
-  SDK last reported, or `rescheduled` while it has reported none. The second branch is
-  what schedules the next delivery.
+  webhooks build their `Authorization` header the same way.
+- `GET /public/v1/system/tasks/{id}` → the task, from `__files/system/task.json.hbs`, in
+  one of two branches: the status the SDK last reported, or `rescheduled` while it has
+  reported none. The second branch is what schedules the next delivery, to the schedule
+  or the extension path the flow recorded. A task no flow started reads `{}` and
+  schedules nothing.
 - `POST /public/v1/system/tasks/{id}/execute` → the claim. The first call answers `200`,
   and later calls answer `409` while the claim is held, which is what the platform does.
 - `POST /public/v1/system/tasks/{id}/complete` and `/fail` → record the final status, so
@@ -78,7 +85,7 @@ footgun rather than a problem.
 Task state is held by the [WireMock state
 extension](https://github.com/wiremock/wiremock-state-extension), pinned in the
 `Dockerfile` and loaded from the classpath. It keys state by the task id taken from the
-request path, which is what lets one pair of stubs serve every use case, and what lets
+request path, which is what lets one set of stubs serve every flow, and what lets
 a stub branch on whether the SDK has reported an outcome yet.
 
 Clear it between runs. The two are separate stores, so clearing one leaves the other:
@@ -100,17 +107,34 @@ State lives in memory and expires; `compose.demo.yaml` sets
 default of an hour would drop a settled task's outcome while a demo is still open. A
 restart clears it either way.
 
-Starting a flow whose loop is still running is refused with `409`, so a use case cannot
-end up with two chains delivering at once. A flow that has settled can be started again.
+Starting a flow or a call whose loop is still running is refused with `409`, so a task
+cannot end up with two chains delivering at once, except by design in the claim scenario
+below. One that has settled can be started again.
 
 ## The claim on an execution
 
 Run **schedule / start flow timeout** from Postman. The primary instance claims the
-task and starts sleeping. Within one minute, run **schedule / deliver timeout to
-secondary** from the same collection. It sends the same task to `app-secondary`
-(port 8081): its `execute` is answered `409` and the SDK answers `Defer` instead of
-running the handler a second time. That is the guarantee that stops two instances, or
-two worker processes, from executing one task.
+task and starts sleeping. Five seconds later the devmock delivers the same task to
+`app-secondary` (port 8081): its `execute` is answered `409` and the SDK answers `Defer`
+instead of running the handler a second time. That is the guarantee that stops two
+instances, or two worker processes, from executing one task.
+
+Only the `timeout` flow does this, from its own stub in `mappings/system/flow_start.json`.
+Each of the two deliveries schedules its own re-delivery, so two chains run until the
+task fails on its deadline; both end there.
+
+## Deferred calls
+
+`agreements-sync` is a deferrable endpoint. On the platform the Extension Service
+answers a call made with `MPT-Async: true` itself, then delivers the same request to
+the extension with `MPT-Task-Id`. Run **API / agreements-sync deferred call** from
+Postman and the devmock plays that delivery: the SDK claims the task, runs the sync in
+the background, and answers `Defer`. Once the handler returns, the SDK completes the
+task, so the next delivery reads it final and is answered `OK`.
+
+The task the devmock serves publishes a 120 s processing budget, not the 600 s the
+endpoint declares: the declared timeouts go to `meta.yaml` for the platform, while the
+SDK times a delivery from the task it reads.
 
 ## Timing
 
@@ -120,9 +144,9 @@ fails in about one minute. On the platform the SDK answers 300 s for these tasks
 the watchdog delay is derived from the task's own timing and clamps to its 5-minute
 floor; the demo compresses that and changes nothing else about the sequence.
 
-The value is a literal in `mappings/system/get_task_pending.json`. It has to be: WireMock
-accepts a template in a webhook's `delay.milliseconds` but never evaluates it, firing
-immediately instead, so the delay cannot be driven from the request.
+The value is a literal in both webhooks of `mappings/system/get_task_pending.json`. It
+has to be: WireMock accepts a template in a webhook's `delay.milliseconds` but never
+evaluates it, firing immediately instead, so the delay cannot be driven from the request.
 
 `defer` never settles its task on purpose, so its loop does not end; stop it with
 `Ctrl-C` or `make down`.

@@ -1,7 +1,9 @@
 from mock_app.api.schemas import AgreementSchema
 from mock_app.sync.agreements import SyncAgreements
-from mpt_extension_sdk import APIRouter
+from mpt_extension_sdk import APIRouter, TaskTimeouts
 from mpt_extension_sdk.api import APIContext, APIResponse, NotFoundError, PaginatedResult
+
+SYNC_MAX_TASK_PROCESSING_SECONDS = 600
 
 api_router = APIRouter()
 
@@ -45,8 +47,24 @@ async def handle_create_agreement(body: AgreementSchema, ctx: APIContext) -> API
     return APIResponse.created(payload=new_agreement)
 
 
-@api_router.post("/agreements/sync", name="agreements-sync")
-async def handle_sync_agreements(ctx: APIContext) -> APIResponse:
-    """Trigger the mock agreement sync flow."""
+@api_router.post(
+    "/agreements/sync",
+    name="agreements-sync",
+    deferrable=True,
+    timeouts=TaskTimeouts(max_task_processing=SYNC_MAX_TASK_PROCESSING_SECONDS),
+)
+async def handle_sync_agreements(ctx: APIContext) -> APIResponse | None:
+    """Run the mock agreement sync flow, directly or as a deferred platform task.
+
+    A direct call waits for the sync and answers 204. A deferred delivery
+    (`MPT-Task-Id` header) runs it in the background, reports to the task, and
+    returns nothing, so the task status is the whole outcome.
+    """
+    if ctx.task is None:
+        await SyncAgreements().execute(ctx)
+        return APIResponse.no_content()
+
+    await ctx.task.log("Starting agreements sync")
     await SyncAgreements().execute(ctx)
-    return APIResponse.no_content()
+    await ctx.task.log("Agreements sync finished")
+    return None
