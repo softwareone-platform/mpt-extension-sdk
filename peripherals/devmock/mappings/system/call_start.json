@@ -1,0 +1,87 @@
+{
+  "mappings": [
+    {
+      "request": {
+        "method": "POST",
+        "urlPathPattern": "/devmock/calls/[^/]+",
+        "customMatcher": {
+          "name": "state-matcher",
+          "parameters": {
+            "hasContext": "{{request.pathSegments.[2]}}",
+            "property": {
+              "status": {
+                "absent": true
+              }
+            }
+          }
+        }
+      },
+      "response": {
+        "status": 409,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"error\":\"a call is already running for {{request.pathSegments.[2]}}; wait for it to settle or reset the devmock\"}",
+        "transformers": [
+          "response-template"
+        ]
+      },
+      "priority": 1
+    },
+    {
+      "request": {
+        "method": "POST",
+        "urlPathPattern": "/devmock/calls/[^/]+",
+        "bodyPatterns": [
+          {
+            "matchesJsonPath": {
+              "expression": "$.path",
+              "matches": "^/.*"
+            }
+          }
+        ]
+      },
+      "response": {
+        "status": 202,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"started\":\"{{jsonPath request.body '$.path'}}\",\"task\":\"{{request.pathSegments.[2]}}\"}",
+        "transformers": [
+          "response-template"
+        ]
+      },
+      "priority": 2,
+      "serveEventListeners": [
+        {
+          "name": "recordState",
+          "parameters": {
+            "context": "{{request.pathSegments.[2]}}",
+            "state": {
+              "call": "{{jsonPath request.body '$.path'}}",
+              "enqueuedAt": "{{now}}",
+              "status": "null",
+              "claimed": "null"
+            }
+          }
+        },
+        {
+          "name": "webhook",
+          "parameters": {
+            "method": "POST",
+            "url": "http://app:8080{{jsonPath originalRequest.body '$.path'}}",
+            "headers": {
+              "Content-Type": "application/json",
+              "MPT-Task-Id": "{{originalRequest.pathSegments.[2]}}",
+              "Authorization": "Bearer {{#base64 padding=false}}{\"alg\":\"none\",\"typ\":\"JWT\"}{{/base64}}.{{#base64 padding=false}}{\"https://claims.softwareone.com/extensionId\":\"EXT-1111-1111\",\"https://claims.softwareone.com/accountId\":\"ACC-0000-3453\",\"https://claims.softwareone.com/accountType\":\"Client\",\"https://claims.softwareone.com/modules\":{},\"exp\":2095751649}{{/base64}}."
+            },
+            "delay": {
+              "type": "fixed",
+              "milliseconds": 500
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

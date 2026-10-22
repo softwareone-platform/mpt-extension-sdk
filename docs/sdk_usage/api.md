@@ -267,6 +267,11 @@ the next delivery, and `CancelError`, `FailError`, or any other exception fails
 it. In the direct branch these errors are not API errors, so the caller gets a
 `500`; raise `APIError` subclasses there instead.
 
+The mock app's `agreements-sync`
+([`mock_app/api/routes/api.py`](../../mock_app/api/routes/api.py)) is a working
+example of both branches. Run it locally in either mode with
+[`peripherals/devmock/README.md`](../../peripherals/devmock/README.md#deferred-calls).
+
 ### Deferred-only endpoints
 
 A deferrable endpoint serves both call modes. When an operation takes longer

@@ -1,0 +1,13 @@
+{
+  "id": "{{request.pathSegments.[4]}}",
+  "status": "{{state context=request.pathSegments.[4] property='status' default='rescheduled'}}",
+  "audit": {
+    "created": {"at": "{{state context=request.pathSegments.[4] property='enqueuedAt' default=''}}"},
+    "started": {"at": "{{now}}"}
+  },
+  "parameters": {
+    "extensionId": "EXT-1111-1111",
+    "maxTaskProcessingSeconds": 120,
+    "maxTaskLifetimeSeconds": 86400
+  }
+}

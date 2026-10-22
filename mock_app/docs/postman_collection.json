@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "mpt-extension-sdk mock_app",
-    "description": "Sample requests for the SDK mock_app running locally on `{{base_url}}` (default `http://localhost:8080`).\n\nAuth is wired automatically:\n\n- A collection-level pre-request script builds a non-prod HS256 JWT from the `extension_id`, `account_id` and `account_type` variables and stores it in `auth_token`.\n- Every authenticated request sends `Authorization: Bearer {{auth_token}}` via collection-level Bearer auth (the `ops` requests opt out).\n\nThe runtime (mpt-extension-sdk) decodes claims without verifying the signature, so the HS256 dummy secret is only there to produce a structurally valid token. Override `extension_id`, `account_id` or `account_type` in the collection variables to test other identities.",
+    "description": "Sample requests for the SDK mock_app running locally on `{{base_url}}` (default `http://localhost:8080`).\n\nAuth is wired automatically:\n\n- A collection-level pre-request script builds a non-prod HS256 JWT from the `extension_id`, `account_id` and `account_type` variables and stores it in `auth_token`.\n- Every authenticated request sends `Authorization: Bearer {{auth_token}}` via collection-level Bearer auth (the `ops` requests opt out).\n\nThe runtime (mpt-extension-sdk) decodes claims without verifying the signature, so the HS256 dummy secret is only there to produce a structurally valid token. Override `extension_id`, `account_id` or `account_type` in the collection variables to test other identities.\n\n`agreements-sync` is deferrable. Without `MPT-Task-Id` it runs as a direct call. The deferred request starts the call on the devmock, which delivers it with `MPT-Task-Id` as the Extension Service does for a call made with `MPT-Async: true`, so run it against `make run-demo`.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -55,11 +55,6 @@
       "type": "string"
     },
     {
-      "key": "secondary_base_url",
-      "value": "http://localhost:8081",
-      "type": "string"
-    },
-    {
       "key": "extension_id",
       "value": "EXT-1111-1111",
       "type": "string"
@@ -78,17 +73,13 @@
       "key": "auth_token",
       "value": "",
       "type": "string"
-    },
-    {
-      "key": "timeout_task_id",
-      "value": "TSK-0014-6018-1456-2413",
-      "type": "string"
     }
   ],
   "item": [
     {
       "name": "ops / health",
       "request": {
+        "description": "Health report of the running extension. No auth.",
         "method": "GET",
         "auth": {
           "type": "noauth"
@@ -105,6 +96,7 @@
     {
       "name": "ops / live — liveness probe (expected 200 OK)",
       "request": {
+        "description": "Liveness probe. Answers `200 OK` as soon as the process serves requests. No auth.",
         "method": "GET",
         "auth": {
           "type": "noauth"
@@ -121,6 +113,7 @@
     {
       "name": "ops / ready — readiness probe (200 OK when started, 503 otherwise)",
       "request": {
+        "description": "Readiness probe. Answers `200 OK` once startup has finished and `503` before. No auth.",
         "method": "GET",
         "auth": {
           "type": "noauth"
@@ -137,6 +130,7 @@
     {
       "name": "event / purchase — supported purchase order (expected OK)",
       "request": {
+        "description": "Delivers an order event to `orders-purchase` directly, as the Extension Framework would. The SDK starts the task, runs `PurchasePipeline` and answers `OK`. Nothing re-delivers it: this request is the whole delivery.",
         "method": "POST",
         "header": [
           { "key": "Content-Type", "value": "application/json" },
@@ -163,6 +157,7 @@
     {
       "name": "API / agreements-retrieve (expected 200 OK)",
       "request": {
+        "description": "Reads one agreement through the authenticated MPT API service. Answers `200` with the agreement.",
         "method": "GET",
         "header": [
           { "key": "Content-Type", "value": "application/json" }
@@ -178,6 +173,7 @@
     {
       "name": "API / agreements-retrieve (expected 404 Not Found)",
       "request": {
+        "description": "The handler raises `NotFoundError` for the id `not-found`, so the SDK maps it to a `404` problem response.",
         "method": "GET",
         "header": [
           { "key": "Content-Type", "value": "application/json" }
@@ -193,6 +189,7 @@
     {
       "name": "API / agreements-list (expected 200 OK — paginated)",
       "request": {
+        "description": "Lists agreements with `offset=2&limit=3`. Answers `200` with the page and the pagination metadata.",
         "method": "GET",
         "header": [
           { "key": "Content-Type", "value": "application/json" }
@@ -212,6 +209,7 @@
     {
       "name": "API / agreements-list (expected 200 OK — count-based pagination)",
       "request": {
+        "description": "`limit=0` asks only for the total. Answers `200` with an empty page and the count.",
         "method": "GET",
         "header": [
           { "key": "Content-Type", "value": "application/json" }
@@ -228,8 +226,9 @@
       "response": []
     },
     {
-      "name": "API / agreements-sync (expected 204 No Content)",
+      "name": "API / agreements-sync direct call (expected 204 No Content)",
       "request": {
+        "description": "Calls the deferrable `agreements-sync` without `MPT-Task-Id`, so it runs as a plain API call: the request waits for the sync and answers `204`. No task is involved.",
         "method": "POST",
         "header": [
           { "key": "Content-Type", "value": "application/json" }
@@ -243,8 +242,29 @@
       "response": []
     },
     {
+      "name": "API / agreements-sync deferred call (expected Defer, then Completed)",
+      "request": {
+        "description": "Starts a deferred call on the devmock (`make run-demo`), which plays the Extension Service for a call made with `MPT-Async: true`.\n\n1. The devmock answers `202` and delivers `POST /api/v2/agreements/sync` with `MPT-Task-Id`.\n2. The SDK reads the task, claims it with `execute`, runs the sync in the background and answers `Defer`. The handler writes two task logs and the SDK completes the task.\n3. About 30 s later the devmock delivers again; the task reads `completed`, so the SDK answers `OK` and the loop stops.\n\nSending it again while the first delivery is pending answers `409`; once settled it can be started again.",
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"path\": \"/api/v2/agreements/sync\"}"
+        },
+        "url": {
+          "raw": "{{devmock_url}}/devmock/calls/TSK-0014-6018-1456-2415",
+          "host": ["{{devmock_url}}"],
+          "path": ["devmock", "calls", "TSK-0014-6018-1456-2415"]
+        }
+      },
+      "response": []
+    },
+    {
       "name": "API / agreements-create (expected 201 Created)",
       "request": {
+        "description": "Creates an agreement from a body that passes `AgreementSchema`. Answers `201` with the created agreement.",
         "method": "POST",
         "header": [
           { "key": "Content-Type", "value": "application/json" }
@@ -269,6 +289,7 @@
     {
       "name": "API / agreements-create (expected 422 Unprocessable Entity)",
       "request": {
+        "description": "The body lacks the fields `AgreementSchema` requires, so the SDK rejects it with `422` before the handler runs.",
         "method": "POST",
         "header": [
           { "key": "Content-Type", "value": "application/json" }
@@ -293,6 +314,7 @@
     {
       "name": "schedule / start flow ok (expected Defer, then Completed)",
       "request": {
+        "description": "Starts the `ok` schedule on the devmock (`make run-demo`).\n\n1. The first delivery is claimed with `execute` and answered `Defer`.\n2. The handler logs, reports progress at 50 % and 100 %, and returns; the SDK completes the task.\n3. About 30 s later the next delivery reads `completed` and is answered `OK`.",
         "method": "POST",
         "header": [],
         "url": {
@@ -306,6 +328,7 @@
     {
       "name": "schedule / start flow cancel (expected Defer, then Failed)",
       "request": {
+        "description": "Starts the `cancel` schedule on the devmock (`make run-demo`).\n\n1. The first delivery is claimed with `execute` and answered `Defer`.\n2. The handler raises `CancelError`; the SDK fails the task.\n3. About 30 s later the next delivery reads `failed` and is answered `OK`.",
         "method": "POST",
         "header": [],
         "url": {
@@ -319,37 +342,13 @@
     {
       "name": "schedule / start flow timeout (expected Defer, then Failed on deadline)",
       "request": {
+        "description": "Starts the `timeout` schedule on the devmock (`make run-demo`), and with it the claim scenario.\n\n1. The first delivery reaches the primary (`{{base_url}}`): it claims the task with `execute`, starts a 180 s sleep and answers `Defer`.\n2. 5 s later the devmock delivers the same task to `app-secondary` (port 8081). Its `execute` is answered `409`, so it answers `Defer` without running the handler: one task never runs twice.\n3. The devmock publishes a 120 s processing budget, so after the SDK's safety margin the primary fails the task on its deadline, in about one minute.\n4. The next delivery reads `failed` and is answered `OK`.\n\nBoth deliveries schedule their own re-delivery, so two chains run until the task fails.",
         "method": "POST",
         "header": [],
         "url": {
-          "raw": "{{devmock_url}}/devmock/flows/timeout/{{timeout_task_id}}",
+          "raw": "{{devmock_url}}/devmock/flows/timeout/TSK-0014-6018-1456-2413",
           "host": ["{{devmock_url}}"],
-          "path": ["devmock", "flows", "timeout", "{{timeout_task_id}}"]
-        }
-      },
-      "response": []
-    },
-    {
-      "name": "schedule / deliver timeout to secondary (expected Defer, no second handler)",
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Content-Type", "value": "application/json" },
-          { "key": "MPT-Task-Id", "value": "{{timeout_task_id}}" }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"id\": \"{{$guid}}\",\n  \"object\": {\n    \"id\": \"mock.use-cases.timeout\",\n    \"name\": \"schedule-use-case-timeout\",\n    \"objectType\": \"Schedule\"\n  },\n  \"task\": {\n    \"id\": \"{{timeout_task_id}}\"\n  },\n  \"details\": {\n    \"enqueueTime\": \"{{$isoTimestamp}}\",\n    \"deliveryTime\": \"{{$isoTimestamp}}\",\n    \"eventType\": \"Schedule\"\n  }\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
-        },
-        "url": {
-          "raw": "{{secondary_base_url}}/api/v2/schedules/use-cases/timeout",
-          "host": ["{{secondary_base_url}}"],
-          "path": ["api", "v2", "schedules", "use-cases", "timeout"]
+          "path": ["devmock", "flows", "timeout", "TSK-0014-6018-1456-2413"]
         }
       },
       "response": []
@@ -357,6 +356,7 @@
     {
       "name": "schedule / start flow defer (expected repeated Defer)",
       "request": {
+        "description": "Starts the `defer` schedule on the devmock (`make run-demo`). The handler logs a warning and raises `DeferError` on every delivery, so the SDK reschedules the task, which releases the claim, and answers `Defer`. The task never settles, so the devmock delivers it every 30 s until you stop it with `make down`.",
         "method": "POST",
         "header": [],
         "url": {
