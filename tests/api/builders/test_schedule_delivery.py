@@ -114,6 +114,7 @@ async def test_watchdog_defers_while_running(
     build_schedule_context, run, task_service, task_factory, async_task_runner
 ):
     task_service.get.return_value = task_factory("Processing", started_seconds_ago=600)
+    async_task_runner.is_running.return_value = True
     async_task_runner.reserve.return_value.__enter__.return_value = False
 
     result = await run()
@@ -125,6 +126,7 @@ async def test_watchdog_skips_acceptance(
     build_schedule_context, run, task_service, task_factory, async_task_runner
 ):
     task_service.get.return_value = task_factory("Processing", started_seconds_ago=600)
+    async_task_runner.is_running.return_value = True
     async_task_runner.reserve.return_value.__enter__.return_value = False
 
     await run()  # act
@@ -135,7 +137,7 @@ async def test_watchdog_skips_acceptance(
 async def test_task_claimed_elsewhere_not_restarted(
     build_schedule_context, run, task_service, task_factory, task_conflict
 ):
-    task_service.get.return_value = task_factory("Processing", started_seconds_ago=600)
+    task_service.get.return_value = task_factory("Rescheduled", started_seconds_ago=600)
     task_service.start.side_effect = task_conflict
 
     await run()  # act
@@ -146,7 +148,7 @@ async def test_task_claimed_elsewhere_not_restarted(
 async def test_task_claimed_elsewhere_skips_handler(
     build_schedule_context, run, task_service, task_factory, task_conflict, async_task_runner
 ):
-    task_service.get.return_value = task_factory("Processing", started_seconds_ago=600)
+    task_service.get.return_value = task_factory("Rescheduled", started_seconds_ago=600)
     task_service.start.side_effect = task_conflict
 
     await run()  # act
@@ -158,12 +160,53 @@ async def test_task_claimed_elsewhere_skips_handler(
 async def test_task_claimed_elsewhere_keeps_cadence(
     build_schedule_context, run, task_service, task_factory, task_conflict
 ):
-    task_service.get.return_value = task_factory("Processing", started_seconds_ago=600)
+    task_service.get.return_value = task_factory("Rescheduled", started_seconds_ago=600)
     task_service.start.side_effect = task_conflict
 
     result = await run()
 
     assert result == EventResponse.reschedule(600)
+
+
+@freeze_time(DELIVERED_AT)
+async def test_running_elsewhere_keeps_cadence(
+    build_schedule_context, run, task_service, task_factory
+):
+    task_service.get.return_value = task_factory("Processing", started_seconds_ago=600)
+
+    result = await run()
+
+    assert result == EventResponse.reschedule(600)
+
+
+async def test_running_elsewhere_skips_context(
+    build_schedule_context, run, task_service, task_factory
+):
+    task_service.get.return_value = task_factory("Processing", started_seconds_ago=600)
+
+    await run()  # act
+
+    build_schedule_context.assert_not_awaited()
+
+
+async def test_running_elsewhere_not_claimed(
+    build_schedule_context, run, task_service, task_factory
+):
+    task_service.get.return_value = task_factory("Processing", started_seconds_ago=600)
+
+    await run()  # act
+
+    task_service.start.assert_not_awaited()
+
+
+async def test_running_elsewhere_keeps_task_state(
+    build_schedule_context, run, task_service, task_factory
+):
+    task_service.get.return_value = task_factory("Processing", started_seconds_ago=600)
+
+    await run()  # act
+
+    task_service.reschedule.assert_not_awaited()
 
 
 async def test_rescheduled_starts_and_submits(
