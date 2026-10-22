@@ -1,5 +1,5 @@
 import datetime as dt
-from typing import Any, Self
+from typing import Any, Self, override
 
 from pydantic import Field, model_validator
 
@@ -40,8 +40,17 @@ FINAL_STATUSES = frozenset((TaskStatus.COMPLETED, TaskStatus.FAILED))
 
 
 class TaskParameters(BaseModel):
-    """Lifetime limits the platform publishes with a task."""
+    """Task parameters: the reserved ones the platform publishes, plus free-form ones.
 
+    The declared fields are reserved: `with_parameter` and `without_parameter`
+    refuse to change them. Any other key is kept as an extra parameter.
+    """
+
+    extension_id: str | None = Field(
+        default=None,
+        serialization_alias="extensionId",
+        validation_alias="extensionId",
+    )
     max_task_processing_seconds: float | None = Field(
         default=None,
         serialization_alias="maxTaskProcessingSeconds",
@@ -52,6 +61,47 @@ class TaskParameters(BaseModel):
         serialization_alias="maxTaskLifetimeSeconds",
         validation_alias="maxTaskLifetimeSeconds",
     )
+
+    @override
+    def to_dict(self) -> dict[str, Any]:
+        """Dump the parameters, leaving out reserved ones the task does not have."""
+        parameters = self.model_dump(mode="json")  # noqa: WPS110
+        for field_name, field in type(self).model_fields.items():
+            if getattr(self, field_name) is None:
+                parameters.pop(field.serialization_alias or field_name)
+        return parameters
+
+    def with_parameter(self, name: str, value: Any) -> Self:  # noqa: WPS110
+        """Return a copy with the parameter added, or overwritten when it exists.
+
+        Args:
+            name: Parameter key, as sent to the platform.
+            value: Parameter value.
+
+        Raises:
+            ValueError: When `name` is a reserved parameter.
+        """
+        self._ensure_not_reserved(name)
+        return self.model_validate({**self.to_dict(), name: value})
+
+    def without_parameter(self, name: str) -> Self:
+        """Return a copy without the parameter; a missing parameter is ignored.
+
+        Args:
+            name: Parameter key, as sent to the platform.
+
+        Raises:
+            ValueError: When `name` is a reserved parameter.
+        """
+        self._ensure_not_reserved(name)
+        parameters = self.to_dict()  # noqa: WPS110
+        parameters.pop(name, None)
+        return self.model_validate(parameters)
+
+    def _ensure_not_reserved(self, name: str) -> None:
+        for field_name, field in type(self).model_fields.items():
+            if name in {field_name, field.serialization_alias}:
+                raise ValueError(f"Task parameter '{name}' is reserved and cannot be changed")
 
 
 class Task(BaseModel):

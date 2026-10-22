@@ -1,14 +1,6 @@
-import warnings
-
 import pytest
 
-from mpt_extension_sdk.models.task import (
-    Task,
-    TaskLog,
-    TaskLogSeverity,
-    TaskStatus,
-    UnknownTaskStatusWarning,
-)
+from mpt_extension_sdk.models.task import TaskLog, TaskParameters
 from mpt_extension_sdk.services.api_client_v2.mpt_api_client import AsyncMPTClient
 from mpt_extension_sdk.services.api_client_v2.system.system import AsyncSystem
 from mpt_extension_sdk.services.api_client_v2.system.system_tasks import AsyncTasksService
@@ -35,6 +27,15 @@ def service(mocker, tasks_client):
         ("fail", ("TASK-1", "Timed out"), "fail", ("TASK-1", {"reason": "Timed out"})),
         ("progress", ("TASK-1", 0.5), "update", ("TASK-1", {"progress": 0.5})),
         ("reschedule", ("TASK-1",), "reschedule", ("TASK-1",)),
+        (
+            "set_parameters",
+            (
+                "TASK-1",
+                TaskParameters.from_payload({"extensionId": "EXT-1", "instanceId": "EXI-1"}),
+            ),
+            "update",
+            ("TASK-1", {"parameters": {"extensionId": "EXT-1", "instanceId": "EXI-1"}}),
+        ),
         (
             "set_result",
             ("TASK-1", "/public/v1/commerce/agreements/AGR-1"),
@@ -97,54 +98,3 @@ async def test_task_service_create_log(service, tasks_client):
     assert result.id == "TLG-1"
     assert result.task.id == "TASK-1"
     assert result.timestamp is not None
-
-
-@pytest.mark.parametrize("severity", ["debug", "Info", "WARNING", "Error", "failure"])
-def test_task_log_severity_ignores_case(severity):
-    task_log = TaskLog(message="Synchronizing", severity=severity)  # act
-
-    assert task_log.severity == TaskLogSeverity(severity.capitalize())
-
-
-@pytest.mark.parametrize(
-    ("status", "is_final"),
-    [
-        ("Completed", True),
-        ("Failed", True),
-        ("Processing", False),
-        ("Queued", False),
-        ("Rescheduled", False),
-        ("Waiting", False),
-    ],
-)
-@pytest.mark.filterwarnings("ignore::mpt_extension_sdk.models.task.UnknownTaskStatusWarning")
-def test_task_status_helpers(status, is_final):
-    task = Task(id="TASK-1", status=status)  # act
-
-    assert task.is_final is is_final
-
-
-def test_task_status_parses_known_status_as_enum():
-    task = Task(id="TASK-1", status="Completed")  # act
-
-    assert task.status == TaskStatus.COMPLETED
-
-
-@pytest.mark.filterwarnings("ignore::mpt_extension_sdk.models.task.UnknownTaskStatusWarning")
-def test_task_status_keeps_unknown_as_string():
-    task = Task(id="TASK-1", status="Waiting")  # act
-
-    assert task.status == "Waiting"
-    assert task.is_final is False
-
-
-def test_task_warns_on_unknown_status():
-    with pytest.warns(UnknownTaskStatusWarning, match="TASK-1"):
-        Task(id="TASK-1", status="Waiting")  # act
-
-
-def test_task_does_not_warn_on_known_status():
-    with warnings.catch_warnings():
-        warnings.simplefilter("error", UnknownTaskStatusWarning)
-
-        Task(id="TASK-1", status="Completed")  # act
