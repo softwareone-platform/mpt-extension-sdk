@@ -9,6 +9,7 @@ from mpt_extension_sdk.routing import (
     ScheduleRouter,
     TaskTimeouts,
 )
+from mpt_extension_sdk.routing.decorators import only_deferrable
 
 __all__ = [  # noqa: WPS410
     "APIRouter",
@@ -20,4 +21,5 @@ __all__ = [  # noqa: WPS410
     "PlugRouter",
     "ScheduleRouter",
     "TaskTimeouts",
+    "only_deferrable",
 ]

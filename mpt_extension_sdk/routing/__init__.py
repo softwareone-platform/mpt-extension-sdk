@@ -1,3 +1,4 @@
+from mpt_extension_sdk.routing.decorators import only_deferrable
 from mpt_extension_sdk.routing.enums import EventDeliveryMode, HTTPMethod, RouteType
 from mpt_extension_sdk.routing.models import (
     APIRouteDefinition,
@@ -37,4 +38,5 @@ __all__ = [  # noqa: WPS410
     "ScheduleRouteDefinition",
     "ScheduleRouter",
     "TaskTimeouts",
+    "only_deferrable",
 ]
