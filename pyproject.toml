@@ -35,10 +35,10 @@ dev = [
     "pytest-asyncio==1.4.*",
     "pytest-cov==7.1.*",
     "pytest-deadfixtures==3.1.*",
-    "pytest-mock==3.16.*",
+    "pytest-mock==3.17.*",
     "pytest-randomly==5.0.*",
     "pytest-xdist==3.8.*",
-    "ruff==0.17.1", # force ruff version to have same formatting everywhere, also update in pre-commit config
+    "ruff==0.17.2", # force ruff version to have same formatting everywhere, also update in pre-commit config
     "wemake-python-styleguide==1.8.*", # also update pre-commit config
 ]
 
