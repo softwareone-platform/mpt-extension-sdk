@@ -29,10 +29,11 @@ def create_deferrable_route(route: APIRouteDefinition, extension_app: ExtensionA
     without it with `405 Method Not Allowed`.
     """
     handler_logger = logging.getLogger(route.callback.__module__)
+    context_factory = RouteContextFactory(extension_app.mpt_api_service_type)
     executor = APIRequestExecutor(
         arguments_builder=APIHandlerArgumentsBuilder(route),
         auth_service=RequestAuthenticationService(),
-        extension_app=extension_app,
+        context_factory=context_factory,
         handler_logger=handler_logger,
         route=route,
     )
@@ -62,9 +63,7 @@ def create_deferrable_route(route: APIRouteDefinition, extension_app: ExtensionA
         )
         event_response = await DeferredCallHandler(
             route=route,
-            context_factory=RouteContextFactory.from_service_type(
-                extension_app.mpt_api_service_type
-            ),
+            context_factory=context_factory,
             task_service=task_service,
             runner=request.app.state.async_task_runner,
             handler_logger=handler_logger,

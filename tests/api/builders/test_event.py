@@ -110,7 +110,7 @@ def make_event_route():
 @pytest.fixture
 def build_context_mock(mocker, fake_context):
     return mocker.patch(
-        "mpt_extension_sdk.api.builders.event.build_context",
+        "mpt_extension_sdk.pipeline.factory.RouteContextFactory.build",
         autospec=True,
         return_value=fake_context,
     )
@@ -263,7 +263,7 @@ def test_event_route_success(
     response = result.json()
     assert response["response"] == ResponseEnum.OK
     mock_callable.assert_called_once_with(mock_callable.call_args.args[0], fake_context)
-    auth = build_context_mock.call_args.kwargs["auth"]
+    auth = build_context_mock.call_args.args[2]
     assert auth.token == auth_token
     assert auth.account.id == "ACC-001"
     start_event_span_mock.assert_called_once_with(
@@ -368,7 +368,7 @@ def test_task_route_success(
     fake_task_service.complete.assert_awaited_once()
     fake_task_service.fail.assert_not_awaited()
     mock_callable.assert_called_once_with(mock_callable.call_args.args[0], fake_context)
-    auth = build_context_mock.call_args.kwargs["auth"]
+    auth = build_context_mock.call_args.args[2]
     assert auth.token == auth_token
     assert auth.account.id == "ACC-001"
     start_event_span_mock.assert_called_once_with(
@@ -450,24 +450,3 @@ def test_task_route_error(
     getattr(fake_task_service, expected_task_action).assert_awaited_once()
     fake_task_service.complete.assert_not_awaited()
     record_exception_mock.assert_called_once_with(event_span, error)
-
-
-async def test_run_handler(mocker, fake_context, mock_callable):
-    mock_callable = mocker.AsyncMock(spec=Callable, side_effect=mock_callable)
-
-    await event_builder.run_handler(mock_callable, "evt", fake_context)  # act
-
-    mock_callable.assert_awaited_once_with("evt", fake_context)
-
-
-async def test_run_handler_supports_sync_handler(fake_context, mock_callable):
-    await event_builder.run_handler(mock_callable, "evt", fake_context)  # act
-
-    mock_callable.assert_called_once_with("evt", fake_context)
-
-
-async def test_run_handler_propagates_async_exception(mocker, fake_context, mock_callable):
-    mock_callable = mocker.AsyncMock(spec=Callable, side_effect=ValueError("async boom"))
-
-    with pytest.raises(ValueError, match="async boom"):
-        await event_builder.run_handler(mock_callable, "evt", fake_context)

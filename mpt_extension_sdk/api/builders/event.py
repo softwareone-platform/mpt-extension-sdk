@@ -1,12 +1,12 @@
 import logging
 from collections.abc import Awaitable, Callable
-from inspect import isawaitable
-from typing import Annotated, Any
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request, status
 
 from mpt_extension_sdk.api.auth import AuthenticationError, RequestAuthenticationService
 from mpt_extension_sdk.api.builders.dependencies import get_tasks_service
+from mpt_extension_sdk.api.builders.handlers import resolve_handler_result
 from mpt_extension_sdk.api.models.events import Event, EventResponse, TaskEvent
 from mpt_extension_sdk.errors.mapping import map_exception_to_event_response
 from mpt_extension_sdk.errors.pipeline import CancelError, DeferError, FailError
@@ -17,8 +17,9 @@ from mpt_extension_sdk.observability.tracing import (
     set_attributes,
     start_event_span,
 )
-from mpt_extension_sdk.pipeline import EventBaseContext, build_context
-from mpt_extension_sdk.routing import EventDeliveryMode, EventRouteCallback, EventRouteDefinition
+from mpt_extension_sdk.pipeline import EventBaseContext, RouteContextFactory
+from mpt_extension_sdk.pipeline.builders import EventContextBuilder
+from mpt_extension_sdk.routing import EventDeliveryMode, EventRouteDefinition
 from mpt_extension_sdk.runtime.logging import set_event_context
 from mpt_extension_sdk.services.mpt_api_service.task import TaskService
 
@@ -42,6 +43,7 @@ def create_task_event_route(  # ruff:ignore[complex-structure]  # noqa: WPS213, 
     """Create a router for a task-based event handler."""
     router = APIRouter()
     handler_logger = logging.getLogger(route.callback.__module__)
+    context_factory = RouteContextFactory(extension_app.mpt_api_service_type)
 
     @router.post(route.path, status_code=status.HTTP_200_OK, response_model=EventResponse)
     async def handle_task_event(  # noqa: WPS212, WPS213, WPS217, WPS430
@@ -53,7 +55,7 @@ def create_task_event_route(  # ruff:ignore[complex-structure]  # noqa: WPS213, 
         set_event_context(task_id=event.task.id)
         try:
             context = await build_authenticated_context(
-                request, event, handler_logger, extension_app
+                request, event, handler_logger, context_factory
             )
         except AuthenticationError as error:
             handler_logger.exception("Task event authentication failed", exc_info=error)
@@ -69,7 +71,7 @@ def create_task_event_route(  # ruff:ignore[complex-structure]  # noqa: WPS213, 
             handler_logger.info("Starting task %s", event.task.id)
             await task_service.start(event.task.id)
             try:  # noqa: WPS225
-                await run_handler(route.callback, event, context)
+                await resolve_handler_result(route.callback(event, context))
             except CancelError as error:
                 record_exception(span, error)  # noqa: WPS204
                 handler_logger.info("Task %s cancelled", event.task.id)
@@ -105,6 +107,7 @@ def create_non_task_event_route(  # ruff:ignore[complex-structure]  # noqa: WPS2
     """Create a FastAPI router for a non-task event handler."""
     router = APIRouter()
     handler_logger = logging.getLogger(route.callback.__module__)
+    context_factory = RouteContextFactory(extension_app.mpt_api_service_type)
 
     @router.post(route.path, status_code=status.HTTP_200_OK, response_model=EventResponse)
     async def handle_event(  # noqa: WPS212, WPS213, WPS430
@@ -114,7 +117,7 @@ def create_non_task_event_route(  # ruff:ignore[complex-structure]  # noqa: WPS2
         set_event_context()
         try:
             context = await build_authenticated_context(
-                request, event, handler_logger, extension_app
+                request, event, handler_logger, context_factory
             )
         except AuthenticationError as error:
             handler_logger.exception("Event authentication failed", exc_info=error)
@@ -128,7 +131,7 @@ def create_non_task_event_route(  # ruff:ignore[complex-structure]  # noqa: WPS2
             )
             set_attributes(span, business_attributes)
             try:  # noqa: WPS225
-                await run_handler(route.callback, event, context)
+                await resolve_handler_result(route.callback(event, context))
             except CancelError as error:
                 record_exception(span, error)
                 handler_logger.info("Event (%s) canceled", event.id)
@@ -155,22 +158,10 @@ async def build_authenticated_context(
     request: Request,
     event: Event,
     handler_logger: logging.Logger,
-    extension_app: ExtensionApp,
+    context_factory: RouteContextFactory,
 ) -> EventBaseContext:
     """Build an event context after authenticating the incoming request."""
     auth = RequestAuthenticationService().authenticate(request)
-    return await build_context(
-        event,
-        handler_logger,
-        auth=auth,
-        mpt_api_service_type=extension_app.mpt_api_service_type,
+    return await context_factory.build(
+        EventContextBuilder(event=event, handler_logger=handler_logger), auth
     )
-
-
-async def run_handler(
-    event_handler: EventRouteCallback, event: Any, context: EventBaseContext
-) -> None:
-    """Invoke a handler and await the result if it is a coroutine."""
-    handler_result = event_handler(event, context)
-    if isawaitable(handler_result):
-        await handler_result

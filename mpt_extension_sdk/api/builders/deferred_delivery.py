@@ -10,6 +10,7 @@ from mpt_extension_sdk.api.builders.task_delivery import TaskDeliveryHandler, Ta
 from mpt_extension_sdk.api.context import AuthenticatedRequestContext
 from mpt_extension_sdk.models.task import Task
 from mpt_extension_sdk.pipeline import RouteContextFactory
+from mpt_extension_sdk.pipeline.builders import APIContextBuilder
 from mpt_extension_sdk.routing.models import APIRouteDefinition
 from mpt_extension_sdk.runtime.async_tasks import AsyncTaskHandler, AsyncTaskRunner
 from mpt_extension_sdk.services.mpt_api_service.task import TaskService
@@ -48,11 +49,13 @@ class DeferredCallHandler(TaskDeliveryHandler[None]):
         request_context = AuthenticatedRequestContext.from_request(
             request, body=await self._arguments_builder.parse_request_body(request)
         )
-        context = await self.context_factory.build_api_context(
-            auth_context=auth,
-            request_context=request_context,
-            handler_logger=self.handler_logger,
-            task=TaskHandle(id=task.id, task_service=self.task_service),
+        context = await self.context_factory.build(
+            APIContextBuilder(
+                handler_logger=self.handler_logger,
+                request_context=request_context,
+                task=TaskHandle(id=task.id, task_service=self.task_service),
+            ),
+            auth,
         )
         handler_arguments = await self._arguments_builder.build(request=request, context=context)
         return build_deferred_callback(
