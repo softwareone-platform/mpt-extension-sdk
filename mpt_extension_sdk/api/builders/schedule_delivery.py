@@ -11,9 +11,9 @@ from mpt_extension_sdk.api.builders.task_timing import (
     TASK_TIMEOUT_SAFETY_MARGIN,
 )
 from mpt_extension_sdk.api.models.events import EventResponse, TaskEvent
-from mpt_extension_sdk.extension_app import ExtensionApp
 from mpt_extension_sdk.models.task import Task
 from mpt_extension_sdk.pipeline import RouteContextFactory
+from mpt_extension_sdk.pipeline.builders import ScheduleContextBuilder
 from mpt_extension_sdk.routing import ScheduleRouteDefinition
 from mpt_extension_sdk.runtime.async_tasks import AsyncTaskHandler, AsyncTaskRunner
 from mpt_extension_sdk.runtime.logging import set_event_context
@@ -27,7 +27,7 @@ class ScheduleDeliveryHandler(TaskDeliveryHandler[TaskEvent]):
         self,
         *,
         route: ScheduleRouteDefinition,
-        extension_app: ExtensionApp,
+        context_factory: RouteContextFactory,
         task_service: TaskService,
         runner: AsyncTaskRunner,
         handler_logger: logging.Logger,
@@ -41,21 +41,22 @@ class ScheduleDeliveryHandler(TaskDeliveryHandler[TaskEvent]):
             instance_id=instance_id,
         )
         self.route = route
-        self.extension_app = extension_app
+        self.context_factory = context_factory
 
     @override
     async def build_callback(
         self, *, request: Request, auth: AuthContext, task: Task, delivery: TaskEvent
     ) -> AsyncTaskHandler:
         """Return a call to the schedule handler with its schedule context."""
-        factory = RouteContextFactory.from_service_type(self.extension_app.mpt_api_service_type)
-        context = await factory.build_schedule_context(
-            schedule_id=self.route.id,
-            task_id=task.id,
-            handler_logger=self.handler_logger,
-            auth=auth,
-            task_service=self.task_service,
-            event=delivery,
+        context = await self.context_factory.build(
+            ScheduleContextBuilder(
+                event=delivery,
+                handler_logger=self.handler_logger,
+                schedule_id=self.route.id,
+                task_id=task.id,
+                task_service=self.task_service,
+            ),
+            auth,
         )
         return lambda: self.route.callback(context)
 

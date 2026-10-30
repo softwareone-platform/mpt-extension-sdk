@@ -28,7 +28,7 @@ Then inspect the code paths relevant to the task:
 
 - [`mpt_extension_sdk/extension_app.py`](mpt_extension_sdk/extension_app.py): public SDK entrypoint that defines `ExtensionApp`, `ExtensionRouter`, route registration, and context adaptation
 - [`mpt_extension_sdk/api/builders/`](mpt_extension_sdk/api/builders): FastAPI route builders for API/event handlers, argument resolution, execution, and error mapping
-- [`mpt_extension_sdk/pipeline/`](mpt_extension_sdk/pipeline): execution contexts, pipeline primitives, step decorators, and context factory helpers
+- [`mpt_extension_sdk/pipeline/`](mpt_extension_sdk/pipeline): execution contexts, pipeline primitives, step decorators, and the route context factory with its context builders
 - [`mpt_extension_sdk/runtime/app.py`](mpt_extension_sdk/runtime/app.py): FastAPI app assembly, middleware registration, observability bootstrap, and extension route mounting
 - [`mpt_extension_sdk/runtime/main.py`](mpt_extension_sdk/runtime/main.py): exported ASGI application used by local and platform runtimes; writes `meta.yaml` on import
 - [`mpt_extension_sdk/runtime/runner.py`](mpt_extension_sdk/runtime/runner.py): local `uvicorn` startup, platform `ziticorn` startup, and the metadata-file writer
