@@ -16,6 +16,8 @@ This guide is the entry point for building an extension package on top of
 - [Authenticated API routes](sdk_usage/api.md): expose authenticated endpoints,
   validate bodies, read request/auth context, return API responses, and use
   pagination.
+- [Webhook routes](sdk_usage/webhooks.md): declare platform webhooks with their
+  type, description and criteria, and publish them in metadata.
 - [UI plugs](sdk_usage/plugs.md): register `PlugRouter` providers, group plugs
   under nested navigation containers, declare modal (open-by-id) plugs, and
   reference static assets.

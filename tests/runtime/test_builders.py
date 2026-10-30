@@ -7,8 +7,11 @@ from mpt_extension_sdk.routing import (
     PlugRouteDefinition,
     RouteType,
     TaskTimeouts,
+    WebhookRouteDefinition,
 )
 from mpt_extension_sdk.runtime.builders import MetaConfigBuilder, PlugMetadataBuilder
+from mpt_extension_sdk.runtime.models import MetaWebhook
+from mpt_extension_sdk.webhooks import WebhookType
 
 
 def test_plug_metadata_builder_reuse(mocker):
@@ -182,3 +185,40 @@ def test_builder_omits_empty_deferrables(api_route_factory):
     result = MetaConfigBuilder(openapi="/openapi.json", routes=[route]).build()
 
     assert "deferrables" not in result.model_dump(exclude_none=True, by_alias=True)
+
+
+def test_meta_config_builder_emits_webhooks(mocker):
+    builder = MetaConfigBuilder(
+        openapi="/bypass/openapi.json",
+        routes=[
+            WebhookRouteDefinition(
+                name="validate_purchase_order_draft",
+                path="/api/v2/webhooks/orders/validate",
+                route_type=RouteType.WEBHOOK,
+                callback=mocker.Mock(),
+                criteria_sets=({"product.id": "PRD-1111-1111"}, {"product.id": "PRD-1111-1112"}),
+                description="Validate draft orders",
+                webhook_type=WebhookType.VALIDATE_PURCHASE_ORDER_DRAFT,
+            )
+        ],
+    )
+
+    result = builder.build()
+
+    assert result.webhooks == [
+        MetaWebhook(
+            type="validatePurchaseOrderDraft",
+            description="Validate draft orders",
+            path="/api/v2/webhooks/orders/validate",
+            criteria={"product.id": product_id},
+        )
+        for product_id in ("PRD-1111-1111", "PRD-1111-1112")
+    ]
+
+
+def test_builder_omits_webhooks_without_routes():
+    builder = MetaConfigBuilder(openapi="/bypass/openapi.json", routes=[])
+
+    result = builder.build()
+
+    assert result.webhooks is None

@@ -13,6 +13,8 @@ from mpt_extension_sdk.schemas import BaseSchema
 if TYPE_CHECKING:
     from mpt_extension_sdk.routing.models import BaseRouteDefinition
 
+type WebhookKey = tuple[object, frozenset[tuple[str, str]]]
+
 
 class RouteValidator:  # noqa: WPS214
     """Validation helpers for route registration."""
@@ -141,9 +143,34 @@ class RouteValidator:  # noqa: WPS214
         ):
             raise ValueError(f"Route event '{getattr(route, 'event', '')}' is already registered")
 
+        if route.route_type == RouteType.WEBHOOK:
+            cls._validate_webhook_uniqueness(route, routes)
+
         if route.route_type == RouteType.SCHEDULE and any(
             existing_route.route_type == RouteType.SCHEDULE
             and getattr(existing_route, "id", None) == getattr(route, "id", None)
             for existing_route in routes
         ):
             raise ValueError(f"Schedule id '{getattr(route, 'id', '')}' is already registered")
+
+    @classmethod
+    def _validate_webhook_uniqueness(
+        cls, route: "BaseRouteDefinition", routes: list["BaseRouteDefinition"]
+    ) -> None:
+        declared_keys = {
+            webhook_key
+            for existing_route in routes
+            if existing_route.route_type == RouteType.WEBHOOK
+            for webhook_key in cls._webhook_keys(existing_route)
+        }
+        for webhook_type, criteria in cls._webhook_keys(route):
+            if (webhook_type, criteria) in declared_keys:
+                raise ValueError(
+                    f"Webhook '{webhook_type}' is already registered for criteria {dict(criteria)}"
+                )
+
+    @classmethod
+    def _webhook_keys(cls, route: "BaseRouteDefinition") -> list[WebhookKey]:
+        criteria_sets = getattr(route, "criteria_sets", ())
+        webhook_type = getattr(route, "webhook_type", None)
+        return [(webhook_type, frozenset(criteria.items())) for criteria in criteria_sets]

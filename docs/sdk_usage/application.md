@@ -49,10 +49,12 @@ from mpt_extension_sdk.routing import EventRouter
 orders_router = EventRouter(prefix="/events/orders")
 ```
 
-The SDK also exposes `APIRouter`, `ScheduleRouter`, and `PlugRouter`.
-`EventRouter`, `APIRouter`, and `ScheduleRouter` are mounted by the runtime.
-`PlugRouter` is declarative: its plug definitions are emitted into metadata and
-its static assets are exposed through `/static`.
+The SDK also exposes `APIRouter`, `ScheduleRouter`, `PlugRouter`, and
+`WebhookRouter`. `EventRouter`, `APIRouter`, and `ScheduleRouter` are mounted by
+the runtime. `PlugRouter` is declarative: its plug definitions are emitted into
+metadata and its static assets are exposed through `/static`. `WebhookRouter`
+routes are published in metadata, but the runtime does not mount them yet (see
+[webhooks.md](webhooks.md)).
 
 ## Include Multiple Routers
 

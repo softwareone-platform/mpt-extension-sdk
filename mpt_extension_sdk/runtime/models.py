@@ -115,6 +115,18 @@ class MetaDeferrable(BaseModel):
         return path
 
 
+class MetaWebhook(BaseModel):
+    """Metadata model for a webhook requested from the Extensions Service."""
+
+    # Keep the order of fields in the model consistent with the order in the metadata file
+    type: str = Field(min_length=1)
+    description: str = Field(min_length=1)
+    path: str = Field(min_length=1)
+    criteria: dict[str, str] = Field(min_length=1)
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+
 class MetaConfig(BaseModel):
     """MetaConfig model for loading metadata."""
 
@@ -126,6 +138,7 @@ class MetaConfig(BaseModel):
     schedules: list[MetaSchedule] | None = None
     plugs: list[MetaPlug] | None = None
     deferrables: list[MetaDeferrable] | None = None
+    webhooks: list[MetaWebhook] | None = None
 
     model_config = ConfigDict(extra="forbid")
 
