@@ -7,6 +7,7 @@ from mpt_extension_sdk.routing.models import (
     EventRouteDefinition,
     PlugRouteDefinition,
     ScheduleRouteDefinition,
+    WebhookRouteDefinition,
 )
 from mpt_extension_sdk.routing.plugs import ModalPlug, NavigationPlug, Plug
 from mpt_extension_sdk.runtime.models import (
@@ -16,6 +17,7 @@ from mpt_extension_sdk.runtime.models import (
     MetaPlug,
     MetaSchedule,
     MetaTaskTimeouts,
+    MetaWebhook,
 )
 
 DeclaredPlug = Plug | NavigationPlug | ModalPlug
@@ -108,6 +110,7 @@ class MetaConfigBuilder:
             schedules=self._build_schedules() or None,
             plugs=self._build_plugs() or None,
             deferrables=self._build_deferrables() or None,
+            webhooks=self._build_webhooks() or None,
         )
 
     def _build_deferrables(self) -> list[MetaDeferrable]:
@@ -158,3 +161,16 @@ class MetaConfigBuilder:
     def _build_plugs(self) -> list[MetaPlug]:
         """Build plug metadata from registered plug providers."""
         return PlugMetadataBuilder(routes=self.routes).build()
+
+    def _build_webhooks(self) -> list[MetaWebhook]:
+        return [
+            MetaWebhook(
+                type=str(route.webhook_type),
+                description=route.description,
+                path=route.path,
+                criteria=dict(criteria),
+            )
+            for route in self.routes
+            if isinstance(route, WebhookRouteDefinition)
+            for criteria in route.criteria_sets
+        ]

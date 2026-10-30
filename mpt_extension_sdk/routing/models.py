@@ -1,3 +1,4 @@
+from collections.abc import Mapping
 from dataclasses import dataclass
 
 from mpt_extension_sdk.context import ContextAdapter
@@ -9,8 +10,10 @@ from mpt_extension_sdk.routing.types import (
     PlugRouteCallback,
     RouteCallback,
     ScheduleRouteCallback,
+    WebhookRouteCallback,
 )
 from mpt_extension_sdk.schemas import BaseSchema
+from mpt_extension_sdk.webhooks.enums import WebhookType
 
 
 @dataclass(frozen=True)
@@ -88,3 +91,13 @@ class PlugRouteDefinition(BaseRouteDefinition):
     """Route definition for plug handlers."""
 
     callback: PlugRouteCallback
+
+
+@dataclass(frozen=True)
+class WebhookRouteDefinition(BaseRouteDefinition):
+    """Route definition for platform webhooks managed by the Extensions Service."""
+
+    callback: WebhookRouteCallback
+    criteria_sets: tuple[Mapping[str, str], ...]
+    description: str
+    webhook_type: WebhookType | str

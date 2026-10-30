@@ -18,7 +18,7 @@ The repository combines:
 The main extension authoring concepts are:
 
 - `ExtensionApp`: the root SDK object for one extension package; it owns route registration, metadata generation, and optional context adaptation
-- route-family routers: `EventRouter`, `APIRouter`, `ScheduleRouter`, and `PlugRouter` group related handlers under a shared prefix before they are included in the extension app
+- route-family routers: `EventRouter`, `APIRouter`, `ScheduleRouter`, `PlugRouter`, and `WebhookRouter` group related handlers under a shared prefix before they are included in the extension app
 - event handlers: task and non-task callbacks registered on `EventRouter` and exposed as FastAPI routes by the runtime
 - pipeline primitives: `ExecutionContext`, specialized order/agreement contexts, `BasePipeline`, and `BaseStep` provide reusable multi-step processing patterns
 
@@ -40,6 +40,7 @@ The main package lives under [`mpt_extension_sdk/`](../mpt_extension_sdk).
 - [`observability/`](../mpt_extension_sdk/observability): tracing bootstrap, instrumentation, and SDK-level observability hooks
 - [`models/`](../mpt_extension_sdk/models): typed Marketplace domain models used across contexts and services, plus `TaskLog` for the log records a task handler writes to its task
 - [`errors/`](../mpt_extension_sdk/errors): runtime, pipeline, and mapping exceptions
+- [`webhooks/`](../mpt_extension_sdk/webhooks): the platform webhook types (`WebhookType`) and the object type each one carries (`WebhookObjectType`)
 
 ## Main Entry Points
 
@@ -103,14 +104,16 @@ be sync or async.
 
 The `event`, `api`, and `schedule` route families are implemented end-to-end in
 runtime request handling. The `plug` route family is implemented as declarative
-metadata with static asset exposure under `/static`. What each family publishes in
-`meta.yaml` is described in [sdk_usage/cli.md](sdk_usage/cli.md#metadata-metayaml).
+metadata with static asset exposure under `/static`. The `webhook` route family is
+only published in metadata for now; the runtime refuses to mount it. What each
+family publishes in `meta.yaml` is described in [sdk_usage/cli.md](sdk_usage/cli.md#metadata-metayaml).
 
 Each route family documents its own contract:
 
 - events: [sdk_usage/events.md](sdk_usage/events.md)
 - schedules: [sdk_usage/schedules.md](sdk_usage/schedules.md)
 - API routes, deferrable endpoints included: [sdk_usage/api.md](sdk_usage/api.md)
+- webhooks: [sdk_usage/webhooks.md](sdk_usage/webhooks.md)
 - plugs: [sdk_usage/plugs.md](sdk_usage/plugs.md)
 
 Error mapping for all of them is described in

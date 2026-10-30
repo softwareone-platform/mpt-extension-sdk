@@ -8,6 +8,7 @@ class RouteType(StrEnum):
     API = "api"
     SCHEDULE = "schedule"
     PLUG = "plug"
+    WEBHOOK = "webhook"
 
 
 class EventDeliveryMode(StrEnum):

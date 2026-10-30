@@ -6,7 +6,14 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from mpt_extension_sdk import APIRouter, EventRouter, Plug, PlugRouter, ScheduleRouter
+from mpt_extension_sdk import (
+    APIRouter,
+    EventRouter,
+    Plug,
+    PlugRouter,
+    ScheduleRouter,
+    WebhookRouter,
+)
 from mpt_extension_sdk.api import APIResponse
 from mpt_extension_sdk.errors.runtime import ConfigError
 from mpt_extension_sdk.extension_app import ExtensionApp
@@ -341,6 +348,22 @@ def test_register_not_supported_ext_routes(dummy_handler):
         ConfigError,
         match="Only event, api, schedule, and plug routes are supported",
     ):
+        runtime_app.register_extension_routes(app, extension_app)
+
+
+def test_register_rejects_webhook_routes(dummy_handler):
+    app = FastAPI()
+    extension_app = ExtensionApp()
+    router = WebhookRouter(prefix="/webhooks")
+    router.webhook(
+        "/orders/validate",
+        type="validatePurchaseOrderDraft",
+        description="Validate draft orders",
+        criteria={"product.id": "PRD-1111-1111"},
+    )(dummy_handler)
+    extension_app.include_router(router)
+
+    with pytest.raises(ConfigError, match="Only event, api, schedule, and plug routes"):
         runtime_app.register_extension_routes(app, extension_app)
 
 
