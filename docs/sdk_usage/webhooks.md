@@ -46,6 +46,12 @@ async def validate_purchase_order_draft(ctx: OrderWebhookContext) -> WebhookResp
 - `criteria`: one mapping, or a list of mappings to request one platform webhook
   per mapping on the same route, for example one per product. Keys and values
   must be non-empty strings.
+- `context_adapter_type`: adapts the webhook context to a custom context, as in
+  `EventRouter` (see
+  [contexts-and-pipelines.md](contexts-and-pipelines.md#adapt-the-execution-context)).
+  The adapter must inherit from the context the webhook type receives, for
+  example `OrderWebhookContext`. `WebhookRouter(context_adapter_type=...)` sets
+  the default of every route of the router.
 
 The mock app's `validate_purchase_order_draft`
 ([`mock_app/api/routes/webhook.py`](../../mock_app/api/routes/webhook.py)) is a
@@ -63,6 +69,13 @@ The SDK rejects a declaration with a `ValueError` when it is registered:
 - the type or the description is empty;
 - `criteria` is empty, contains an empty mapping, or repeats a mapping;
 - another webhook route already declares the same type with the same criteria.
+
+It also rejects, with a `TypeError`, a context adapter that does not inherit
+from the context of the webhook type, for example an adapter of
+`OrderWebhookContext` on a `validateAccount` route. A webhook type the SDK does
+not know receives `WebhookContext`, so its adapter cannot inherit from a typed
+context such as `AccountWebhookContext`. The check covers the adapter set on the
+route and the default of the router.
 
 ## Webhook context
 

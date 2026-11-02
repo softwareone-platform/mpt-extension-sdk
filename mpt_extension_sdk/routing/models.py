@@ -101,3 +101,4 @@ class WebhookRouteDefinition(BaseRouteDefinition):
     criteria_sets: tuple[Mapping[str, str], ...]
     description: str
     webhook_type: WebhookType | str
+    context_adapter_type: type[ContextAdapter] | None = None

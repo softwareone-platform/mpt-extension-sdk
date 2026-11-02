@@ -5,7 +5,12 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from mpt_extension_sdk.extension_validator import ExtensionValidator
-from mpt_extension_sdk.routing import APIRouteDefinition, BaseRouteDefinition, EventRouteDefinition
+from mpt_extension_sdk.routing import (
+    APIRouteDefinition,
+    BaseRouteDefinition,
+    EventRouteDefinition,
+    WebhookRouteDefinition,
+)
 from mpt_extension_sdk.routing.routers.base import BaseExtensionRouter
 from mpt_extension_sdk.routing.validators import RouteValidator
 from mpt_extension_sdk.runtime.builders import MetaConfigBuilder
@@ -106,7 +111,9 @@ class ExtensionApp:
         """
         return self._startup_hooks.register(hook)
 
-    def build_context(self, route: EventRouteDefinition, context: Any) -> Any:
+    def build_context(
+        self, route: EventRouteDefinition | WebhookRouteDefinition, context: Any
+    ) -> Any:
         """Adapt a base SDK context to the route-specific custom context."""
         adapter_type = route.context_adapter_type
         if adapter_type is None:

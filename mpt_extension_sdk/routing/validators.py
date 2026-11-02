@@ -9,6 +9,7 @@ from mpt_extension_sdk.routing.models import TaskTimeouts
 from mpt_extension_sdk.routing.paths import RoutePath
 from mpt_extension_sdk.routing.types import APIRouteCallback
 from mpt_extension_sdk.schemas import BaseSchema
+from mpt_extension_sdk.webhooks.context import WEBHOOK_CONTEXT_TYPES
 
 if TYPE_CHECKING:
     from mpt_extension_sdk.routing.models import BaseRouteDefinition
@@ -106,6 +107,28 @@ class RouteValidator:  # noqa: WPS214
             cls._validate_api_route_uniqueness(route, existing_path_routes)
             return
         cls._validate_non_api_route_uniqueness(route, routes, existing_path_routes)
+
+    @classmethod
+    def validate_webhook_context_adapter_type(
+        cls, context_type: type[object] | None, webhook_context_type: type[object]
+    ) -> None:
+        """Validate that a webhook adapter belongs to the context of its webhook type."""
+        if context_type is None:
+            return
+        if not issubclass(context_type, webhook_context_type):
+            raise TypeError(
+                f"Configured context type '{context_type.__name__}' must inherit from "
+                f"'{webhook_context_type.__name__}'"
+            )
+        for typed_context_type in WEBHOOK_CONTEXT_TYPES.values():
+            if typed_context_type is not webhook_context_type and issubclass(
+                context_type, typed_context_type
+            ):
+                raise TypeError(
+                    f"Configured context type '{context_type.__name__}' must not inherit from "
+                    f"'{typed_context_type.__name__}': the webhook receives "
+                    f"'{webhook_context_type.__name__}'"
+                )
 
     @classmethod
     def _validate_api_route_uniqueness(

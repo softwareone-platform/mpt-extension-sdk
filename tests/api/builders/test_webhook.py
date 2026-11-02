@@ -1,5 +1,6 @@
 from collections.abc import Callable
 from contextlib import contextmanager
+from dataclasses import dataclass
 from http import HTTPStatus
 
 import pytest
@@ -8,6 +9,7 @@ from fastapi.testclient import TestClient
 from opentelemetry.trace import StatusCode
 
 from mpt_extension_sdk.api.builders.webhook import create_webhook_route
+from mpt_extension_sdk.context import ContextAdapter
 from mpt_extension_sdk.extension_app import ExtensionApp
 from mpt_extension_sdk.observability.tracing import RouteSpanAttributes
 from mpt_extension_sdk.routing import WebhookRouter
@@ -19,6 +21,21 @@ from mpt_extension_sdk.webhooks import (
     WebhookResponse,
     WebhookType,
 )
+
+
+@dataclass(kw_only=True)
+class FakeOrderWebhookContext(OrderWebhookContext, ContextAdapter):
+    marker: str = ""
+
+    @classmethod
+    def from_context(cls, ctx):
+        return cls(**ctx.__dict__, marker="adapted")
+
+
+class FakeFailingAdapter(OrderWebhookContext, ContextAdapter):
+    @classmethod
+    def from_context(cls, ctx):
+        raise ValueError("Adapter failed")
 
 
 @pytest.fixture
@@ -47,6 +64,7 @@ def webhook_client(api_route_dependencies, api_service_type_factory, mock_api_se
     def factory(
         route_handler,
         webhook_type=WebhookType.VALIDATE_PURCHASE_ORDER_DRAFT,
+        context_adapter_type=None,
     ):
         extension_app = ExtensionApp(
             mpt_api_service_type=api_service_type_factory(mock_api_service)
@@ -57,6 +75,7 @@ def webhook_client(api_route_dependencies, api_service_type_factory, mock_api_se
             type=webhook_type,
             description="Validate",
             criteria={"product.id": "PRD-1"},
+            context_adapter_type=context_adapter_type,
         )(route_handler)
         extension_app.include_router(webhook_router)
         app = FastAPI()
@@ -123,6 +142,29 @@ def test_webhook_unknown_type_gets_payload(webhook_client, webhook_handler, auth
 
     assert result.status_code == HTTPStatus.OK
     assert webhook_handler.call_args.args[0].__class__ is WebhookContext
+
+
+def test_webhook_route_adapts_context(webhook_client, webhook_handler, auth_headers, order_payload):
+    webhook_handler.return_value = WebhookResponse.ok({})
+    client = webhook_client(webhook_handler, context_adapter_type=FakeOrderWebhookContext)
+
+    client.post("/webhooks/validate", json=order_payload, headers=auth_headers)  # act
+
+    context = webhook_handler.call_args.args[0]
+    assert (context.marker, context.order.id) == ("adapted", "ORD-1")
+
+
+def test_webhook_adapter_error_is_unexpected(
+    webhook_client, webhook_handler, auth_headers, order_payload
+):
+    client = webhook_client(webhook_handler, context_adapter_type=FakeFailingAdapter)
+
+    result = client.post(
+        "/webhooks/validate", json=order_payload, headers={**auth_headers, "x-request-id": "corr-1"}
+    )
+
+    assert (result.status_code, result.json()["id"]) == (HTTPStatus.INTERNAL_SERVER_ERROR, "EXT001")
+    webhook_handler.assert_not_called()
 
 
 def test_webhook_route_rejects_wrong_payload(webhook_client, webhook_handler, auth_headers):

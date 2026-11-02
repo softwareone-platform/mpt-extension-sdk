@@ -1,26 +1,13 @@
 import logging
-from types import MappingProxyType
 from typing import Any, override
 
 from pydantic import ValidationError
 
 from mpt_extension_sdk.api.context import AuthenticatedRequestContext
 from mpt_extension_sdk.pipeline.builders.base import ContextBuilder, ContextResources
-from mpt_extension_sdk.webhooks import (
-    AccountWebhookContext,
-    OrderWebhookContext,
-    RequestWebhookContext,
-    WebhookContext,
-    WebhookObjectType,
-    WebhookType,
-)
+from mpt_extension_sdk.webhooks import WebhookContext, WebhookType
+from mpt_extension_sdk.webhooks.context import get_webhook_context_type
 from mpt_extension_sdk.webhooks.errors import WebhookInvalidPayloadError
-
-WEBHOOK_CONTEXT_TYPES = MappingProxyType({
-    WebhookObjectType.ACCOUNT: AccountWebhookContext,
-    WebhookObjectType.ORDER: OrderWebhookContext,
-    WebhookObjectType.REQUEST: RequestWebhookContext,
-})
 
 
 class WebhookContextBuilder(ContextBuilder[WebhookContext]):
@@ -50,7 +37,7 @@ class WebhookContextBuilder(ContextBuilder[WebhookContext]):
             WebhookInvalidPayloadError: The payload does not match the webhook object type.
         """
         try:
-            return self._context_type().from_payload(
+            return get_webhook_context_type(self.webhook_type).from_payload(
                 self.payload,
                 logger=self.handler_logger,
                 request=self.request_context,
@@ -63,8 +50,3 @@ class WebhookContextBuilder(ContextBuilder[WebhookContext]):
                 error.errors(include_url=False, include_context=False, include_input=False),
             )
             raise WebhookInvalidPayloadError("The webhook body does not match its type") from error
-
-    def _context_type(self) -> type[WebhookContext]:
-        if not isinstance(self.webhook_type, WebhookType):
-            return WebhookContext
-        return WEBHOOK_CONTEXT_TYPES[self.webhook_type.object_type]

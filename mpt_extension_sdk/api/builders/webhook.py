@@ -14,6 +14,7 @@ def create_webhook_route(route: WebhookRouteDefinition, extension_app: Extension
     executor = WebhookRequestExecutor(
         auth_service=RequestAuthenticationService(),
         context_factory=RouteContextFactory(extension_app.mpt_api_service_type),
+        extension_app=extension_app,
         handler_logger=logging.getLogger(route.callback.__module__),
         route=route,
     )

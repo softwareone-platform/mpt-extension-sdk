@@ -1,7 +1,13 @@
 from dataclasses import dataclass, field
+from typing import Final, cast
 
+from mpt_extension_sdk.context import ContextAdapter
 from mpt_extension_sdk.routing import BaseRouteDefinition
 from mpt_extension_sdk.routing.validators import RouteValidator
+
+# Default of a decorator's `context_adapter_type`: the route takes the router adapter.
+# `None` cannot mark it, because it means the route has no adapter.
+NO_CONTEXT_ADAPTER: Final[object] = object()
 
 
 @dataclass
@@ -45,6 +51,20 @@ class BaseExtensionRouter:
         route_payload = {**route.__dict__}
         route_payload["path"] = self._join_paths(prefix, route.path)
         return type(route)(**route_payload)
+
+    def _resolve_context_adapter_type(
+        self,
+        context_adapter_type: type[ContextAdapter] | object | None,
+        router_adapter_type: type[ContextAdapter] | None,
+    ) -> type[ContextAdapter] | None:
+        resolved_adapter_type = cast(
+            "type[ContextAdapter] | None",
+            router_adapter_type
+            if context_adapter_type is NO_CONTEXT_ADAPTER
+            else context_adapter_type,
+        )
+        RouteValidator.validate_context_adapter_type(resolved_adapter_type)
+        return resolved_adapter_type
 
     def _register_base_route(self, route: BaseRouteDefinition) -> None:
         """Register a route definition on the router."""
