@@ -5,7 +5,12 @@ from mpt_extension_sdk.models.account import (
     BuyerAccount,
     SellerAccount,
 )
-from mpt_extension_sdk.models.agreement import Agreement, AgreementLine, AgreementStatus
+from mpt_extension_sdk.models.agreement import (
+    Agreement,
+    AgreementLine,
+    AgreementSimple,
+    AgreementStatus,
+)
 from mpt_extension_sdk.models.asset import Asset, AssetLine, AssetStatus
 from mpt_extension_sdk.models.authorization import Authorization
 from mpt_extension_sdk.models.extension import Extension, UnknownExtensionStatusWarning
@@ -18,10 +23,11 @@ from mpt_extension_sdk.models.installation import (
     UnknownInstallationStatusWarning,
 )
 from mpt_extension_sdk.models.licensee import Licensee, LicenseeStatus
-from mpt_extension_sdk.models.order import Order, OrderLine, OrderStatus
+from mpt_extension_sdk.models.order import Order, OrderLine, OrderSimple, OrderStatus
 from mpt_extension_sdk.models.parameter import ParameterBag
 from mpt_extension_sdk.models.price import Price
 from mpt_extension_sdk.models.product import Product, ProductItem
+from mpt_extension_sdk.models.request import Request, RequestStatus
 from mpt_extension_sdk.models.status import CaseInsensitiveStrEnum, UnknownStatusWarning
 from mpt_extension_sdk.models.subscription import (
     Subscription,
@@ -37,6 +43,7 @@ __all__ = [  # noqa: WPS410
     "AccountToken",
     "Agreement",
     "AgreementLine",
+    "AgreementSimple",
     "AgreementStatus",
     "Asset",
     "AssetLine",
@@ -53,11 +60,14 @@ __all__ = [  # noqa: WPS410
     "LicenseeStatus",
     "Order",
     "OrderLine",
+    "OrderSimple",
     "OrderStatus",
     "ParameterBag",
     "Price",
     "Product",
     "ProductItem",
+    "Request",
+    "RequestStatus",
     "SellerAccount",
     "Subscription",
     "SubscriptionLine",

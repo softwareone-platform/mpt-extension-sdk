@@ -38,6 +38,7 @@ class ParameterValue(BaseModel):
     display_value: str | None = Field(
         default=None, serialization_alias="displayValue", validation_alias="displayValue"
     )
+    error: dict[str, Any] | None = None
     external_id: str | None = Field(
         default=None, serialization_alias="externalId", validation_alias="externalId"
     )
@@ -123,6 +124,14 @@ class ParameterBag(BaseModel):  # noqa: WPS214
                 "fulfillment": self._with_phase_visibility(self.fulfillment, visible_set),
             }
         )
+
+    def without_ordering_errors(self) -> Self:
+        """Return a copy with `None` as the error of every ordering parameter."""
+        ordering = [parameter.model_copy(update={"error": None}) for parameter in self.ordering]
+        parameter_bag = self.model_copy(update={"ordering": ordering})
+        if "ordering" not in self.model_fields_set:
+            parameter_bag.model_fields_set.discard("ordering")
+        return parameter_bag
 
     def _get_param_value(self, external_id: str, phase: str) -> Any:
         """Return the raw parameter value for an external ID within a phase."""

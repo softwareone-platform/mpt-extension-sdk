@@ -61,31 +61,19 @@ class AgreementLine(BaseModel):
         return self
 
 
-class Agreement(BaseModel):
-    """Agreement model."""
+class AgreementSimple(BaseModel):
+    """Agreement with its own fields only, as embedded in webhook payloads."""
 
     id: str
-    icon: str | None = None
-    name: str
+    name: str | None = None
     revision: int | None = None
     status: AgreementStatus | str | None = Field(default=None, union_mode="left_to_right")
 
-    authorization: Authorization | None = None
-    assets: list[AssetSimple] = Field(default_factory=list)
-    buyer: BuyerAccount | None = None
-    client: Account
     external_ids: ExternalIds = Field(
         default_factory=ExternalIds,
         serialization_alias="externalIds",
         validation_alias="externalIds",
     )
-    licensee: Licensee
-    lines: list[AgreementLine] = Field(default_factory=list)
-    parameters: ParameterBag = Field(default_factory=ParameterBag)  # noqa: WPS110
-    product: Product
-    seller: SellerAccount | None = None
-    subscriptions: list[SubscriptionSimple] = Field(default_factory=list)
-    vendor: Account | None = None
 
     @model_validator(mode="after")
     def _warn_on_unknown_status(self) -> Self:
@@ -95,3 +83,22 @@ class Agreement(BaseModel):
                 "Agreement", self.id, self.status, AgreementStatus, UnknownAgreementStatusWarning
             )
         return self
+
+
+class Agreement(AgreementSimple):
+    """Agreement model with its relations, as returned by the agreements API."""
+
+    icon: str | None = None
+    name: str
+
+    authorization: Authorization | None = None
+    assets: list[AssetSimple] = Field(default_factory=list)
+    buyer: BuyerAccount | None = None
+    client: Account
+    licensee: Licensee
+    lines: list[AgreementLine] = Field(default_factory=list)
+    parameters: ParameterBag = Field(default_factory=ParameterBag)  # noqa: WPS110
+    product: Product
+    seller: SellerAccount | None = None
+    subscriptions: list[SubscriptionSimple] = Field(default_factory=list)
+    vendor: Account | None = None
