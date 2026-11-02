@@ -10,6 +10,7 @@ from mpt_extension_sdk.api.builders.errors import RequestRejectedError, WebhookE
 from mpt_extension_sdk.api.builders.handlers import resolve_handler_result
 from mpt_extension_sdk.api.builders.request_executor import RouteRequestExecutor
 from mpt_extension_sdk.api.context import AuthenticatedRequestContext
+from mpt_extension_sdk.extension_app import ExtensionApp
 from mpt_extension_sdk.observability.tracing import (
     RouteSpanAttributes,
     record_exception,
@@ -29,6 +30,7 @@ class WebhookRequestExecutor(RouteRequestExecutor[WebhookContext, WebhookRouteDe
         *,
         auth_service: RequestAuthenticationService,
         context_factory: RouteContextFactory,
+        extension_app: ExtensionApp,
         handler_logger: logging.Logger,
         route: WebhookRouteDefinition,
     ) -> None:
@@ -39,6 +41,7 @@ class WebhookRequestExecutor(RouteRequestExecutor[WebhookContext, WebhookRouteDe
             handler_logger=handler_logger,
             route=route,
         )
+        self.extension_app = extension_app
 
     @override
     async def _build_context(self, request: Request, auth_context: AuthContext) -> WebhookContext:
@@ -59,7 +62,7 @@ class WebhookRequestExecutor(RouteRequestExecutor[WebhookContext, WebhookRouteDe
     @override
     async def _run(self, context: WebhookContext, request: Request, span: Span) -> Response:
         try:
-            webhook_response = await resolve_handler_result(self.route.callback(context))
+            webhook_response = await self._call_handler(context)
         except WebhookError as error:
             record_exception(span, error)
             self.handler_logger.info(
@@ -79,6 +82,10 @@ class WebhookRequestExecutor(RouteRequestExecutor[WebhookContext, WebhookRouteDe
             f"Webhook {webhook_type}",
             RouteSpanAttributes.from_route(self.route, auth_context),
         )
+
+    async def _call_handler(self, context: WebhookContext) -> object:
+        handler_context = self.extension_app.build_context(self.route, context)
+        return await resolve_handler_result(self.route.callback(handler_context))
 
     async def _read_payload(self, request: Request) -> dict[str, Any]:
         try:

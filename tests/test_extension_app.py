@@ -20,10 +20,12 @@ from mpt_extension_sdk.routing import (
     PlugRouter,
     RouteType,
 )
+from mpt_extension_sdk.routing.models import WebhookRouteDefinition
 from mpt_extension_sdk.routing.routers.schedule import ScheduleRouter
 from mpt_extension_sdk.runtime.models import MetaConfig
 from mpt_extension_sdk.services.mpt_api_service import MPTAPIService
 from mpt_extension_sdk.settings.extension import BaseExtensionSettings
+from mpt_extension_sdk.webhooks import WebhookContext
 
 
 def test_event_router_registers_non_task_route(dummy_handler, extension_router):
@@ -521,6 +523,32 @@ def test_ext_app_build_ctx_rejects_wrong_subtype(
     )
 
     with pytest.raises(TypeError, match="must inherit from 'OrderContext'"):
+        ExtensionApp().build_context(route, context)
+
+
+def test_ext_app_rejects_wrong_webhook_adapter(mocker, logger, dummy_handler):
+    context = WebhookContext(
+        logger=logger,
+        mpt_api_service=mocker.sentinel.mpt_api_service,
+        vendor_mpt_api_service=mocker.sentinel.vendor_mpt_api_service,
+        ext_settings=mocker.sentinel.ext_settings,
+        runtime_settings=mocker.sentinel.runtime_settings,
+        auth=mocker.sentinel.auth,
+        payload={"id": "ANS-1"},
+        request=mocker.sentinel.request,
+    )
+    route = WebhookRouteDefinition(
+        name="validate_answer",
+        path="/validate",
+        route_type=RouteType.WEBHOOK,
+        callback=dummy_handler,
+        criteria_sets=({"form.id": "FRM-1"},),
+        description="Validate answers",
+        webhook_type="validateHelpdeskAnswer",
+        context_adapter_type=WrongOrderAdapter,
+    )
+
+    with pytest.raises(TypeError, match="must inherit from 'WebhookContext'"):
         ExtensionApp().build_context(route, context)
 
 

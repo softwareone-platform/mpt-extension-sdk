@@ -5,11 +5,9 @@ from typing import cast
 from mpt_extension_sdk.context import ContextAdapter
 from mpt_extension_sdk.routing.enums import EventDeliveryMode, RouteType
 from mpt_extension_sdk.routing.models import EventRouteDefinition
-from mpt_extension_sdk.routing.routers.base import BaseExtensionRouter
+from mpt_extension_sdk.routing.routers.base import NO_CONTEXT_ADAPTER, BaseExtensionRouter
 from mpt_extension_sdk.routing.types import EventRouteCallback
 from mpt_extension_sdk.routing.validators import RouteValidator
-
-_NO_CONTEXT_ADAPTER = object()
 
 
 @dataclass
@@ -28,7 +26,7 @@ class EventRouter(BaseExtensionRouter):
         name: str,
         event: str,
         condition: str | None = None,
-        context_adapter_type: type[ContextAdapter] | object | None = _NO_CONTEXT_ADAPTER,
+        context_adapter_type: type[ContextAdapter] | object | None = NO_CONTEXT_ADAPTER,
     ) -> Callable[[EventRouteCallback], EventRouteCallback]:
         """Register a non-task event handler on the router."""
         return self._create_event_decorator(
@@ -38,11 +36,7 @@ class EventRouter(BaseExtensionRouter):
                 "event": event,
                 "condition": condition,
                 "delivery_mode": EventDeliveryMode.EVENT,
-                "context_adapter_type": (
-                    self.context_adapter_type
-                    if context_adapter_type is _NO_CONTEXT_ADAPTER
-                    else context_adapter_type
-                ),
+                "context_adapter_type": context_adapter_type,
             }
         )
 
@@ -52,7 +46,7 @@ class EventRouter(BaseExtensionRouter):
         name: str,
         event: str,
         condition: str | None = None,
-        context_adapter_type: type[ContextAdapter] | object | None = _NO_CONTEXT_ADAPTER,
+        context_adapter_type: type[ContextAdapter] | object | None = NO_CONTEXT_ADAPTER,
     ) -> Callable[[EventRouteCallback], EventRouteCallback]:
         """Register a task-based event handler on the router."""
         return self._create_event_decorator(
@@ -62,11 +56,7 @@ class EventRouter(BaseExtensionRouter):
                 "event": event,
                 "condition": condition,
                 "delivery_mode": EventDeliveryMode.TASK,
-                "context_adapter_type": (
-                    self.context_adapter_type
-                    if context_adapter_type is _NO_CONTEXT_ADAPTER
-                    else context_adapter_type
-                ),
+                "context_adapter_type": context_adapter_type,
             }
         )
 
@@ -76,10 +66,9 @@ class EventRouter(BaseExtensionRouter):
         event = cast(str, definition_payload["event"])
         if not event.strip():
             raise ValueError("Route event cannot be empty")
-        resolved_adapter_type = cast(
-            "type[ContextAdapter] | None", definition_payload["context_adapter_type"]
+        resolved_adapter_type = self._resolve_context_adapter_type(
+            definition_payload["context_adapter_type"], self.context_adapter_type
         )
-        RouteValidator.validate_context_adapter_type(resolved_adapter_type)
         normalized_path = self._join_paths(self.prefix, cast(str, definition_payload["path"]))
 
         def decorator(event_handler: EventRouteCallback) -> EventRouteCallback:

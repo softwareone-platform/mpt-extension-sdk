@@ -3,10 +3,13 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from types import MappingProxyType
 
+from mpt_extension_sdk.context import ContextAdapter
 from mpt_extension_sdk.routing.enums import RouteType
 from mpt_extension_sdk.routing.models import WebhookRouteDefinition
-from mpt_extension_sdk.routing.routers.base import BaseExtensionRouter
+from mpt_extension_sdk.routing.routers.base import NO_CONTEXT_ADAPTER, BaseExtensionRouter
 from mpt_extension_sdk.routing.types import WebhookRouteCallback
+from mpt_extension_sdk.routing.validators import RouteValidator
+from mpt_extension_sdk.webhooks.context import get_webhook_context_type
 from mpt_extension_sdk.webhooks.enums import WebhookType
 
 logger = logging.getLogger(__name__)
@@ -19,13 +22,20 @@ type WebhookCriteria = Criteria | Sequence[Criteria]
 class WebhookRouter(BaseExtensionRouter):
     """Router object for platform webhook handlers."""
 
-    def webhook(
+    context_adapter_type: type[ContextAdapter] | None = None
+
+    def __post_init__(self) -> None:
+        """Validate the default router adapter when configured."""
+        RouteValidator.validate_context_adapter_type(self.context_adapter_type)
+
+    def webhook(  # noqa: WPS211
         self,
         path: str,
         *,
         type: WebhookType | str,  # ruff:ignore[builtin-argument-shadowing] - metadata contract uses "type"
         description: str,
         criteria: WebhookCriteria,
+        context_adapter_type: type[ContextAdapter] | object | None = NO_CONTEXT_ADAPTER,
     ) -> Callable[[WebhookRouteCallback], WebhookRouteCallback]:
         """Register a webhook handler.
 
@@ -38,6 +48,12 @@ class WebhookRouter(BaseExtensionRouter):
         if not description.strip():
             raise ValueError("Webhook description cannot be empty")
         criteria_sets = self._validate_criteria_sets(criteria)
+        resolved_adapter_type = self._resolve_context_adapter_type(
+            context_adapter_type, self.context_adapter_type
+        )
+        RouteValidator.validate_webhook_context_adapter_type(
+            resolved_adapter_type, get_webhook_context_type(webhook_type)
+        )
         normalized_path = self._join_paths(self.prefix, path)
 
         def decorator(route_handler: WebhookRouteCallback) -> WebhookRouteCallback:
@@ -50,14 +66,12 @@ class WebhookRouter(BaseExtensionRouter):
                     criteria_sets=criteria_sets,
                     description=description.strip(),
                     webhook_type=webhook_type,
+                    context_adapter_type=resolved_adapter_type,
                 )
             )
             return route_handler
 
         return decorator
-
-    def _criteria_key(self, criteria: Criteria) -> frozenset[tuple[str, str]]:
-        return frozenset(criteria.items())
 
     def _is_filled(self, text: object) -> bool:
         return isinstance(text, str) and bool(text.strip())
@@ -95,6 +109,7 @@ class WebhookRouter(BaseExtensionRouter):
         if not criteria_list:
             raise ValueError("Webhook criteria cannot be empty")
         criteria_sets = tuple(map(self._validate_criteria, criteria_list))
-        if len(set(map(self._criteria_key, criteria_sets))) != len(criteria_sets):
+        unique_criteria = {frozenset(criteria_set.items()) for criteria_set in criteria_sets}
+        if len(unique_criteria) != len(criteria_sets):
             raise ValueError("Webhook criteria cannot be repeated")
         return criteria_sets
