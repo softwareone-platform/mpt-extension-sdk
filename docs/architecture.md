@@ -40,13 +40,13 @@ The main package lives under [`mpt_extension_sdk/`](../mpt_extension_sdk).
 - [`observability/`](../mpt_extension_sdk/observability): tracing bootstrap, instrumentation, and SDK-level observability hooks
 - [`models/`](../mpt_extension_sdk/models): typed Marketplace domain models used across contexts and services, plus `TaskLog` for the log records a task handler writes to its task
 - [`errors/`](../mpt_extension_sdk/errors): runtime, pipeline, and mapping exceptions
-- [`webhooks/`](../mpt_extension_sdk/webhooks): the platform webhook types (`WebhookType`) and the object type each one carries (`WebhookObjectType`)
+- [`webhooks/`](../mpt_extension_sdk/webhooks): the platform webhook types (`WebhookType`, `WebhookObjectType`), `WebhookContext`, `WebhookResponse`, `WebhookError`, and the `WebhookError` subclasses the SDK answers with (`EXT001`-`EXT003`)
 
 ## Main Entry Points
 
 - [`mpt_extension_sdk/extension_app.py`](../mpt_extension_sdk/extension_app.py): exposes `ExtensionApp`
 - [`mpt_extension_sdk/routing/`](../mpt_extension_sdk/routing): defines route-family routers and route metadata types
-- [`mpt_extension_sdk/api/builders/`](../mpt_extension_sdk/api/builders): FastAPI route builders for API, deferrable API, event, and schedule routes
+- [`mpt_extension_sdk/api/builders/`](../mpt_extension_sdk/api/builders): FastAPI route builders for API, deferrable API, event, schedule, and webhook routes
 - [`mpt_extension_sdk/runtime/app.py`](../mpt_extension_sdk/runtime/app.py): creates the FastAPI app, loads the exported extension app, and mounts routes
 - [`mpt_extension_sdk/runtime/main.py`](../mpt_extension_sdk/runtime/main.py): exports the ASGI application instance
 - [`mpt_extension_sdk/runtime/runner.py`](../mpt_extension_sdk/runtime/runner.py): runs the extension locally with `uvicorn` or on the platform with `ziticorn`
@@ -87,8 +87,8 @@ Every route family builds its handler context through `RouteContextFactory`
 (`pipeline/factory.py`). The factory checks that the token targets this extension,
 creates the account-scoped and vendor-scoped Marketplace services, and hands them,
 with the settings, to the `ContextBuilder` of the family in `pipeline/builders/`
-(`APIContextBuilder`, `EventContextBuilder`, `ScheduleContextBuilder`). Each route
-builder creates one factory when the route is mounted and passes it to the code
+(`APIContextBuilder`, `EventContextBuilder`, `ScheduleContextBuilder`,
+`WebhookContextBuilder`). Each route builder creates one factory when the route is mounted and passes it to the code
 that answers the request; the factory reads the process settings on each build, so
 mounting routes does not need them.
 
@@ -96,17 +96,17 @@ Synchronous HTTP routes share `RouteRequestExecutor`
 (`api/builders/request_executor.py`). It authenticates the request, builds the
 context, runs the handler inside the route span, and answers authentication and
 unexpected errors with the family's `RouteErrorResponseBuilder`
-(`api/builders/errors.py`). `APIRequestExecutor` implements it for API routes.
-`resolve_handler_result` (`api/builders/handlers.py`) lets event and API handlers
-be sync or async.
+(`api/builders/errors.py`). `APIRequestExecutor` implements it for API routes,
+and `WebhookRequestExecutor` (`api/builders/webhook_execution.py`) for webhook
+routes. `resolve_handler_result` (`api/builders/handlers.py`) lets event, API and
+webhook handlers be sync or async.
 
 ### Route families
 
-The `event`, `api`, and `schedule` route families are implemented end-to-end in
-runtime request handling. The `plug` route family is implemented as declarative
-metadata with static asset exposure under `/static`. The `webhook` route family is
-only published in metadata for now; the runtime refuses to mount it. What each
-family publishes in `meta.yaml` is described in [sdk_usage/cli.md](sdk_usage/cli.md#metadata-metayaml).
+The `event`, `api`, `schedule`, and `webhook` route families are implemented
+end-to-end in runtime request handling. The `plug` route family is implemented as
+declarative metadata with static asset exposure under `/static`. What each family
+publishes in `meta.yaml` is described in [sdk_usage/cli.md](sdk_usage/cli.md#metadata-metayaml).
 
 Each route family documents its own contract:
 

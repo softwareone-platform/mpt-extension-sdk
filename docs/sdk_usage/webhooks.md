@@ -1,12 +1,9 @@
 # Webhook Routes
 
-Use `WebhookRouter` to declare the platform webhooks an extension answers. The
-Extensions Service registers each webhook from the extension metadata, so the
-declaration is all the platform needs.
-
-The runtime does not serve webhook routes yet: an extension app that includes a
-`WebhookRouter` publishes its webhooks in `meta.yaml`, but the runtime refuses to
-mount them with a `ConfigError`.
+Use `WebhookRouter` when the platform must get an immediate answer from the
+extension, for example to validate a draft order while the user is in the order
+wizard. The Extensions Service registers each webhook from the extension
+metadata, so the declaration is all the platform needs.
 
 ## Declaring a webhook
 
@@ -15,7 +12,7 @@ function name.
 
 ```python
 from mpt_extension_sdk import WebhookRouter
-from mpt_extension_sdk.webhooks import WebhookType
+from mpt_extension_sdk.webhooks import WebhookContext, WebhookResponse, WebhookType
 
 webhook_router = WebhookRouter(prefix="/webhooks")
 
@@ -26,7 +23,8 @@ webhook_router = WebhookRouter(prefix="/webhooks")
     description="Validate purchase orders in Draft status",
     criteria={"product.id": "PRD-5516-5707"},
 )
-def validate_purchase_order_draft(ctx): ...
+def validate_purchase_order_draft(ctx: WebhookContext) -> WebhookResponse:
+    return WebhookResponse.ok(ctx.payload)
 ```
 
 - `path`: the route path, joined to the router prefix.
@@ -49,6 +47,34 @@ The SDK rejects a declaration with a `ValueError` when it is registered:
 - the type or the description is empty;
 - `criteria` is empty, contains an empty mapping, or repeats a mapping;
 - another webhook route already declares the same type with the same criteria.
+
+## Webhook context
+
+The handler receives a `WebhookContext`, sync or async. It exposes the
+`BaseContext` fields, `ctx.payload` (the webhook body) and `ctx.request` (the
+HTTP request, as in API routes).
+
+## Responses and errors
+
+| Handler outcome | HTTP response |
+| --- | --- |
+| Returns `WebhookResponse.ok(payload)` | `200` with the payload, without a `data` envelope |
+| Returns `WebhookResponse.error(error_id, message)` | `500`, or the given `status_code`, with `{"id": error_id, "message": message}` |
+| Raises `WebhookError(error_id, message)` | `500`, or the `status_code` of the error, with `{"id": error_id, "message": message}` |
+| Any other exception, or a return value that is not a `WebhookResponse` | `500` with `{"id": "EXT001", ...}` and the correlation id |
+| Missing or invalid token, or a token for another extension | `401` with `{"id": "EXT002", ...}` |
+| Body that is not a JSON object | `400` with `{"id": "EXT003", ...}` |
+
+`WebhookResponse.ok` leaves out model fields that were not set, so a model
+goes back with the shape it arrived with.
+
+The platform treats every answer that is not `200` as a failed call. Report
+business validation problems in the returned object, and keep errors for calls
+the extension cannot answer.
+
+Webhook calls are synchronous: there is no Task and no retry, and the platform
+stops waiting after its timeout. Keep handlers fast and move long work to an
+event handler or an API route.
 
 ## Metadata
 

@@ -8,6 +8,13 @@ from fastapi.responses import JSONResponse
 from mpt_extension_sdk.api.errors import APIError
 from mpt_extension_sdk.api.models.errors import ProblemDetails
 from mpt_extension_sdk.runtime.logging import correlation_id_ctx
+from mpt_extension_sdk.webhooks.errors import (
+    WebhookError,
+    WebhookInvalidPayloadError,
+    WebhookUnauthorizedError,
+    WebhookUnexpectedError,
+)
+from mpt_extension_sdk.webhooks.responses import WebhookResponse
 
 
 class RequestRejectedError(Exception):
@@ -71,3 +78,29 @@ class APIErrorResponseBuilder(RouteErrorResponseBuilder):
             title="Internal Server Error",
         )
         return self.build(error, instance=request.url.path, correlation_id=correlation_id_ctx.get())
+
+
+class WebhookErrorResponseBuilder(RouteErrorResponseBuilder):
+    """Build webhook error HTTP responses."""
+
+    @classmethod
+    def build(cls, error: WebhookError) -> JSONResponse:
+        """Create the error object response the platform expects from a webhook."""
+        return WebhookResponse.error(
+            error.error_id, error.message, status_code=error.status_code
+        ).to_http_response()
+
+    @classmethod
+    def invalid_payload(cls, message: str) -> JSONResponse:
+        """Return a `400` webhook error response for a body the SDK cannot read."""
+        return cls.build(WebhookInvalidPayloadError(message))
+
+    @override
+    def unauthorized(self, request: Request) -> Response:
+        """Return a `401` webhook error response."""
+        return self.build(WebhookUnauthorizedError())
+
+    @override
+    def unexpected(self, request: Request) -> Response:
+        """Return a `500` webhook error response carrying the correlation id."""
+        return self.build(WebhookUnexpectedError(correlation_id_ctx.get()))

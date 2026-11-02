@@ -346,12 +346,12 @@ def test_register_not_supported_ext_routes(dummy_handler):
 
     with pytest.raises(
         ConfigError,
-        match="Only event, api, schedule, and plug routes are supported",
+        match="Only event, api, schedule, plug, and webhook routes are supported",
     ):
         runtime_app.register_extension_routes(app, extension_app)
 
 
-def test_register_rejects_webhook_routes(dummy_handler):
+def test_register_webhook_routes(dummy_handler):
     app = FastAPI()
     extension_app = ExtensionApp()
     router = WebhookRouter(prefix="/webhooks")
@@ -363,8 +363,9 @@ def test_register_rejects_webhook_routes(dummy_handler):
     )(dummy_handler)
     extension_app.include_router(router)
 
-    with pytest.raises(ConfigError, match="Only event, api, schedule, and plug routes"):
-        runtime_app.register_extension_routes(app, extension_app)
+    runtime_app.register_extension_routes(app, extension_app)  # act
+
+    assert "/webhooks/orders/validate" in {route.path for route in app.routes}
 
 
 def test_middlewares_propagate_request_headers(middleware_test_app):
