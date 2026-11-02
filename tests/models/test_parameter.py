@@ -126,3 +126,36 @@ def test_with_visibility_updates_both_phases(parameter_bag):
 
     assert [parameter.constraints.hidden for parameter in result.ordering] == [False, False]
     assert [parameter.constraints.hidden for parameter in result.fulfillment] == [True, False]
+
+
+def test_without_ordering_errors_clears_errors(parameter_bag):
+    with_error = parameter_bag.with_ordering_error("ord-1", {"id": "ERR-1", "message": "Bad"})
+
+    result = with_error.without_ordering_errors()
+
+    assert [parameter.error for parameter in result.ordering] == [None, None]
+
+
+def test_ordering_errors_sent_as_empty(parameter_bag):
+    result = parameter_bag.without_ordering_errors()
+
+    assert [parameter.model_dump(exclude_unset=True)["error"] for parameter in result.ordering] == [
+        None,
+        None,
+    ]
+
+
+def test_ordering_errors_keep_fulfillment(parameter_bag):
+    with_error = parameter_bag.with_fulfillment_error("ful-1", {"id": "ERR-1", "message": "Bad"})
+
+    result = with_error.without_ordering_errors()
+
+    assert result.get_fulfillment_parameter("ful-1").error == {"id": "ERR-1", "message": "Bad"}
+
+
+def test_ordering_errors_keep_ordering_unset():
+    parameter_bag = ParameterBag.model_validate({"fulfillment": [{"externalId": "ful-1"}]})
+
+    result = parameter_bag.without_ordering_errors()
+
+    assert "ordering" not in result.model_dump(exclude_unset=True)

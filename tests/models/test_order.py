@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 import pytest
+from pydantic import ValidationError
 
 from mpt_extension_sdk.models import OrderStatus
 from mpt_extension_sdk.models.account import Account, SellerAccount
@@ -8,7 +9,12 @@ from mpt_extension_sdk.models.agreement import Agreement
 from mpt_extension_sdk.models.authorization import Authorization
 from mpt_extension_sdk.models.external_id import ExternalIds
 from mpt_extension_sdk.models.licensee import Licensee
-from mpt_extension_sdk.models.order import Order, OrderLine, UnknownOrderStatusWarning
+from mpt_extension_sdk.models.order import (
+    Order,
+    OrderLine,
+    OrderSimple,
+    UnknownOrderStatusWarning,
+)
 from mpt_extension_sdk.models.parameter import ParameterBag
 from mpt_extension_sdk.models.price import Price
 from mpt_extension_sdk.models.product import ExternalIds as ProductExternalIds
@@ -162,3 +168,102 @@ def test_order_defaults_parameter_bag(full_order_factory):
     result = order.parameters
 
     assert isinstance(result, ParameterBag)
+
+
+@pytest.fixture
+def order_simple_payload(order_payload):
+    agreement_reference = {"id": "AGR-1", "name": "Agreement", "status": "Draft"}
+    return order_payload | {"agreement": agreement_reference}
+
+
+def test_order_simple_accepts_agreement_reference(order_simple_payload):
+    result = OrderSimple.model_validate(order_simple_payload)
+
+    assert (result.agreement_id, result.agreement.name) == ("AGR-1", "Agreement")
+
+
+def test_order_rejects_agreement_reference(order_simple_payload):
+    with pytest.raises(ValidationError, match=r"agreement\.client"):
+        Order.model_validate(order_simple_payload)
+
+
+def test_order_is_an_order_simple(full_order_factory):
+    order = full_order_factory()
+
+    result = isinstance(order, OrderSimple)
+
+    assert result is True
+
+
+def test_order_simple_clears_errors(order_simple_payload):
+    error = {"id": "ERR-1", "message": "Invalid"}
+    order = OrderSimple.model_validate(
+        order_simple_payload
+        | {
+            "error": error,
+            "parameters": {"ordering": [{"externalId": "address", "error": error}]},
+        }
+    )
+
+    result = order.without_errors()
+
+    assert (result.error, result.parameters.get_ordering_parameter("address").error) == (
+        None,
+        None,
+    )
+
+
+def test_order_simple_sends_empty_error(order_simple_payload):
+    payload = {key: field for key, field in order_simple_payload.items() if key != "error"}
+    order = OrderSimple.model_validate(payload)
+
+    result = order.without_errors()
+
+    assert result.model_dump(exclude_unset=True)["error"] is None
+
+
+def test_order_simple_keeps_parameters_unset(order_simple_payload):
+    payload = {key: field for key, field in order_simple_payload.items() if key != "parameters"}
+    order = OrderSimple.model_validate(payload)
+
+    result = order.without_errors()
+
+    assert "parameters" not in result.model_dump(exclude_unset=True)
+
+
+def test_order_simple_sets_order_error(order_simple_payload):
+    order = OrderSimple.model_validate(order_simple_payload)
+
+    result = order.with_error({"id": "ERR-1", "message": "Invalid order"})
+
+    assert result.model_dump(exclude_unset=True)["error"] == {
+        "id": "ERR-1",
+        "message": "Invalid order",
+    }
+
+
+def test_order_simple_sets_ordering_error(order_simple_payload):
+    order = OrderSimple.model_validate(
+        order_simple_payload | {"parameters": {"ordering": [{"externalId": "address"}]}}
+    )
+
+    result = order.with_ordering_error("address", {"id": "ERR-1", "message": "Invalid"})
+
+    assert result.parameters.get_ordering_parameter("address").error == {
+        "id": "ERR-1",
+        "message": "Invalid",
+    }
+
+
+def test_order_simple_chains_errors(order_simple_payload):
+    error = {"id": "ERR-1", "message": "Invalid"}
+    order = OrderSimple.model_validate(
+        order_simple_payload | {"parameters": {"ordering": [{"externalId": "address"}]}}
+    )
+
+    result = order.without_errors().with_ordering_error("address", error).with_error(error)
+
+    assert (result.error, result.parameters.get_ordering_parameter("address").error) == (
+        error,
+        error,
+    )

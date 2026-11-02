@@ -1,9 +1,9 @@
-from typing import Self
+from typing import Any, Self
 
 from pydantic import Field, model_validator
 
 from mpt_extension_sdk.models.account import SellerAccount
-from mpt_extension_sdk.models.agreement import Agreement
+from mpt_extension_sdk.models.agreement import Agreement, AgreementSimple
 from mpt_extension_sdk.models.asset import Asset
 from mpt_extension_sdk.models.authorization import Authorization
 from mpt_extension_sdk.models.base import BaseModel
@@ -54,17 +54,18 @@ class OrderLine(BaseModel):
     subscription: Subscription | None = None
 
 
-class Order(BaseModel):  # noqa: WPS214
-    """Order."""
+class OrderSimple(BaseModel):  # noqa: WPS214
+    """Order whose agreement is an `AgreementSimple`, as sent in webhook payloads."""
 
     id: str
     revision: int | None = None
     status: OrderStatus | str = Field(union_mode="left_to_right")
     type: str
 
-    agreement: Agreement
+    agreement: AgreementSimple
     assets: list[Asset] = Field(default_factory=list)
     authorization: Authorization
+    error: dict[str, Any] | None = None
     external_ids: ExternalIds = Field(
         default_factory=ExternalIds,
         serialization_alias="externalIds",
@@ -126,6 +127,25 @@ class Order(BaseModel):  # noqa: WPS214
 
         raise ValueError(f"No line found for SKU: {sku}")
 
+    def with_error(self, error: dict[str, Any]) -> Self:
+        """Return a copy with `error` as the order error."""
+        return self.model_copy(update={"error": error})
+
+    def with_ordering_error(self, external_id: str, error: dict[str, Any]) -> Self:
+        """Return a copy with `error` on the ordering parameter `external_id`."""
+        return self.model_copy(
+            update={"parameters": self.parameters.with_ordering_error(external_id, error)}
+        )
+
+    def without_errors(self) -> Self:
+        """Return a copy with `None` as the order error and every ordering parameter error."""
+        order = self.model_copy(
+            update={"error": None, "parameters": self.parameters.without_ordering_errors()}
+        )
+        if "parameters" not in self.model_fields_set:
+            order.model_fields_set.discard("parameters")
+        return order
+
     @model_validator(mode="after")
     def _warn_on_unknown_status(self) -> Self:
         """Emit a warning when the status is not a known OrderStatus."""
@@ -133,3 +153,9 @@ class Order(BaseModel):  # noqa: WPS214
             "Order", self.id, self.status, OrderStatus, UnknownOrderStatusWarning
         )
         return self
+
+
+class Order(OrderSimple):
+    """Order with its full agreement, as returned by the orders API."""
+
+    agreement: Agreement

@@ -5,6 +5,7 @@ import pytest
 from mpt_extension_sdk.models.agreement import (
     Agreement,
     AgreementLine,
+    AgreementSimple,
     AgreementStatus,
     UnknownAgreementStatusWarning,
 )
@@ -96,3 +97,20 @@ def test_line_defaults_missing_status(agreement_line_payload):
 def test_status_rejects_non_string_lookup():
     with pytest.raises(ValueError, match="not a valid AgreementStatus"):
         AgreementStatus(0)
+
+
+def test_agreement_simple_reads_reference():
+    payload = {"id": "AGR-1", "href": "/commerce/agreements/AGR-1", "status": "Draft"}
+
+    result = AgreementSimple.from_payload(payload)
+
+    assert (result.id, result.status, result.name) == ("AGR-1", AgreementStatus.DRAFT, None)
+
+
+def test_agreement_simple_warns_on_unknown_status():
+    payload = {"id": "AGR-1", "status": "Archived"}
+
+    with pytest.warns(UnknownAgreementStatusWarning, match="Archived"):
+        result = AgreementSimple.from_payload(payload)
+
+    assert result.status == "Archived"
