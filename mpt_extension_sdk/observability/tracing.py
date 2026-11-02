@@ -127,13 +127,19 @@ def set_attributes(span: Span, attributes: Attributes) -> None:
 
 
 def get_business_attributes(ctx: Any) -> Attributes:
-    """Return business dimensions for the current agreement/order context."""
+    """Return business dimensions for the business object of the context."""
     attributes: Attributes = {}
     if getattr(ctx, "order", None) is not None:
         attributes["order.id"] = ctx.order.id
         return attributes
     if getattr(ctx, "agreement", None) is not None:
         attributes["agreement.id"] = ctx.agreement.id
+        return attributes
+    if getattr(ctx, "account", None) is not None:
+        attributes["account.id"] = ctx.account.id
+        return attributes
+    if getattr(ctx, "mpt_request", None) is not None:
+        attributes["request.id"] = ctx.mpt_request.id
     return attributes
 
 

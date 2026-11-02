@@ -13,12 +13,14 @@ from mpt_extension_sdk.api.context import AuthenticatedRequestContext
 from mpt_extension_sdk.extension_app import ExtensionApp
 from mpt_extension_sdk.observability.tracing import (
     RouteSpanAttributes,
+    get_business_attributes,
     record_exception,
     start_route_span,
 )
 from mpt_extension_sdk.pipeline import RouteContextFactory
 from mpt_extension_sdk.pipeline.builders import WebhookContextBuilder
 from mpt_extension_sdk.routing.models import WebhookRouteDefinition
+from mpt_extension_sdk.runtime.logging import set_webhook_context
 from mpt_extension_sdk.webhooks import WebhookContext, WebhookError, WebhookResponse
 
 
@@ -47,7 +49,7 @@ class WebhookRequestExecutor(RouteRequestExecutor[WebhookContext, WebhookRouteDe
     async def _build_context(self, request: Request, auth_context: AuthContext) -> WebhookContext:
         payload = await self._read_payload(request)
         try:
-            return await self.context_factory.build(
+            context = await self.context_factory.build(
                 WebhookContextBuilder(
                     handler_logger=self.handler_logger,
                     payload=payload,
@@ -58,6 +60,13 @@ class WebhookRequestExecutor(RouteRequestExecutor[WebhookContext, WebhookRouteDe
             )
         except WebhookError as error:
             raise RequestRejectedError(WebhookErrorResponseBuilder.build(error))
+        business_attributes = get_business_attributes(context)
+        set_webhook_context(
+            order_id=str(business_attributes.get("order.id", "")),
+            account_id=str(business_attributes.get("account.id", "")),
+            request_id=str(business_attributes.get("request.id", "")),
+        )
+        return context
 
     @override
     async def _run(self, context: WebhookContext, request: Request, span: Span) -> Response:
@@ -77,10 +86,13 @@ class WebhookRequestExecutor(RouteRequestExecutor[WebhookContext, WebhookRouteDe
     def _start_span(
         self, context: WebhookContext, auth_context: AuthContext
     ) -> AbstractContextManager[Span]:
-        webhook_type = self.route.webhook_type
+        business_attributes = get_business_attributes(context)
+        object_id = next(iter(business_attributes.values()), "")
+        webhook_type = str(self.route.webhook_type)
         return start_route_span(
-            f"Webhook {webhook_type}",
+            f"Webhook {webhook_type} {object_id}".rstrip(),
             RouteSpanAttributes.from_route(self.route, auth_context),
+            {"mpt.webhook.type": webhook_type, **business_attributes},
         )
 
     async def _call_handler(self, context: WebhookContext) -> object:

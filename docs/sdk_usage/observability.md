@@ -26,6 +26,18 @@ Both are enriched with event and business correlation attributes, including
 `mpt.event.id`, `mpt.task.id`, and the main business identifier (such as
 `order.id` or `agreement.id`).
 
+Webhook calls get one span each, named `Webhook <type> <object id>`, with
+`mpt.extension.route_type` set to `webhook`, the `mpt.webhook.type`, and the
+business identifier (`order.id`, `account.id` or `request.id`). A webhook type
+the SDK does not know carries no business object, so its span is named
+`Webhook <type>` without an identifier. A call rejected before its context is
+built (a missing or invalid token, or a body that is not a JSON object or does
+not match its type) is answered without a webhook span. Only an
+unexpected error sets the span status to error; a `WebhookError` is a controlled
+answer, recorded on the span without changing its status. The same business
+identifier is added to the log records, shown as `(order: …)`, `(account: …)`
+or `(request: …)`.
+
 ## Configuration
 
 Observability is controlled through runtime environment variables (see
