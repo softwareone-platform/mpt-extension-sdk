@@ -17,7 +17,8 @@ This guide is the entry point for building an extension package on top of
   validate bodies, read request/auth context, return API responses, and use
   pagination.
 - [Webhook routes](sdk_usage/webhooks.md): declare platform webhooks, read the
-  webhook context, and answer with `WebhookResponse` or `WebhookError`.
+  typed order, account or request context, and answer with `WebhookResponse` or
+  `WebhookError`.
 - [UI plugs](sdk_usage/plugs.md): register `PlugRouter` providers, group plugs
   under nested navigation containers, declare modal (open-by-id) plugs, and
   reference static assets.

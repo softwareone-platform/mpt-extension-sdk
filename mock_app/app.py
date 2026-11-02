@@ -3,6 +3,7 @@ import logging
 from mock_app.api.routes.api import api_router
 from mock_app.api.routes.event import orders_router
 from mock_app.api.routes.schedule import schedule_router
+from mock_app.api.routes.webhook import webhooks_router
 from mock_app.mocks.api_service import ExtMPTAPIService
 from mpt_extension_sdk import ExtensionApp
 
@@ -12,6 +13,7 @@ ext_app = ExtensionApp(prefix="/api/v2", mpt_api_service_type=ExtMPTAPIService, 
 ext_app.include_router(api_router)
 ext_app.include_router(orders_router)
 ext_app.include_router(schedule_router)
+ext_app.include_router(webhooks_router)
 
 
 @ext_app.on_startup

@@ -12,7 +12,7 @@ function name.
 
 ```python
 from mpt_extension_sdk import WebhookRouter
-from mpt_extension_sdk.webhooks import WebhookContext, WebhookResponse, WebhookType
+from mpt_extension_sdk.webhooks import OrderWebhookContext, WebhookResponse, WebhookType
 
 webhook_router = WebhookRouter(prefix="/webhooks")
 
@@ -23,8 +23,18 @@ webhook_router = WebhookRouter(prefix="/webhooks")
     description="Validate purchase orders in Draft status",
     criteria={"product.id": "PRD-5516-5707"},
 )
-def validate_purchase_order_draft(ctx: WebhookContext) -> WebhookResponse:
-    return WebhookResponse.ok(ctx.payload)
+async def validate_purchase_order_draft(ctx: OrderWebhookContext) -> WebhookResponse:
+    order = ctx.order.without_errors()
+    account_type = order.parameters.get_ordering_value("accountType")
+    if isinstance(account_type, str) and account_type in {"NewAccount", "ExistingAccount"}:
+        return WebhookResponse.ok(order)
+
+    return WebhookResponse.ok(
+        order.with_ordering_error(
+            "accountType",
+            {"id": "MOCK001", "message": f"Invalid account type: {account_type}"},
+        )
+    )
 ```
 
 - `path`: the route path, joined to the router prefix.
@@ -36,6 +46,12 @@ def validate_purchase_order_draft(ctx: WebhookContext) -> WebhookResponse:
 - `criteria`: one mapping, or a list of mappings to request one platform webhook
   per mapping on the same route, for example one per product. Keys and values
   must be non-empty strings.
+
+The mock app's `validate_purchase_order_draft`
+([`mock_app/api/routes/webhook.py`](../../mock_app/api/routes/webhook.py)) is a
+working example. The `webhook /` requests of the Postman collection
+([`mock_app/docs/postman_collection.json`](../../mock_app/docs/postman_collection.json))
+call it with an invalid account type and then with the value fixed.
 
 `WebhookType.object_type` returns the platform object the webhook carries
 (`WebhookObjectType.ORDER`, `ACCOUNT` or `REQUEST`).
@@ -50,9 +66,42 @@ The SDK rejects a declaration with a `ValueError` when it is registered:
 
 ## Webhook context
 
-The handler receives a `WebhookContext`, sync or async. It exposes the
-`BaseContext` fields, `ctx.payload` (the webhook body) and `ctx.request` (the
-HTTP request, as in API routes).
+The handler, sync or async, receives a context typed by the object the webhook
+carries:
+
+| Webhook type | Context |
+| --- | --- |
+| Order validation types and `selectOrderLines` | `OrderWebhookContext` with `ctx.order` (`OrderSimple`) |
+| `validateAccount` | `AccountWebhookContext` with `ctx.account` |
+| `validateRequest` | `RequestWebhookContext` with `ctx.mpt_request` |
+| Unknown type | `WebhookContext` |
+
+Every webhook context also exposes the `BaseContext` fields, `ctx.payload` (the
+webhook body) and `ctx.request` (the HTTP request, as in API routes).
+
+Fields the platform adds to a payload do not break the context: the models keep
+them, and `WebhookResponse` returns them as they arrived. A payload without a
+required field of the model, such as the order `id` or `product`, is answered
+with `EXT003`.
+
+The platform sends the order with the errors of the previous answer. Clear them
+with `ctx.order.without_errors()` before validating again, as the example does:
+it sets the order error and every ordering parameter error to `None`, so the
+answer clears them.
+
+To report a problem, return the order with the error set:
+`order.with_ordering_error(external_id, error)` puts it on an ordering
+parameter, and `order.with_error(error)` on the order itself. Both return a copy,
+so they can be chained after `without_errors()`:
+
+```python
+order = (
+    ctx.order
+    .without_errors()
+    .with_ordering_error("accountType", {"id": "MOCK001", "message": "Invalid account type"})
+    .with_error({"id": "MOCK002", "message": "The order cannot be placed"})
+)
+```
 
 ## Responses and errors
 
@@ -63,7 +112,7 @@ HTTP request, as in API routes).
 | Raises `WebhookError(error_id, message)` | `500`, or the `status_code` of the error, with `{"id": error_id, "message": message}` |
 | Any other exception, or a return value that is not a `WebhookResponse` | `500` with `{"id": "EXT001", ...}` and the correlation id |
 | Missing or invalid token, or a token for another extension | `401` with `{"id": "EXT002", ...}` |
-| Body that is not a JSON object | `400` with `{"id": "EXT003", ...}` |
+| Body that is not a JSON object, or does not match the context model | `400` with `{"id": "EXT003", ...}` |
 
 `WebhookResponse.ok` leaves out model fields that were not set, so a model
 goes back with the shape it arrived with.
