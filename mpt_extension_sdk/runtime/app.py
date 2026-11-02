@@ -13,6 +13,7 @@ from mpt_extension_sdk.api.builders import (
     create_deferrable_route,
     create_event_route,
     create_schedule_route,
+    create_webhook_route,
 )
 from mpt_extension_sdk.errors.runtime import ConfigError
 from mpt_extension_sdk.extension_app import ExtensionApp
@@ -23,6 +24,7 @@ from mpt_extension_sdk.routing.models import (
     EventRouteDefinition,
     PlugRouteDefinition,
     ScheduleRouteDefinition,
+    WebhookRouteDefinition,
 )
 from mpt_extension_sdk.runtime.async_tasks import AsyncTaskRunner
 from mpt_extension_sdk.runtime.logging import correlation_id_ctx, setup_logging, task_id_ctx
@@ -107,8 +109,12 @@ def register_extension_routes(app: FastAPI, extension_app: ExtensionApp) -> None
                 app.include_router(create_api_route(registered_route, extension_app))
             case ScheduleRouteDefinition():
                 app.include_router(create_schedule_route(registered_route, extension_app))
+            case WebhookRouteDefinition():
+                app.include_router(create_webhook_route(registered_route, extension_app))
             case _:
-                raise ConfigError("Only event, api, schedule, and plug routes are supported")
+                raise ConfigError(
+                    "Only event, api, schedule, plug, and webhook routes are supported"
+                )
 
 
 def _create_fastapi_app(

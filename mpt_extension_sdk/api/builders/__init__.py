@@ -2,10 +2,12 @@ from mpt_extension_sdk.api.builders.api import create_api_route
 from mpt_extension_sdk.api.builders.deferrable import create_deferrable_route
 from mpt_extension_sdk.api.builders.event import create_event_route
 from mpt_extension_sdk.api.builders.schedule import create_schedule_route
+from mpt_extension_sdk.api.builders.webhook import create_webhook_route
 
 __all__ = [  # noqa: WPS410
     "create_api_route",
     "create_deferrable_route",
     "create_event_route",
     "create_schedule_route",
+    "create_webhook_route",
 ]

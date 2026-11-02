@@ -8,7 +8,8 @@ routes. Extensions do not implement their own response mappers.
 
 This page covers the event/pipeline error model. For the API error model
 (`application/problem+json`, `APIError` subclasses, `422`/`500` responses) see
-[api.md](api.md).
+[api.md](api.md), and for the answers of webhook routes (`WebhookError`) see
+[webhooks.md](webhooks.md#responses-and-errors).
 
 ## Exception Hierarchy
 
