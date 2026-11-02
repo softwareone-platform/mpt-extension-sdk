@@ -18,16 +18,27 @@ event_id_ctx: contextvars.ContextVar[str] = contextvars.ContextVar("event_id", d
 task_id_ctx: contextvars.ContextVar[str] = contextvars.ContextVar("task_id", default="")
 order_id_ctx: contextvars.ContextVar[str] = contextvars.ContextVar("order_id", default="")
 agreement_id_ctx: contextvars.ContextVar[str] = contextvars.ContextVar("agreement_id", default="")
+account_id_ctx: contextvars.ContextVar[str] = contextvars.ContextVar("account_id", default="")
+request_id_ctx: contextvars.ContextVar[str] = contextvars.ContextVar("request_id", default="")
 
 
 def set_event_context(
     *, event_id: str = "", task_id: str = "", order_id: str = "", agreement_id: str = ""
 ) -> None:
     """Persist entity identifiers for the current event execution."""
+    account_id_ctx.set("")
+    request_id_ctx.set("")
     agreement_id_ctx.set(agreement_id)
     order_id_ctx.set(order_id)
     task_id_ctx.set(task_id)
     event_id_ctx.set(event_id)
+
+
+def set_webhook_context(*, order_id: str = "", account_id: str = "", request_id: str = "") -> None:
+    """Persist the business object identifier for the current webhook call."""
+    set_event_context(order_id=order_id)
+    account_id_ctx.set(account_id)
+    request_id_ctx.set(request_id)
 
 
 class CorrelationIdFilter(Filter):
@@ -56,19 +67,24 @@ class CorrelationIdFilter(Filter):
         record.order_id = order_id
         agreement_id = agreement_id_ctx.get()
         record.agreement_id = agreement_id
+        account_id = account_id_ctx.get()
+        record.account_id = account_id
+        request_id = request_id_ctx.get()
+        record.request_id = request_id
         trace_id = getattr(record, "otelTraceID", "")
         record.trace_id = trace_id
         record.span_id = getattr(record, "otelSpanID", "")
 
+        labelled_ids = (
+            ("event", event_id),
+            ("order", order_id),
+            ("agreement", agreement_id),
+            ("account", account_id),
+            ("request", request_id),
+            ("trace", trace_id),
+        )
         parts = [f"({task_id})"] if task_id else []
-        if event_id:
-            parts.append(f"(event: {event_id})")
-        if order_id:
-            parts.append(f"(order: {order_id})")
-        if agreement_id:
-            parts.append(f"(agreement: {agreement_id})")
-        if trace_id:
-            parts.append(f"(trace: {trace_id})")
+        parts.extend(f"({label}: {label_id})" for label, label_id in labelled_ids if label_id)
         record.request_context = " ".join(parts)
 
         return True

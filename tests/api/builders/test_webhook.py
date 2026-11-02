@@ -293,7 +293,7 @@ def test_webhook_span_describes_call(call_webhook, webhook_handler, webhook_span
     call_webhook()  # act
 
     start_route_span.assert_called_once_with(
-        "Webhook validatePurchaseOrderDraft",
+        "Webhook validatePurchaseOrderDraft ORD-1",
         RouteSpanAttributes(
             account_id="ACC-1",
             correlation_id="corr-1",
@@ -302,7 +302,99 @@ def test_webhook_span_describes_call(call_webhook, webhook_handler, webhook_span
             route_path="/webhooks/validate",
             route_type="webhook",
         ),
+        {"mpt.webhook.type": "validatePurchaseOrderDraft", "order.id": "ORD-1"},
     )
+
+
+def test_webhook_span_unknown_type(webhook_client, webhook_handler, webhook_span, auth_headers):
+    start_route_span, _ = webhook_span
+    webhook_handler.return_value = WebhookResponse.ok({})
+    client = webhook_client(webhook_handler, webhook_type="validateHelpdeskAnswer")
+
+    client.post("/webhooks/validate", json={"id": "ANS-1"}, headers=auth_headers)  # act
+
+    span_name, _, attributes = start_route_span.call_args.args
+    assert (span_name, attributes) == (
+        "Webhook validateHelpdeskAnswer",
+        {"mpt.webhook.type": "validateHelpdeskAnswer"},
+    )
+
+
+@pytest.mark.parametrize(
+    ("webhook_type", "payload", "span_name", "attributes"),
+    [
+        (
+            WebhookType.VALIDATE_ACCOUNT,
+            {"id": "ACC-1", "name": "Vendor"},
+            "Webhook validateAccount ACC-1",
+            {"mpt.webhook.type": "validateAccount", "account.id": "ACC-1"},
+        ),
+        (
+            WebhookType.VALIDATE_REQUEST,
+            {"id": "REQ-1", "status": "Draft"},
+            "Webhook validateRequest REQ-1",
+            {"mpt.webhook.type": "validateRequest", "request.id": "REQ-1"},
+        ),
+    ],
+)
+def test_webhook_span_names_business_object(  # noqa: WPS211
+    webhook_client,
+    webhook_handler,
+    webhook_span,
+    auth_headers,
+    webhook_type,
+    payload,
+    span_name,
+    attributes,
+):
+    start_route_span, _ = webhook_span
+    webhook_handler.return_value = WebhookResponse.ok({})
+    client = webhook_client(webhook_handler, webhook_type=webhook_type)
+
+    client.post("/webhooks/validate", json=payload, headers=auth_headers)  # act
+
+    result_name, _, result_attributes = start_route_span.call_args.args
+    assert (result_name, result_attributes) == (span_name, attributes)
+
+
+def test_webhook_sets_log_context(mocker, call_webhook, webhook_handler):
+    set_webhook_context = mocker.patch(
+        "mpt_extension_sdk.api.builders.webhook_execution.set_webhook_context", autospec=True
+    )
+    webhook_handler.return_value = WebhookResponse.ok({})
+
+    call_webhook()  # act
+
+    set_webhook_context.assert_called_once_with(order_id="ORD-1", account_id="", request_id="")
+
+
+@pytest.mark.parametrize(
+    ("webhook_type", "payload", "log_context"),
+    [
+        (
+            WebhookType.VALIDATE_ACCOUNT,
+            {"id": "ACC-1", "name": "Vendor"},
+            {"order_id": "", "account_id": "ACC-1", "request_id": ""},
+        ),
+        (
+            WebhookType.VALIDATE_REQUEST,
+            {"id": "REQ-1", "status": "Draft"},
+            {"order_id": "", "account_id": "", "request_id": "REQ-1"},
+        ),
+    ],
+)
+def test_webhook_log_context_names_object(  # noqa: WPS211
+    mocker, webhook_client, webhook_handler, auth_headers, webhook_type, payload, log_context
+):
+    set_webhook_context = mocker.patch(
+        "mpt_extension_sdk.api.builders.webhook_execution.set_webhook_context", autospec=True
+    )
+    webhook_handler.return_value = WebhookResponse.ok({})
+    client = webhook_client(webhook_handler, webhook_type=webhook_type)
+
+    client.post("/webhooks/validate", json=payload, headers=auth_headers)  # act
+
+    set_webhook_context.assert_called_once_with(**log_context)
 
 
 def test_webhook_span_keeps_status_on_error(call_webhook, webhook_handler, webhook_span):

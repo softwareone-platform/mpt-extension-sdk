@@ -204,6 +204,22 @@ def test_business_attributes_return_empty():
     assert not result
 
 
+def test_business_attributes_return_account_id(mocker):
+    ctx = mocker.Mock(spec=["account"], account=mocker.Mock(id="ACC-1"))
+
+    result = tracing.get_business_attributes(ctx)
+
+    assert result == {"account.id": "ACC-1"}
+
+
+def test_business_attributes_return_request_id(mocker):
+    ctx = mocker.Mock(spec=["mpt_request"], mpt_request=mocker.Mock(id="REQ-1"))
+
+    result = tracing.get_business_attributes(ctx)
+
+    assert result == {"request.id": "REQ-1"}
+
+
 def test_route_span_sets_attributes(mocker, span_exporter):
     exporter, tracer = span_exporter
     mocker.patch.object(tracing, "TRACER", tracer)

@@ -118,6 +118,30 @@ def test_correlation_id_filter_sets_record_fields():  # noqa: WPS218
     )
 
 
+def test_webhook_context_sets_request_context():
+    runtime_logging.set_webhook_context(account_id="ACC-1")
+    record = logging.LogRecord("tests", logging.INFO, __file__, 10, "msg", (), None)
+
+    runtime_logging.CorrelationIdFilter().filter(record)  # act
+
+    assert (record.account_id, record.request_id, record.request_context) == (
+        "ACC-1",
+        "",
+        "(account: ACC-1)",
+    )
+
+
+def test_event_context_clears_webhook_object():
+    runtime_logging.set_webhook_context(request_id="REQ-1")
+
+    runtime_logging.set_event_context(order_id="ORD-1")  # act
+
+    assert (runtime_logging.request_id_ctx.get(), runtime_logging.order_id_ctx.get()) == (
+        "",
+        "ORD-1",
+    )
+
+
 def test_filter_without_optional_data():
     runtime_logging.correlation_id_ctx.set("corr-2")
     runtime_logging.set_event_context()
