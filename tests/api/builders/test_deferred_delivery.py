@@ -40,8 +40,8 @@ def authenticate(mocker):
 
 @pytest.fixture
 def context_factory(mocker):
-    factory = mocker.Mock(spec=RouteContextFactory)
-    factory.build_api_context = mocker.AsyncMock(return_value=mocker.Mock(spec=APIContext))
+    factory = mocker.create_autospec(RouteContextFactory, instance=True)
+    factory.build.return_value = mocker.Mock(spec=APIContext)
     return factory
 
 
@@ -127,7 +127,7 @@ async def test_running_elsewhere_skips_context(
 
     await delivery_handler.execute(request=http_request, task_id="TSK-001", delivery=None)  # act
 
-    context_factory.build_api_context.assert_not_awaited()
+    context_factory.build.assert_not_awaited()
 
 
 @pytest.mark.parametrize(
@@ -145,7 +145,7 @@ async def test_running_elsewhere_skips_context(
 async def test_answers_failed_context_build(
     delivery_handler, http_request, context_factory, task_service, error, expected
 ):
-    context_factory.build_api_context.side_effect = error
+    context_factory.build.side_effect = error
 
     result = await delivery_handler.execute(request=http_request, task_id="TSK-001", delivery=None)
 
@@ -209,9 +209,8 @@ async def test_context_carries_delivered_task(
 ):
     await delivery_handler.execute(request=http_request, task_id="TSK-001", delivery=None)  # act
 
-    assert context_factory.build_api_context.call_args.kwargs["task"] == TaskHandle(
-        id="TSK-001", task_service=task_service
-    )
+    builder = context_factory.build.call_args.args[0]
+    assert builder.task == TaskHandle(id="TSK-001", task_service=task_service)
 
 
 async def test_submitted_execution_runs_handler(

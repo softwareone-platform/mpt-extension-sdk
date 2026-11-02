@@ -10,7 +10,7 @@ from mpt_extension_sdk.api.builders.schedule_delivery import ScheduleDeliveryHan
 from mpt_extension_sdk.api.builders.task_timing import EVENT_RETENTION_SECONDS
 from mpt_extension_sdk.api.models.events import EventResponse, ResponseEnum
 from mpt_extension_sdk.errors.runtime import AsyncTasksRunnerError, ConfigError
-from mpt_extension_sdk.extension_app import ExtensionApp
+from mpt_extension_sdk.pipeline import RouteContextFactory
 from mpt_extension_sdk.runtime.logging import event_id_ctx
 
 # Shortly after the delivery time of the task_event fixture, so the event of every
@@ -19,10 +19,15 @@ DELIVERED_AT = "2026-08-11T17:05:00Z"
 
 
 @pytest.fixture
-def delivery_handler(schedule_route, task_service, async_task_runner, logger):
+def context_factory(mocker):
+    return mocker.create_autospec(RouteContextFactory, instance=True)
+
+
+@pytest.fixture
+def delivery_handler(schedule_route, context_factory, task_service, async_task_runner, logger):
     return ScheduleDeliveryHandler(
         route=schedule_route,
-        extension_app=ExtensionApp(),
+        context_factory=context_factory,
         task_service=task_service,
         runner=async_task_runner,
         handler_logger=logger,
@@ -42,17 +47,13 @@ def run(mocker, delivery_handler, task_event):
 
 
 @pytest.fixture
-def build_schedule_context(mocker, schedule_context):
+def build_schedule_context(mocker, context_factory, schedule_context):
     mocker.patch(
         "mpt_extension_sdk.api.builders.task_delivery.RequestAuthenticationService.authenticate",
         autospec=True,
     )
-    factory = mocker.patch(
-        "mpt_extension_sdk.api.builders.schedule_delivery.RouteContextFactory.from_service_type",
-        autospec=True,
-    )
-    factory.return_value.build_schedule_context = mocker.AsyncMock(return_value=schedule_context)
-    return factory.return_value.build_schedule_context
+    context_factory.build.return_value = schedule_context
+    return context_factory.build
 
 
 @freeze_time(DELIVERED_AT)
@@ -385,7 +386,7 @@ async def test_watchdog_capped_by_event_retention(build_schedule_context, run, t
 async def test_event_reaches_the_context(build_schedule_context, run, task_event):
     await run()  # act
 
-    assert build_schedule_context.call_args.kwargs["event"] is task_event
+    assert build_schedule_context.call_args.args[0].event is task_event
 
 
 async def test_event_id_in_log_context(build_schedule_context, run, task_event):

@@ -7,6 +7,13 @@ from pydantic import Field
 from mpt_extension_sdk.api.models.base import APIBaseModel
 
 
+class EventObjectType(StrEnum):
+    """Object types the SDK builds an event context for."""
+
+    AGREEMENT = "Agreement"
+    ORDER = "Order"
+
+
 class ResponseEnum(StrEnum):
     """Valid outcome values for event response."""
 
@@ -32,7 +39,12 @@ class EventObject(APIBaseModel):
 
     id: str
     object_type: Annotated[
-        str, Field(serialization_alias="objectType", validation_alias="objectType")
+        EventObjectType | str,
+        Field(
+            serialization_alias="objectType",
+            union_mode="left_to_right",
+            validation_alias="objectType",
+        ),
     ]
     name: str
 

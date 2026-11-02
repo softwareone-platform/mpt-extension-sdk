@@ -9,6 +9,9 @@ from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
 from mpt_extension_sdk.observability import decorators, trace_span, tracing
+from mpt_extension_sdk.routing import RouteType
+from mpt_extension_sdk.routing.models import BaseRouteDefinition
+from mpt_extension_sdk.runtime.logging import correlation_id_ctx
 
 PATH = "/api/v2/events/orders/change"
 
@@ -199,3 +202,45 @@ def test_business_attributes_return_empty():
     result = tracing.get_business_attributes(ctx)
 
     assert not result
+
+
+def test_route_span_sets_attributes(mocker, span_exporter):
+    exporter, tracer = span_exporter
+    mocker.patch.object(tracing, "TRACER", tracer)
+    route_attributes = tracing.RouteSpanAttributes(
+        route_path="/api/v1/orders", route_type="api", method="GET"
+    )
+
+    with tracing.start_route_span(
+        "API GET /api/v1/orders", route_attributes, {"order.id": "ORD-1"}
+    ) as span:
+        span_name = span.name  # act
+
+    assert span_name == "API GET /api/v1/orders"
+    assert dict(exporter.get_finished_spans()[0].attributes) == {
+        "http.request.method": "GET",
+        "mpt.extension.route_path": "/api/v1/orders",
+        "mpt.extension.route_type": "api",
+        "order.id": "ORD-1",
+    }
+
+
+def test_route_span_attributes_from_route(mocker, auth_context):
+    auth_context.account = mocker.Mock(id="ACC-1")
+    auth_context.extension_id = "EXT-1"
+    route = BaseRouteDefinition(
+        name="sync", path="/sync", route_type=RouteType.API, callback=mocker.Mock()
+    )
+    token = correlation_id_ctx.set("corr-1")
+
+    result = tracing.RouteSpanAttributes.from_route(route, auth_context)
+
+    correlation_id_ctx.reset(token)
+    assert result == tracing.RouteSpanAttributes(
+        account_id="ACC-1",
+        correlation_id="corr-1",
+        extension_id="EXT-1",
+        route_name="sync",
+        route_path="/sync",
+        route_type=RouteType.API,
+    )

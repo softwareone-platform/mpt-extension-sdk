@@ -29,12 +29,11 @@ def patch_context(mocker, schedule_context):
         "mpt_extension_sdk.api.builders.task_delivery.RequestAuthenticationService.authenticate",
         autospec=True,
     )
-    factory = mocker.patch(
-        "mpt_extension_sdk.api.builders.schedule_delivery.RouteContextFactory.from_service_type",
+    return mocker.patch(
+        "mpt_extension_sdk.pipeline.factory.RouteContextFactory.build",
         autospec=True,
+        return_value=schedule_context,
     )
-    factory.return_value.build_schedule_context = mocker.AsyncMock(return_value=schedule_context)
-    return factory.return_value.build_schedule_context
 
 
 def test_route_defers_queued_task(
@@ -80,7 +79,8 @@ def test_route_exposes_delivered_event(
         schedule_route.path, json=task_event_payload(), headers=task_headers
     )
 
-    assert patch_context.call_args.kwargs["event"].id == "e5b68484-42a3-4e8a-a699-ad4b4e029745"
+    builder = patch_context.call_args.args[1]
+    assert builder.event.id == "e5b68484-42a3-4e8a-a699-ad4b4e029745"
 
 
 def test_route_reads_task_id_from_header(

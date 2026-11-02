@@ -31,7 +31,7 @@ The main package lives under [`mpt_extension_sdk/`](../mpt_extension_sdk).
 - [`extension_app.py`](../mpt_extension_sdk/extension_app.py): public SDK entrypoint that defines `ExtensionApp`
 - [`routing/`](../mpt_extension_sdk/routing): route-family routers, route definition models, and route decorators used by the SDK contract
 - [`api/`](../mpt_extension_sdk/api): FastAPI payload models and builder helpers that adapt SDK routes to HTTP
-- [`pipeline/`](../mpt_extension_sdk/pipeline): execution contexts, context factory helpers, decorators, pipeline base classes, and steps
+- [`pipeline/`](../mpt_extension_sdk/pipeline): execution contexts, the route context factory and its context builders, decorators, pipeline base classes, and steps
 - [`runtime/`](../mpt_extension_sdk/runtime): FastAPI app assembly, runtime startup, logging context, and platform bootstrap helpers
 - [`tasks.py`](../mpt_extension_sdk/tasks.py): `TaskHandle`, which gives task-backed handlers such as schedules the platform task id, best-effort task logging and progress reporting, and task parameter updates, without exposing the task lifecycle
 - [`services/mpt_api_service/`](../mpt_extension_sdk/services/mpt_api_service): Marketplace service layer used by handlers, pipelines, and runtime operations
@@ -79,6 +79,25 @@ endpoints under `/bypass` (see
 Its lifespan runs the startup hooks registered through `ExtensionApp.on_startup`
 before the app reports itself as ready, so serve-time initialization stays out of
 `app.py` import time and never runs during metadata generation.
+
+### Context building and request execution
+
+Every route family builds its handler context through `RouteContextFactory`
+(`pipeline/factory.py`). The factory checks that the token targets this extension,
+creates the account-scoped and vendor-scoped Marketplace services, and hands them,
+with the settings, to the `ContextBuilder` of the family in `pipeline/builders/`
+(`APIContextBuilder`, `EventContextBuilder`, `ScheduleContextBuilder`). Each route
+builder creates one factory when the route is mounted and passes it to the code
+that answers the request; the factory reads the process settings on each build, so
+mounting routes does not need them.
+
+Synchronous HTTP routes share `RouteRequestExecutor`
+(`api/builders/request_executor.py`). It authenticates the request, builds the
+context, runs the handler inside the route span, and answers authentication and
+unexpected errors with the family's `RouteErrorResponseBuilder`
+(`api/builders/errors.py`). `APIRequestExecutor` implements it for API routes.
+`resolve_handler_result` (`api/builders/handlers.py`) lets event and API handlers
+be sync or async.
 
 ### Route families
 

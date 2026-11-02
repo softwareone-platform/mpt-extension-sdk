@@ -8,6 +8,7 @@ from mpt_extension_sdk.api.builders.schedule_delivery import ScheduleDeliveryHan
 from mpt_extension_sdk.api.builders.task_timing import delivery_latency_seconds
 from mpt_extension_sdk.api.models.events import EventResponse, TaskEvent
 from mpt_extension_sdk.extension_app import ExtensionApp
+from mpt_extension_sdk.pipeline import RouteContextFactory
 from mpt_extension_sdk.routing import ScheduleRouteDefinition
 from mpt_extension_sdk.services.mpt_api_service.task import TaskService
 
@@ -16,6 +17,7 @@ def create_schedule_route(route: ScheduleRouteDefinition, extension_app: Extensi
     """Create a FastAPI router for a schedule route definition."""
     router = APIRouter()
     handler_logger = logging.getLogger(route.callback.__module__)
+    context_factory = RouteContextFactory(extension_app.mpt_api_service_type)
 
     @router.post(route.path, status_code=status.HTTP_200_OK, response_model=EventResponse)
     async def handle_schedule_task(  # noqa: WPS430
@@ -34,7 +36,7 @@ def create_schedule_route(route: ScheduleRouteDefinition, extension_app: Extensi
         )
         return await ScheduleDeliveryHandler(
             route=route,
-            extension_app=extension_app,
+            context_factory=context_factory,
             task_service=task_service,
             runner=request.app.state.async_task_runner,
             handler_logger=handler_logger,

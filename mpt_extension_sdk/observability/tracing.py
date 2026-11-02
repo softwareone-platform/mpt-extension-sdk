@@ -1,9 +1,16 @@
 from collections.abc import Generator
 from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any, Self
 
 from opentelemetry.trace import Span, SpanKind, get_tracer
+
+from mpt_extension_sdk.api.models.events import EventObjectType
+from mpt_extension_sdk.runtime.logging import correlation_id_ctx
+
+if TYPE_CHECKING:
+    from mpt_extension_sdk.api.auth import AuthContext
+    from mpt_extension_sdk.routing.models import BaseRouteDefinition
 
 TRACER = get_tracer("mpt_extension_sdk")
 type AttributeValue = str | int | float | bool
@@ -22,6 +29,25 @@ class RouteSpanAttributes:
     method: str | None = None
     route_name: str | None = None
     task_based: bool | None = None
+
+    @classmethod
+    def from_route(
+        cls,
+        route: "BaseRouteDefinition",
+        auth_context: "AuthContext",
+        *,
+        method: str | None = None,
+    ) -> Self:
+        """Return the attributes of an authenticated route call."""
+        return cls(
+            account_id=auth_context.account.id,
+            correlation_id=correlation_id_ctx.get(),
+            extension_id=auth_context.extension_id,
+            method=method,
+            route_name=route.name,
+            route_path=route.path,
+            route_type=route.route_type,
+        )
 
     def to_dict(self) -> Attributes:
         """Return sanitized OpenTelemetry attributes."""
@@ -48,58 +74,43 @@ class RouteSpanAttributes:
 
 
 @contextmanager
-def start_event_span(path: str, *, task_based: bool, event: Any) -> Generator[Span]:  # noqa: WPS210
+def start_event_span(path: str, *, task_based: bool, event: Any) -> Generator[Span]:
     """Start and yield the span for an incoming event delivery."""
     object_type = getattr(getattr(event, "object", None), "object_type", "")
     object_id = getattr(getattr(event, "object", None), "id", "")
-    event_type = getattr(getattr(event, "details", None), "event_type", "")
     business_attributes: Attributes = {}
-    if object_type == "Order" and object_id:
+    if object_type == EventObjectType.ORDER and object_id:
         business_attributes["order.id"] = object_id
-    if object_type == "Agreement" and object_id:
+    if object_type == EventObjectType.AGREEMENT and object_id:
         business_attributes["agreement.id"] = object_id
-    span_name = _build_event_span_name(object_type, object_id)
-    with TRACER.start_as_current_span(span_name, kind=SpanKind.INTERNAL) as span:
-        route_attributes = RouteSpanAttributes(
-            route_path=path,
-            route_type="event",
-            task_based=task_based,
-        )
-        set_attributes(
-            span,
-            {
-                **route_attributes.to_dict(),
-                "mpt.event.id": getattr(event, "id", ""),
-                "mpt.event.type": event_type,
-                "mpt.task.id": getattr(getattr(event, "task", None), "id", ""),
-                **business_attributes,
-            },
-        )
+    with start_route_span(
+        _build_event_span_name(object_type, object_id),
+        RouteSpanAttributes(route_path=path, route_type="event", task_based=task_based),
+        {
+            "mpt.event.id": getattr(event, "id", ""),
+            "mpt.event.type": getattr(getattr(event, "details", None), "event_type", ""),
+            "mpt.task.id": getattr(getattr(event, "task", None), "id", ""),
+            **business_attributes,
+        },
+    ) as span:
         yield span
 
 
 @contextmanager
-def start_api_span(  # noqa: WPS211
-    *,
-    account_id: str,
-    correlation_id: str,
-    extension_id: str,
-    method: str,
-    route_name: str,
-    route_path: str,
+def start_route_span(
+    span_name: str,
+    route_attributes: RouteSpanAttributes,
+    attributes: Attributes | None = None,
 ) -> Generator[Span]:
-    """Start and yield the span for an authenticated API request."""
-    with TRACER.start_as_current_span(f"API {method} {route_path}", kind=SpanKind.INTERNAL) as span:
-        route_attributes = RouteSpanAttributes(
-            account_id=account_id,
-            correlation_id=correlation_id,
-            extension_id=extension_id,
-            method=method,
-            route_name=route_name,
-            route_path=route_path,
-            route_type="api",
-        )
-        set_attributes(span, route_attributes.to_dict())
+    """Start and yield the span of a route call.
+
+    Args:
+        span_name: Name of the span.
+        route_attributes: Attributes every route span carries.
+        attributes: Attributes of the route family, such as the event or webhook type.
+    """
+    with TRACER.start_as_current_span(span_name, kind=SpanKind.INTERNAL) as span:
+        set_attributes(span, {**route_attributes.to_dict(), **(attributes or {})})
         yield span
 
 

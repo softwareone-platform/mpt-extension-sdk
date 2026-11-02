@@ -12,6 +12,7 @@ from mpt_extension_sdk.api.auth import AccountType
 from mpt_extension_sdk.api.builders.api import create_api_route
 from mpt_extension_sdk.api.builders.arguments import APIHandlerArgumentsBuilder
 from mpt_extension_sdk.extension_app import ExtensionApp
+from mpt_extension_sdk.observability.tracing import RouteSpanAttributes
 from mpt_extension_sdk.routing import APIRouteDefinition, APIRouter, HTTPMethod, RouteType
 from mpt_extension_sdk.runtime import app as runtime_app
 from mpt_extension_sdk.schemas import BaseSchema
@@ -193,15 +194,15 @@ def api_span_mock(mocker):
     span = mocker.Mock()
 
     @contextmanager
-    def wrapper(**kwargs):
+    def wrapper(*args):
         yield span
 
-    start_api_span = mocker.patch(
-        "mpt_extension_sdk.api.builders.execution.start_api_span",
+    start_route_span = mocker.patch(
+        "mpt_extension_sdk.api.builders.execution.start_route_span",
         autospec=True,
         side_effect=wrapper,
     )
-    return start_api_span, span
+    return start_route_span, span
 
 
 def test_api_route_passes_context_and_body(  # noqa: WPS210, WPS218
@@ -342,6 +343,19 @@ def test_api_route_maps_unhandled_errors(api_route_dependencies, auth_headers, a
     )
 
 
+def test_api_route_marks_unhandled_error_on_span(
+    api_route_dependencies, auth_headers, api_app_factory, api_span_mock
+):
+    _, span = api_span_mock
+    client = api_app_factory(route_handler=unhandled_error_handler)
+
+    result = client.get("/auth/check", headers={**auth_headers, "x-request-id": "corr-1"})
+
+    span_status = span.set_status.call_args.args[0]
+    assert result.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
+    assert not span_status.is_ok
+
+
 def test_api_route_starts_observability_span(
     api_route_dependencies,
     auth_headers,
@@ -349,7 +363,7 @@ def test_api_route_starts_observability_span(
     ok_handler,
     api_span_mock,
 ):
-    start_api_span, _ = api_span_mock
+    start_route_span, _ = api_span_mock
     client = api_app_factory(route_handler=ok_handler)
 
     result = client.get(
@@ -358,13 +372,17 @@ def test_api_route_starts_observability_span(
     )
 
     assert result.status_code == HTTPStatus.OK
-    start_api_span.assert_called_once_with(
-        route_name="auth-check",
-        route_path="/auth/check",
-        method="GET",
-        account_id="ACC-1",
-        extension_id="EXT-1",
-        correlation_id="corr-1",
+    start_route_span.assert_called_once_with(
+        "API GET /auth/check",
+        RouteSpanAttributes(
+            account_id="ACC-1",
+            correlation_id="corr-1",
+            extension_id="EXT-1",
+            method="GET",
+            route_name="auth-check",
+            route_path="/auth/check",
+            route_type="api",
+        ),
     )
 
 

@@ -7,6 +7,7 @@ from mpt_extension_sdk.api.auth import RequestAuthenticationService
 from mpt_extension_sdk.api.builders.arguments import APIHandlerArgumentsBuilder
 from mpt_extension_sdk.api.builders.execution import APIRequestExecutor
 from mpt_extension_sdk.extension_app import ExtensionApp
+from mpt_extension_sdk.pipeline import RouteContextFactory
 from mpt_extension_sdk.routing.models import APIRouteDefinition
 
 logger = logging.getLogger(__name__)
@@ -17,7 +18,7 @@ def create_api_route(route: APIRouteDefinition, extension_app: ExtensionApp) -> 
     executor = APIRequestExecutor(
         arguments_builder=APIHandlerArgumentsBuilder(route),
         auth_service=RequestAuthenticationService(),
-        extension_app=extension_app,
+        context_factory=RouteContextFactory(extension_app.mpt_api_service_type),
         handler_logger=logging.getLogger(route.callback.__module__),
         route=route,
     )
