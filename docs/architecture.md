@@ -40,7 +40,7 @@ The main package lives under [`mpt_extension_sdk/`](../mpt_extension_sdk).
 - [`observability/`](../mpt_extension_sdk/observability): tracing bootstrap, instrumentation, and SDK-level observability hooks
 - [`models/`](../mpt_extension_sdk/models): typed Marketplace domain models used across contexts and services, plus `TaskLog` for the log records a task handler writes to its task
 - [`errors/`](../mpt_extension_sdk/errors): runtime, pipeline, and mapping exceptions
-- [`webhooks/`](../mpt_extension_sdk/webhooks): the platform webhook types (`WebhookType`, `WebhookObjectType`), `WebhookContext`, `WebhookResponse`, `WebhookError`, and the `WebhookError` subclasses the SDK answers with (`EXT001`-`EXT003`)
+- [`webhooks/`](../mpt_extension_sdk/webhooks): the platform webhook types (`WebhookType`, `WebhookObjectType`), the typed webhook contexts, `WebhookResponse`, `WebhookError`, and the `WebhookError` subclasses the SDK answers with (`EXT001`-`EXT003`)
 
 ## Main Entry Points
 

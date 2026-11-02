@@ -12,12 +12,26 @@ from mpt_extension_sdk.extension_app import ExtensionApp
 from mpt_extension_sdk.observability.tracing import RouteSpanAttributes
 from mpt_extension_sdk.routing import WebhookRouter
 from mpt_extension_sdk.runtime import app as runtime_app
-from mpt_extension_sdk.webhooks import WebhookContext, WebhookError, WebhookResponse, WebhookType
+from mpt_extension_sdk.webhooks import (
+    OrderWebhookContext,
+    WebhookContext,
+    WebhookError,
+    WebhookResponse,
+    WebhookType,
+)
 
 
 @pytest.fixture
 def order_payload():
-    return {"id": "ORD-1", "status": "Draft", "product": {"id": "PRD-1"}}
+    return {
+        "id": "ORD-1",
+        "status": "Draft",
+        "type": "Purchase",
+        "agreement": {"id": "AGR-1", "href": "/commerce/agreements/AGR-1"},
+        "authorization": {"id": "AUT-1", "name": "US", "currency": "USD"},
+        "product": {"id": "PRD-1", "name": "Product"},
+        "notes": "kept as it arrived",
+    }
 
 
 @pytest.fixture
@@ -30,14 +44,17 @@ def webhook_handler(mocker):
 
 @pytest.fixture
 def webhook_client(api_route_dependencies, api_service_type_factory, mock_api_service):
-    def factory(route_handler):
+    def factory(
+        route_handler,
+        webhook_type=WebhookType.VALIDATE_PURCHASE_ORDER_DRAFT,
+    ):
         extension_app = ExtensionApp(
             mpt_api_service_type=api_service_type_factory(mock_api_service)
         )
         webhook_router = WebhookRouter(prefix="/webhooks")
         webhook_router.webhook(
             "/validate",
-            type=WebhookType.VALIDATE_PURCHASE_ORDER_DRAFT,
+            type=webhook_type,
             description="Validate",
             criteria={"product.id": "PRD-1"},
         )(route_handler)
@@ -86,8 +103,38 @@ def test_webhook_route_returns_handler_payload(call_webhook, webhook_handler, or
 
     context = webhook_handler.call_args.args[0]
     assert (result.status_code, result.json()) == (HTTPStatus.OK, order_payload)
-    assert isinstance(context, WebhookContext)
+    assert isinstance(context, OrderWebhookContext)
     assert (context.payload, context.request.body) == (order_payload, order_payload)
+
+
+def test_webhook_returns_order_as_it_arrived(call_webhook, webhook_handler, order_payload):
+    webhook_handler.side_effect = lambda ctx: WebhookResponse.ok(ctx.order)
+
+    result = call_webhook()
+
+    assert result.json() == order_payload
+
+
+def test_webhook_unknown_type_gets_payload(webhook_client, webhook_handler, auth_headers):
+    webhook_handler.return_value = WebhookResponse.ok({"id": "ANS-1"})
+    client = webhook_client(webhook_handler, webhook_type="validateHelpdeskAnswer")
+
+    result = client.post("/webhooks/validate", json={"id": "ANS-1"}, headers=auth_headers)
+
+    assert result.status_code == HTTPStatus.OK
+    assert webhook_handler.call_args.args[0].__class__ is WebhookContext
+
+
+def test_webhook_route_rejects_wrong_payload(webhook_client, webhook_handler, auth_headers):
+    client = webhook_client(webhook_handler)
+
+    result = client.post("/webhooks/validate", json={"id": "ORD-1"}, headers=auth_headers)
+
+    assert (result.status_code, result.json()) == (
+        HTTPStatus.BAD_REQUEST,
+        {"id": "EXT003", "message": "The webhook body does not match its type"},
+    )
+    webhook_handler.assert_not_called()
 
 
 def test_webhook_route_awaits_async_handler(mocker, webhook_client, auth_headers, order_payload):

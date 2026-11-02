@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "mpt-extension-sdk mock_app",
-    "description": "Sample requests for the SDK mock_app running locally on `{{base_url}}` (default `http://localhost:8080`).\n\nAuth is wired automatically:\n\n- A collection-level pre-request script builds a non-prod HS256 JWT from the `extension_id`, `account_id` and `account_type` variables and stores it in `auth_token`.\n- Every authenticated request sends `Authorization: Bearer {{auth_token}}` via collection-level Bearer auth (the `ops` requests opt out).\n\nThe runtime (mpt-extension-sdk) decodes claims without verifying the signature, so the HS256 dummy secret is only there to produce a structurally valid token. Override `extension_id`, `account_id` or `account_type` in the collection variables to test other identities.\n\n`agreements-sync` is deferrable. Without `MPT-Task-Id` it runs as a direct call. The deferred request starts the call on the devmock, which delivers it with `MPT-Task-Id` as the Extension Service does for a call made with `MPT-Async: true`, so run it against `make run-demo`.",
+    "description": "Sample requests for the SDK mock_app running locally on `{{base_url}}` (default `http://localhost:8080`).\n\nAuth is wired automatically:\n\n- A collection-level pre-request script builds a non-prod HS256 JWT from the `extension_id`, `account_id` and `account_type` variables and stores it in `auth_token`.\n- Every authenticated request sends `Authorization: Bearer {{auth_token}}` via collection-level Bearer auth (the `ops` requests opt out).\n\nThe runtime (mpt-extension-sdk) decodes claims without verifying the signature, so the HS256 dummy secret is only there to produce a structurally valid token. Override `extension_id`, `account_id` or `account_type` in the collection variables to test other identities.\n\n`agreements-sync` is deferrable. Without `MPT-Task-Id` it runs as a direct call. The deferred request starts the call on the devmock, which delivers it with `MPT-Task-Id` as the Extension Service does for a call made with `MPT-Async: true`, so run it against `make run-demo`.\n\n`webhook / validate draft order` calls the order validation webhook directly, as the platform does. Every answer is `200`: validation problems are returned on the order, not as an error status.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -307,6 +307,56 @@
           "raw": "{{base_url}}/api/v2/agreements",
           "host": ["{{base_url}}"],
           "path": ["api", "v2", "agreements"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "webhook / validate draft order — invalid account type (expected 200 OK with a parameter error)",
+      "request": {
+        "description": "Calls `validate_purchase_order_draft` as the platform does for a `validatePurchaseOrderDraft` webhook. The account type is not valid, so the answer is `200` with the order and an `error` on the `accountType` ordering parameter, which the wizard shows to the user.",
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"id\": \"ORD-7707-5631-5150\",\n  \"status\": \"Draft\",\n  \"type\": \"Purchase\",\n  \"agreement\": {\n    \"id\": \"AGR-1234-1234-1234\",\n    \"href\": \"/commerce/agreements/AGR-1234-1234-1234\",\n    \"name\": \"Mock agreement\",\n    \"status\": \"Draft\"\n  },\n  \"authorization\": {\n    \"id\": \"AUT-1234-5678\",\n    \"name\": \"Mock authorization\",\n    \"currency\": \"USD\"\n  },\n  \"product\": {\n    \"id\": \"PRD-5516-5707\",\n    \"name\": \"Mock product\"\n  },\n  \"parameters\": {\n    \"ordering\": [\n      {\n        \"id\": \"PAR-5516-5707-0001\",\n        \"externalId\": \"accountType\",\n        \"name\": \"Account type\",\n        \"type\": \"Choice\",\n        \"value\": \"Unknown\"\n      }\n    ],\n    \"fulfillment\": []\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v2/webhooks/orders/validate",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v2", "webhooks", "orders", "validate"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "webhook / validate draft order — fixed account type (expected 200 OK without errors)",
+      "request": {
+        "description": "Sends the order back with the error of the previous answer and a valid account type, as the platform does after the user fixes the value. The handler clears the previous errors first, so the answer is `200` with `error: null` on the order and on every ordering parameter.",
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"id\": \"ORD-7707-5631-5150\",\n  \"status\": \"Draft\",\n  \"type\": \"Purchase\",\n  \"agreement\": {\n    \"id\": \"AGR-1234-1234-1234\",\n    \"href\": \"/commerce/agreements/AGR-1234-1234-1234\",\n    \"name\": \"Mock agreement\",\n    \"status\": \"Draft\"\n  },\n  \"authorization\": {\n    \"id\": \"AUT-1234-5678\",\n    \"name\": \"Mock authorization\",\n    \"currency\": \"USD\"\n  },\n  \"product\": {\n    \"id\": \"PRD-5516-5707\",\n    \"name\": \"Mock product\"\n  },\n  \"parameters\": {\n    \"ordering\": [\n      {\n        \"id\": \"PAR-5516-5707-0001\",\n        \"externalId\": \"accountType\",\n        \"name\": \"Account type\",\n        \"type\": \"Choice\",\n        \"value\": \"NewAccount\",\n        \"error\": {\n          \"id\": \"MOCK001\",\n          \"message\": \"Invalid account type: Unknown\"\n        }\n      }\n    ],\n    \"fulfillment\": []\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v2/webhooks/orders/validate",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v2", "webhooks", "orders", "validate"]
         }
       },
       "response": []

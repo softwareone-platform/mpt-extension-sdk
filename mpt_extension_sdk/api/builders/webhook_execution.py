@@ -43,14 +43,18 @@ class WebhookRequestExecutor(RouteRequestExecutor[WebhookContext, WebhookRouteDe
     @override
     async def _build_context(self, request: Request, auth_context: AuthContext) -> WebhookContext:
         payload = await self._read_payload(request)
-        return await self.context_factory.build(
-            WebhookContextBuilder(
-                handler_logger=self.handler_logger,
-                payload=payload,
-                request_context=AuthenticatedRequestContext.from_request(request, body=payload),
-            ),
-            auth_context,
-        )
+        try:
+            return await self.context_factory.build(
+                WebhookContextBuilder(
+                    handler_logger=self.handler_logger,
+                    payload=payload,
+                    request_context=AuthenticatedRequestContext.from_request(request, body=payload),
+                    webhook_type=self.route.webhook_type,
+                ),
+                auth_context,
+            )
+        except WebhookError as error:
+            raise RequestRejectedError(WebhookErrorResponseBuilder.build(error))
 
     @override
     async def _run(self, context: WebhookContext, request: Request, span: Span) -> Response:
