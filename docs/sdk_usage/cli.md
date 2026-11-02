@@ -41,6 +41,9 @@ maintained by hand. The generated document contains:
   `timeouts` with `maxTaskLifespan` and `maxTaskProcessing` when the route
   declares them), when the extension declares any. The `path` is the full
   mounted path, and each `(method, path)` pair is declared once
+- `webhooks` — one entry per criteria set of each webhook route (`type`,
+  `description`, `path`, `criteria`), when the extension declares any. A route
+  with several criteria sets publishes several entries with the same `path`
 
 ```yaml
 openapi: /bypass/openapi.json
@@ -69,6 +72,12 @@ deferrables:
     timeouts:
       maxTaskLifespan: 7200
       maxTaskProcessing: 3600
+webhooks:
+  - type: validatePurchaseOrderDraft
+    description: Validate purchase orders in Draft status
+    path: /api/v2/webhooks/orders/validate
+    criteria:
+      product.id: PRD-5516-5707
 ```
 
 ### `mpt-ext meta generate`

@@ -10,6 +10,7 @@ from mpt_extension_sdk.routing import (
     TaskTimeouts,
 )
 from mpt_extension_sdk.routing.decorators import only_deferrable
+from mpt_extension_sdk.routing.routers.webhook import WebhookRouter
 
 __all__ = [  # noqa: WPS410
     "APIRouter",
@@ -21,5 +22,6 @@ __all__ = [  # noqa: WPS410
     "PlugRouter",
     "ScheduleRouter",
     "TaskTimeouts",
+    "WebhookRouter",
     "only_deferrable",
 ]

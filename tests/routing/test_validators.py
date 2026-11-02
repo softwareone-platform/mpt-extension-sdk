@@ -2,7 +2,12 @@ from collections.abc import Callable
 
 import pytest
 
-from mpt_extension_sdk.routing import RouteType, ScheduleRouteDefinition, TaskTimeouts
+from mpt_extension_sdk.routing import (
+    RouteType,
+    ScheduleRouteDefinition,
+    TaskTimeouts,
+    WebhookRouteDefinition,
+)
 from mpt_extension_sdk.routing.validators import RouteValidator
 
 
@@ -20,6 +25,39 @@ def schedule_route(mocker):
         )
 
     return factory
+
+
+@pytest.fixture
+def webhook_route(mocker):
+    def factory(name, path, product_id):
+        return WebhookRouteDefinition(
+            name=name,
+            path=path,
+            route_type=RouteType.WEBHOOK,
+            callback=mocker.Mock(spec=Callable),
+            criteria_sets=({"product.id": product_id},),
+            description="Validate draft orders",
+            webhook_type="validatePurchaseOrderDraft",
+        )
+
+    return factory
+
+
+def test_validate_rejects_duplicate_webhook(webhook_route):
+    existing = webhook_route("first", "/webhooks/first", "PRD-1")
+    duplicate = webhook_route("second", "/webhooks/second", "PRD-1")
+
+    with pytest.raises(ValueError, match="Webhook 'validatePurchaseOrderDraft' is already"):
+        RouteValidator.validate_route_uniqueness(route=duplicate, routes=[existing])
+
+
+def test_validate_accepts_webhook_other_criteria(webhook_route):
+    existing = webhook_route("first", "/webhooks/first", "PRD-1")
+    other_product = webhook_route("second", "/webhooks/second", "PRD-2")
+
+    result = RouteValidator.validate_route_uniqueness(route=other_product, routes=[existing])
+
+    assert result is None
 
 
 def test_validate_rejects_duplicate_schedule_id(schedule_route):

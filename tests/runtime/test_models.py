@@ -6,7 +6,13 @@ from pydantic import ValidationError
 
 from mpt_extension_sdk.errors.runtime import ConfigError
 from mpt_extension_sdk.routing import HTTPMethod
-from mpt_extension_sdk.runtime.models import MetaConfig, MetaDeferrable, MetaPlug, MetaSchedule
+from mpt_extension_sdk.runtime.models import (
+    MetaConfig,
+    MetaDeferrable,
+    MetaPlug,
+    MetaSchedule,
+    MetaWebhook,
+)
 
 
 @pytest.fixture
@@ -269,3 +275,34 @@ def test_meta_config_rejects_invalid_deferrables(deferrables):
 
     with pytest.raises(ValidationError):
         MetaConfig.model_validate(payload, by_alias=True)
+
+
+@pytest.fixture
+def webhook_payload():
+    return {
+        "type": "validatePurchaseOrderDraft",
+        "description": "Validate draft orders",
+        "path": "/api/v2/webhooks/orders/validate",
+        "criteria": {"product.id": "PRD-1111-1111"},
+    }
+
+
+def test_meta_config_supports_webhooks(webhook_payload):
+    result = MetaConfig.model_validate({
+        "openapi": "/bypass/openapi.json",
+        "events": [],
+        "webhooks": [webhook_payload],
+    })
+
+    assert result.webhooks == [MetaWebhook(**webhook_payload)]
+
+
+def test_meta_rejects_webhook_without_criteria(webhook_payload):
+    payload = {
+        "openapi": "/bypass/openapi.json",
+        "events": [],
+        "webhooks": [{**webhook_payload, "criteria": {}}],
+    }
+
+    with pytest.raises(ValidationError, match="criteria"):
+        MetaConfig.model_validate(payload)
