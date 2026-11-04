@@ -125,3 +125,7 @@ A route that carries a platform task transitions it from the handler outcome:
 | returns normally | the task is completed |
 | `DeferError` | the task is rescheduled |
 | any other exception | the task is failed |
+
+Each outcome is logged once on the handler logger: a reschedule or a
+`CancelError` at info level with its reason, and any other error at error level
+with the failure reason and its traceback.

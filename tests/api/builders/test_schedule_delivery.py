@@ -1,7 +1,6 @@
 import datetime as dt
 
 import pytest
-from fastapi import Request
 from freezegun import freeze_time
 from mpt_api_client.exceptions import MPTError
 
@@ -10,17 +9,11 @@ from mpt_extension_sdk.api.builders.schedule_delivery import ScheduleDeliveryHan
 from mpt_extension_sdk.api.builders.task_timing import EVENT_RETENTION_SECONDS
 from mpt_extension_sdk.api.models.events import EventResponse, ResponseEnum
 from mpt_extension_sdk.errors.runtime import AsyncTasksRunnerError, ConfigError
-from mpt_extension_sdk.pipeline import RouteContextFactory
 from mpt_extension_sdk.runtime.logging import event_id_ctx
 
 # Shortly after the delivery time of the task_event fixture, so the event of every
 # delivery under test was enqueued in the past, as the framework delivers it.
 DELIVERED_AT = "2026-08-11T17:05:00Z"
-
-
-@pytest.fixture
-def context_factory(mocker):
-    return mocker.create_autospec(RouteContextFactory, instance=True)
 
 
 @pytest.fixture
@@ -35,23 +28,7 @@ def delivery_handler(schedule_route, context_factory, task_service, async_task_r
 
 
 @pytest.fixture
-def run(mocker, delivery_handler, task_event):
-    http_request = mocker.Mock(spec=Request)
-
-    async def factory(event=task_event):
-        return await delivery_handler.execute(
-            request=http_request, task_id="TSK-001", delivery=event
-        )
-
-    return factory
-
-
-@pytest.fixture
-def build_schedule_context(mocker, context_factory, schedule_context):
-    mocker.patch(
-        "mpt_extension_sdk.api.builders.task_delivery.RequestAuthenticationService.authenticate",
-        autospec=True,
-    )
+def build_schedule_context(authenticate, context_factory, schedule_context):
     context_factory.build.return_value = schedule_context
     return context_factory.build
 
@@ -306,23 +283,17 @@ async def test_defers_on_start_error(build_schedule_context, run, task_service):
     assert result.response == ResponseEnum.DEFER
 
 
-async def test_cancels_on_auth_failure(mocker, run):
-    mocker.patch(
-        "mpt_extension_sdk.api.builders.task_delivery.RequestAuthenticationService.authenticate",
-        side_effect=AuthenticationError,
-    )
+async def test_cancels_on_auth_failure(authenticate, run):
+    authenticate.side_effect = AuthenticationError
 
     result = await run()
 
     assert result == EventResponse.cancel(reason="Authentication failed")
 
 
-async def test_final_task_ok_without_auth(mocker, run, task_service, task_factory):
+async def test_final_task_ok_without_auth(authenticate, run, task_service, task_factory):
     task_service.get.return_value = task_factory("Completed")
-    mocker.patch(
-        "mpt_extension_sdk.api.builders.task_delivery.RequestAuthenticationService.authenticate",
-        side_effect=AuthenticationError,
-    )
+    authenticate.side_effect = AuthenticationError
 
     result = await run()
 

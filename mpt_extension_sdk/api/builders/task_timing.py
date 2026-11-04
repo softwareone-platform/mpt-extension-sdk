@@ -42,6 +42,21 @@ def get_execution_deadline(task: Task) -> float:
     return max(min(remaining_processing, remaining_lifespan) - TASK_TIMEOUT_SAFETY_MARGIN, 1)
 
 
+def get_schedulable_delay(delay: float, enqueued_at: dt.datetime) -> int:
+    """Return a watchdog delay capped so the redelivery stays within the event retention.
+
+    Args:
+        delay: The watchdog delay, in seconds, to answer.
+        enqueued_at: When the framework enqueued the delivered event.
+
+    Returns:
+        The capped delay, never below one second.
+    """
+    retained = (dt.datetime.now(dt.UTC) - enqueued_at).total_seconds()
+    schedulable = EVENT_RETENTION_SECONDS - retained - TASK_TIMEOUT_SAFETY_MARGIN
+    return max(int(min(delay, schedulable)), 1)
+
+
 def delivery_latency_seconds(enqueued_at: dt.datetime, delivered_at: dt.datetime) -> float:
     """Return how long the framework held the event before delivering it.
 

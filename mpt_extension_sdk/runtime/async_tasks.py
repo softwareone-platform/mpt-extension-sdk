@@ -143,9 +143,6 @@ class AsyncTaskRunner:  # noqa: WPS214
             )
             raise
         except Exception as error:
-            execution.handler_logger.exception(
-                "Async task %s failed", execution.task_id, exc_info=error
-            )
             await transitions.transition_on_error(execution.task_id, error)
         else:
             execution.handler_logger.info("Async task %s completed successfully", execution.task_id)
