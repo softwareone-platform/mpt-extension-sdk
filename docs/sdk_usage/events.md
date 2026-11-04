@@ -21,8 +21,9 @@ async def process_purchase(event, context):
     """Process a non-task order or agreement event."""
 ```
 
-Use `task(...)` for task-backed events. The runtime starts, completes,
-fails, or reschedules the Marketplace task around the handler execution.
+Use `task(...)` for task-backed events. The runtime runs the handler on its
+application-scoped task runner, outside the HTTP request, and completes, fails,
+or reschedules the Marketplace task from the handler outcome.
 
 ```python
 from mpt_extension_sdk import EventRouter
@@ -38,6 +39,19 @@ orders_router = EventRouter(prefix="/events/orders")
 async def process_order_change(event, context):
     """Process a task-backed event."""
 ```
+
+Task-backed event deliveries follow the same delivery protocol as schedules
+(see [schedules.md](schedules.md#delivery-protocol)). What is specific to
+task-backed events:
+
+- the task identifier comes from `task.id` in the event body, and the context
+  exposes it as `ctx.meta.task_id`; the context has no `ctx.task` handle;
+- the task runs within the time limits the platform publishes on it, and counts
+  towards `SDK_MAX_CONCURRENT_TASKS` with schedules and deferred calls;
+- a `DeferError` reschedules the task, and the next delivery follows the
+  watchdog cadence rather than `delay_seconds`;
+- the context adapter and the event span work as for non-task events, and the
+  span covers the handler execution in the runner.
 
 Within one router or app, each route `name` and `path` must be unique. Event
 subscriptions must also be unique among event routes.

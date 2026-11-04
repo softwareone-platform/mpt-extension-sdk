@@ -20,7 +20,7 @@ The SDK runtime relies on these settings:
 | `SDK_LOCAL_WORKERS` | `1` | `2` | Worker count for local Uvicorn mode |
 | `SDK_ZITI_WORKERS` | `4` | `8` | Worker count for Ziticorn platform runtime |
 | `SDK_ZITI_RELOAD` | `false` | `true` | Enables Ziticorn reload mode |
-| `SDK_MAX_CONCURRENT_TASKS` | unbounded | `10` | Maximum task executions, schedule and deferred together, that each worker process runs at the same time; `0` runs none |
+| `SDK_MAX_CONCURRENT_TASKS` | unbounded | `10` | Maximum task executions, schedule, task-backed event and deferred together, that each worker process runs at the same time; `0` runs none |
 | `LOG_LEVEL` | `INFO` | `DEBUG` | Default runtime log level |
 | `SDK_OBSERVABILITY_ENABLED` | `true` | `false` | Enables SDK observability bootstrap |
 | `SDK_APPLICATIONINSIGHTS_CONNECTION_STRING` | - | `InstrumentationKey=...` | Azure Monitor connection string used by the SDK observability bootstrap |
@@ -80,9 +80,10 @@ LOG_LEVEL=INFO
 - In local `FastAPI + uvicorn` mode, `SDK_LOCAL_RELOAD=true` takes precedence
   over multi-worker settings. Use reload for local development, or disable
   reload before increasing `SDK_LOCAL_WORKERS`.
-- Worker count does not duplicate schedule executions: they are claimed in the
-  platform, which covers every worker process and every instance, as described
-  in [sdk_usage/schedules.md](sdk_usage/schedules.md).
+- Worker count does not duplicate task executions (schedules, task-backed
+  events, deferred calls): they are claimed in the platform, which covers every
+  worker process and every instance, as described in
+  [sdk_usage/schedules.md](sdk_usage/schedules.md#claiming-an-execution).
 - `SDK_MAX_CONCURRENT_TASKS` limits each worker process on its own, so an
   instance runs up to that value times its worker count. A delivery that
   arrives while the process is at the limit is answered `Defer` with the

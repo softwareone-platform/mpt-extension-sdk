@@ -96,7 +96,7 @@ class OrderFailedStopStepError(StopStepError):
 
 ## Event Response Mapping
 
-For event and task routes, the SDK maps the final exception to an
+For non-task event routes, the SDK maps the final exception to an
 `EventResponse` through `map_exception_to_event_response`:
 
 | Exception | Event response |
@@ -125,6 +125,11 @@ A route that carries a platform task transitions it from the handler outcome:
 | returns normally | the task is completed |
 | `DeferError` | the task is rescheduled |
 | any other exception | the task is failed |
+
+Task-backed event, schedule and deferred call handlers run on the task runner,
+so their outcome is a task transition rather than the delivery answer. A
+`DeferError` there reschedules the task without its `delay_seconds`: the next
+delivery follows the watchdog cadence.
 
 Each outcome is logged once on the handler logger: a reschedule or a
 `CancelError` at info level with its reason, and any other error at error level

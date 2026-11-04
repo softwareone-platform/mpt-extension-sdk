@@ -1,5 +1,3 @@
-import base64
-import json
 from collections.abc import Callable
 from unittest.mock import call
 
@@ -9,37 +7,16 @@ from fastapi.testclient import TestClient
 
 from mpt_extension_sdk import routing
 from mpt_extension_sdk.api.auth import AuthenticationError
-from mpt_extension_sdk.api.auth import constants as auth_constants
 from mpt_extension_sdk.api.builders import event as event_builder
 from mpt_extension_sdk.api.models.events import ResponseEnum
 from mpt_extension_sdk.context import BaseContext
 from mpt_extension_sdk.errors import pipeline as pipeline_errors
 from mpt_extension_sdk.extension_app import ExtensionApp
-from mpt_extension_sdk.services.mpt_api_service.task import TaskService
 
 
 @pytest.fixture
 def mock_callable(mocker):
     return mocker.Mock(spec=Callable)
-
-
-@pytest.fixture
-def auth_token():
-    claims = {
-        auth_constants.CLAIM_ACCOUNT_ID: "ACC-001",
-        auth_constants.CLAIM_ACCOUNT_TYPE: "Client",
-        auth_constants.CLAIM_EXTENSION_ID: "EXT-001",
-        auth_constants.CLAIM_MODULES: {"billing": ["edit"]},
-        "exp": 4102444800,
-    }
-    payload = json.dumps(claims).encode("utf-8")
-    encoded_payload = base64.urlsafe_b64encode(payload).decode("utf-8").rstrip("=")
-    return f"header.{encoded_payload}."
-
-
-@pytest.fixture
-def auth_headers(auth_token):
-    return {"Authorization": f"Bearer {auth_token}"}
 
 
 @pytest.fixture
@@ -56,7 +33,7 @@ def task_event_payload():
             "object_type": "Order",
             "name": "OrderName",
         },
-        "task": {"id": "TASK-001"},
+        "task": {"id": "TSK-001"},
     }
 
 
@@ -80,11 +57,6 @@ def event_payload():
 @pytest.fixture
 def app_instance():
     return ExtensionApp()
-
-
-@pytest.fixture
-def fake_task_service(mocker):
-    return mocker.AsyncMock(spec=TaskService)
 
 
 @pytest.fixture
@@ -161,13 +133,10 @@ def start_event_span_mock(mocker, event_span):
 
 @pytest.fixture
 def task_client(
+    authenticate,
     build_context_mock,
-    get_business_attributes_mock,
-    set_attributes_mock,
-    record_exception_mock,
-    set_event_context_mock,
-    start_event_span_mock,
-    fake_task_service,
+    task_service,
+    async_task_runner,
     app_instance,
     make_event_route,
 ):
@@ -177,8 +146,10 @@ def task_client(
         )
         router = event_builder.create_task_event_route(route, app_instance)
         app = FastAPI()
+        app.state.async_task_runner = async_task_runner
         app.include_router(router)
-        app.dependency_overrides[event_builder.get_tasks_service] = lambda: fake_task_service
+        app.dependency_overrides[event_builder.get_instance_id] = lambda: None
+        app.dependency_overrides[event_builder.get_tasks_service] = lambda: task_service
         return TestClient(app, raise_server_exceptions=False)
 
     return factory
@@ -265,7 +236,7 @@ def test_event_route_success(
     mock_callable.assert_called_once_with(mock_callable.call_args.args[0], fake_context)
     auth = build_context_mock.call_args.args[2]
     assert auth.token == auth_token
-    assert auth.account.id == "ACC-001"
+    assert auth.account.id == "ACC-1"
     start_event_span_mock.assert_called_once_with(
         "/test/event", task_based=False, event=mock_callable.call_args.args[0]
     )
@@ -346,107 +317,50 @@ def test_create_task_event_route(mock_callable, make_event_route):
     assert api_route.methods == {"POST"}
 
 
-def test_task_route_success(
-    auth_headers,
-    auth_token,
-    task_client,
-    task_event_payload,
-    mock_callable,
-    fake_task_service,
-    fake_context,
-    build_context_mock,
-    start_event_span_mock,
-    set_event_context_mock,
+def test_task_route_defers_queued_task(
+    auth_headers, task_client, task_event_payload, mock_callable
 ):
     result = task_client(mock_callable).post(
         "/test/task", json=task_event_payload, headers=auth_headers
     )
 
-    response = result.json()
-    assert response["response"] == ResponseEnum.OK
-    fake_task_service.start.assert_awaited_once()
-    fake_task_service.complete.assert_awaited_once()
-    fake_task_service.fail.assert_not_awaited()
-    mock_callable.assert_called_once_with(mock_callable.call_args.args[0], fake_context)
-    auth = build_context_mock.call_args.args[2]
-    assert auth.token == auth_token
-    assert auth.account.id == "ACC-001"
-    start_event_span_mock.assert_called_once_with(
-        "/test/task", task_based=True, event=mock_callable.call_args.args[0]
-    )
-    assert set_event_context_mock.call_args_list == [
-        call(task_id="TASK-001"),
-        call(order_id="ORD-001", agreement_id="AGR-001"),
-    ]
+    assert result.json()["response"] == ResponseEnum.DEFER
 
 
-def test_task_route_authentication_error(
-    build_context_mock, fake_task_service, task_client, task_event_payload, mock_callable
+def test_task_route_fetches_event_task(
+    auth_headers, task_client, task_event_payload, mock_callable, task_service
 ):
-    result = task_client(mock_callable).post("/test/task", json=task_event_payload)
+    task_client(mock_callable).post(  # act
+        "/test/task", json=task_event_payload, headers=auth_headers
+    )
 
-    response = result.json()
-    assert response["response"] == ResponseEnum.CANCEL
-    build_context_mock.assert_not_called()
-    fake_task_service.start.assert_not_awaited()
-    fake_task_service.fail.assert_not_awaited()
+    task_service.get.assert_awaited_once_with("TSK-001")
+
+
+def test_task_route_submits_to_runner(
+    auth_headers, task_client, task_event_payload, mock_callable, async_task_runner
+):
+    task_client(mock_callable).post(  # act
+        "/test/task", json=task_event_payload, headers=auth_headers
+    )
+
+    execution = async_task_runner.submit.call_args.kwargs["execution"]
+    assert execution.task_id == "TSK-001"
+
+
+def test_task_route_does_not_run_handler_inline(
+    auth_headers, task_client, task_event_payload, mock_callable
+):
+    task_client(mock_callable).post(  # act
+        "/test/task", json=task_event_payload, headers=auth_headers
+    )
+
     mock_callable.assert_not_called()
 
 
-def test_task_route_context_authentication_error(
-    auth_headers,
-    build_context_mock,
-    fake_task_service,
-    task_client,
-    task_event_payload,
-    mock_callable,
+def test_task_route_requires_task_event_body(
+    auth_headers, task_client, event_payload, mock_callable
 ):
-    build_context_mock.side_effect = AuthenticationError
+    result = task_client(mock_callable).post("/test/task", json=event_payload, headers=auth_headers)
 
-    result = task_client(mock_callable).post(
-        "/test/task", json=task_event_payload, headers=auth_headers
-    )
-
-    response = result.json()
-    assert response.get("response") == ResponseEnum.CANCEL
-    fake_task_service.start.assert_not_awaited()
-    fake_task_service.fail.assert_not_awaited()
-    mock_callable.assert_not_called()
-
-
-@pytest.mark.parametrize(
-    ("error", "expected_response", "expected_task_action"),
-    [
-        (pipeline_errors.CancelError("not allowed"), ResponseEnum.CANCEL, "fail"),
-        (
-            pipeline_errors.DeferError("retry later", delay_seconds=60),
-            ResponseEnum.DEFER,
-            "reschedule",
-        ),
-        (pipeline_errors.FailError("processing failed"), ResponseEnum.CANCEL, "fail"),
-        (RuntimeError("unexpected"), ResponseEnum.CANCEL, "fail"),
-    ],
-)
-def test_task_route_error(
-    auth_headers,
-    error,
-    expected_response,
-    expected_task_action,
-    fake_task_service,
-    task_client,
-    task_event_payload,
-    mock_callable,
-    record_exception_mock,
-    event_span,
-):
-    mock_callable.side_effect = error
-
-    result = task_client(mock_callable).post(
-        "/test/task", json=task_event_payload, headers=auth_headers
-    )
-
-    response = result.json()
-    assert response["response"] == expected_response
-    getattr(fake_task_service, expected_task_action).assert_awaited_once()
-    fake_task_service.complete.assert_not_awaited()
-    record_exception_mock.assert_called_once_with(event_span, error)
+    assert result.status_code == 422

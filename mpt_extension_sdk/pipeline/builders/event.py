@@ -2,6 +2,7 @@ import logging
 from typing import override
 
 from mpt_extension_sdk.api.models.events import Event, EventObjectType
+from mpt_extension_sdk.errors.runtime import ValidationError
 from mpt_extension_sdk.pipeline.builders.base import ContextBuilder, ContextResources
 from mpt_extension_sdk.pipeline.context.agreement import AgreementContext
 from mpt_extension_sdk.pipeline.context.event import EventBaseContext, EventMetadata
@@ -37,7 +38,7 @@ class EventContextBuilder(ContextBuilder[EventBaseContext]):
                 **resources.base_fields(),
             )
 
-        raise RuntimeError(f"Unsupported context type: {object_type}")
+        raise ValidationError(f"Unsupported context type: {object_type}")
 
     def _metadata(self) -> EventMetadata:
         return EventMetadata(

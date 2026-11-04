@@ -2,6 +2,7 @@ from contextlib import contextmanager
 
 import pytest
 
+from mpt_extension_sdk.errors.runtime import ValidationError
 from mpt_extension_sdk.pipeline.builders import EventContextBuilder
 from mpt_extension_sdk.pipeline.context.agreement import AgreementContext
 from mpt_extension_sdk.pipeline.context.order import OrderContext
@@ -55,7 +56,7 @@ async def test_build_rejects_unsupported_obj_type(logger, event_factory, resourc
         event=event_factory("Subscription", "SUB-1"), handler_logger=logger
     )
 
-    with pytest.raises(RuntimeError, match="Unsupported context type: Subscription"):
+    with pytest.raises(ValidationError, match="Unsupported context type: Subscription"):
         await builder.build(resources)
 
 
