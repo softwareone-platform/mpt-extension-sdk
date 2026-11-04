@@ -11,9 +11,8 @@ runs it. `make run-demo` layers [`compose.demo.yaml`](../compose.demo.yaml) on
 top and starts the whole local harness: the extension in `--local` mode, a second
 instance used to demonstrate the claim on an execution, a WireMock devmock that
 answers the Marketplace and Tasks APIs, and a Jaeger collector for traces. See
-[`peripherals/devmock/README.md`](../peripherals/devmock/README.md) for the
-endpoints it stubs and how to run the schedule, task-based event and deferred
-call demos.
+[`peripherals/devmock/README.md`](../peripherals/devmock/README.md) for the endpoints it stubs and how to run the schedule,
+task-based event and deferred call demos.
 
 The packaged runtime itself runs in two modes:
 
@@ -46,8 +45,7 @@ The targets the shared document does not cover:
 
 - `make run` starts the extension alone through [`compose.yaml`](../compose.yaml).
 - `make run-demo` layers [`compose.demo.yaml`](../compose.demo.yaml) on top and
-  starts the full local harness described in
-  [Local Execution Model](#local-execution-model).
+  starts the full local harness described in [Local Execution Model](#local-execution-model).
 - `make down` stops and removes the Compose containers.
 - `make build-package` runs `uv build` in the runtime container to produce a
   distributable package artifact.

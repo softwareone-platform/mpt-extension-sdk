@@ -26,17 +26,25 @@ When applicable, read the repository in this order:
 
 Then inspect the code paths relevant to the task:
 
-- [`mpt_extension_sdk/extension_app.py`](mpt_extension_sdk/extension_app.py): public SDK entrypoint that defines `ExtensionApp`, `ExtensionRouter`, route registration, and context adaptation
-- [`mpt_extension_sdk/api/builders/`](mpt_extension_sdk/api/builders): FastAPI route builders for API/event handlers, argument resolution, execution, and error mapping
+- [`mpt_extension_sdk/extension_app.py`](mpt_extension_sdk/extension_app.py): public SDK entrypoint that defines `ExtensionApp`, router inclusion, and context adaptation
+- [`mpt_extension_sdk/routing/`](mpt_extension_sdk/routing): route-family routers, route definition models, and registration validation
+- [`mpt_extension_sdk/api/builders/`](mpt_extension_sdk/api/builders): FastAPI route builders for every route family, the task delivery handlers, argument resolution, execution, and error mapping
 - [`mpt_extension_sdk/pipeline/`](mpt_extension_sdk/pipeline): execution contexts, pipeline primitives, step decorators, and the route context factory with its context builders
 - [`mpt_extension_sdk/runtime/app.py`](mpt_extension_sdk/runtime/app.py): FastAPI app assembly, middleware registration, observability bootstrap, and extension route mounting
 - [`mpt_extension_sdk/runtime/main.py`](mpt_extension_sdk/runtime/main.py): exported ASGI application used by local and platform runtimes; writes `meta.yaml` on import
 - [`mpt_extension_sdk/runtime/runner.py`](mpt_extension_sdk/runtime/runner.py): local `uvicorn` startup, platform `ziticorn` startup, and the metadata-file writer
+- [`mpt_extension_sdk/runtime/async_tasks.py`](mpt_extension_sdk/runtime/async_tasks.py): application-scoped runner that executes task handlers outside the request
+- [`mpt_extension_sdk/runtime/task_transitions.py`](mpt_extension_sdk/runtime/task_transitions.py): task claim and lifecycle transitions that tolerate finalized tasks
+- [`mpt_extension_sdk/runtime/logging.py`](mpt_extension_sdk/runtime/logging.py): logging setup and the per-request logging context
 - [`mpt_extension_sdk/runtime/bootstrap/`](mpt_extension_sdk/runtime/bootstrap): extension instance registration, platform identity persistence, and bootstrap HTTP calls
 - [`mpt_extension_sdk/services/mpt_api_service/`](mpt_extension_sdk/services/mpt_api_service): Marketplace service layer used by handlers, pipelines, and runtime task operations
 - [`mpt_extension_sdk/settings/`](mpt_extension_sdk/settings): runtime and extension settings discovery from environment variables and extension modules
-- [`mpt_extension_sdk/observability/`](mpt_extension_sdk/observability): tracing, logging, and FastAPI instrumentation hooks
+- [`mpt_extension_sdk/observability/`](mpt_extension_sdk/observability): tracing bootstrap, FastAPI and HTTPX instrumentation, and log correlation
 - [`mpt_extension_sdk/models/`](mpt_extension_sdk/models): shared typed Marketplace domain models used by contexts and services
+- [`mpt_extension_sdk/tasks.py`](mpt_extension_sdk/tasks.py): `TaskHandle`, the handle a task handler uses to report to its platform task
+- [`mpt_extension_sdk/webhooks/`](mpt_extension_sdk/webhooks): webhook types, typed webhook contexts, and webhook responses and errors
+- [`mpt_extension_sdk/errors/`](mpt_extension_sdk/errors): runtime and pipeline exceptions and their mapping to event responses
+- [`mpt_extension_sdk/cli/`](mpt_extension_sdk/cli): the `mpt-ext` commands
 - [`tests/`](tests): pytest coverage grouped by SDK domain
 - [`make/`](make): canonical local commands
 - [`compose.yaml`](compose.yaml): Docker-based local runtime definition

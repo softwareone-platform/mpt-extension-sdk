@@ -31,10 +31,8 @@ The repository commits a shared project settings file,
 
 Only `.claude/settings.json` is tracked. Keep personal settings in
 `.claude/settings.local.json` or other files under `.claude/`, which
-[`.gitignore`](../.gitignore) keeps out of version control. See the Claude Code
-[settings](https://code.claude.com/docs/en/settings#settings-files-and-who-they-affect)
-and [attribution](https://code.claude.com/docs/en/settings-reference#attribution)
-references for details.
+[`.gitignore`](../.gitignore) keeps out of version control. See the Claude Code [settings](https://code.claude.com/docs/en/settings#settings-files-and-who-they-affect)
+and [attribution](https://code.claude.com/docs/en/settings-reference#attribution) references for details.
 
 ## Code Organization Expectations
 
@@ -53,16 +51,13 @@ Repository-specific expectations:
 ## Validation Before Review
 
 Follow the shared validation flow in [knowledge/build-and-checks.md](https://github.com/softwareone-platform/mpt-extension-skills/blob/main/knowledge/build-and-checks.md).
-[local-development.md](local-development.md#make-commands) covers the targets
-specific to this repository.
+[local-development.md](local-development.md#make-commands) covers the targets specific to this repository.
 
 Repository-specific expectations on top of the shared flow:
 
-- rebuild with `make build` whenever [`uv.lock`](../uv.lock) changed, before
-  running any check.
+- rebuild with `make build` whenever [`uv.lock`](../uv.lock) changed, before running any check.
 - see [testing.md](testing.md) for when tests are required.
 
 ## Documentation Changes
 
-Documentation rules, and the map of which document owns which topic, live in
-[documentation.md](documentation.md).
+Documentation rules, and the map of which document owns which topic, live in [documentation.md](documentation.md).
