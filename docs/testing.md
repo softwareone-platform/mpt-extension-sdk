@@ -3,25 +3,22 @@
 This file documents repository-specific testing behavior and the shared testing
 rules imported from `mpt-extension-skills`:
 
-- `standards/unittests.md`
-- `knowledge/build-and-checks.md`
+- [standards/unittests.md](https://github.com/softwareone-platform/mpt-extension-skills/blob/main/standards/unittests.md)
+- [knowledge/build-and-checks.md](https://github.com/softwareone-platform/mpt-extension-skills/blob/main/knowledge/build-and-checks.md)
 
-The repository-local rules below override or narrow those shared rules where
-needed.
+The repository-local rules below override or narrow those shared rules where needed.
 
-## Test Scope
+## Test Layout
 
-The repository has pytest configured in [`pyproject.toml`](../pyproject.toml)
-and the `tests/` tree already covers the main SDK domains, including:
+`tests/` mirrors `mpt_extension_sdk/` one module at a time: the tests of
+`mpt_extension_sdk/<package>/<module>.py` live in
+`tests/<package>/test_<module>.py`. Do not add tests for a module to a generic or
+sibling test file.
 
-- extension app and route registration under `tests/test_extension_app.py`
-- pipeline contexts, decorators, and factories under `tests/pipeline/`
-- runtime app, runner, and bootstrap behavior under `tests/runtime/`
-- Marketplace service helpers under `tests/services/`
-- CLI behavior under `tests/cli/`
-- settings loading under `tests/settings/`
-- observability bootstrap and tracing under `tests/observability/`
-
+Shared fixtures live in [`tests/conftest.py`](../tests/conftest.py), and fixtures
+used by one package in that package's `conftest.py`, for example the task
+delivery fixtures in
+[`tests/api/builders/conftest.py`](../tests/api/builders/conftest.py).
 
 ## Commands
 
@@ -41,21 +38,10 @@ make test args="tests/cli -k meta_validate"
 
 Repository-specific test settings come from [`pyproject.toml`](../pyproject.toml):
 
-- tests are discovered under `tests`
-- `pythonpath` includes the repository root
-- coverage is collected for `mpt_extension_sdk`
-- tests run with `--import-mode=importlib`
-
-## Writing Tests
-
-Repository-specific guidance:
-
-- add or update tests next to the affected SDK domain instead of creating catch-all files
-- prefer existing fixtures from [`tests/conftest.py`](../tests/conftest.py) and domain-specific `conftest.py` files
-- keep external service calls mocked; do not make live Marketplace or external platform calls in tests
-- cover CLI and runtime changes under `tests/cli/` or `tests/runtime/`
-- cover public SDK behavior when changing `ExtensionApp`, router-family APIs, pipeline APIs, or runtime wiring
-
+- tests are discovered under `tests`, with the repository root on `pythonpath`
+  and `--import-mode=importlib`
+- `asyncio_mode = "auto"`, so async tests need no marker
+- branch coverage is collected for `mpt_extension_sdk`
 
 ## When Tests Are Required
 

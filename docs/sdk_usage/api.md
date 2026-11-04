@@ -237,7 +237,8 @@ deferred call only for an endpoint listed there.
 3. The Extension Service then delivers the same request to the extension, with
    the same path, query, and body, without `MPT-Async` and with `MPT-Task-Id`.
 4. The SDK starts the Task, runs the handler in the background, and completes,
-   reschedules, or fails the Task from its outcome.
+   reschedules, or fails the Task from its outcome, following the
+   [delivery protocol](tasks.md#delivery-protocol) shared by task-based routes.
 
 A call without `MPT-Async: true` reaches the handler as a regular request. A
 call with it to an endpoint that is not deferrable is rejected by the Extension
@@ -255,13 +256,13 @@ implements both branches. `ctx.task` tells them apart:
 | A `TaskHandle` | Deferred delivery | `None` or a `TaskResult`; the caller already got `202` |
 
 `ctx.task.progress(...)`, `ctx.task.log(...)`, and the task parameter methods
-report to the Task, as for schedules (see
-[schedules.md](schedules.md#reporting-to-the-task)), and only exist in the
+report to the Task (see
+[tasks.md](tasks.md#reporting-to-the-task)), and only exist in the
 deferred branch. Progress and logging are best-effort; the parameter methods
 raise on failure.
 
-The outcome of the deferred branch drives the Task, as for schedules (see
-[schedules.md](schedules.md#handler-outcomes)): a return completes it,
+The outcome of the deferred branch drives the Task (see
+[tasks.md](tasks.md#handler-outcomes)): a return completes it,
 `DeferError` reschedules it and the handler runs again from the beginning on
 the next delivery, and `CancelError`, `FailError`, or any other exception fails
 it. In the direct branch these errors are not API errors, so the caller gets a
@@ -350,7 +351,7 @@ async def sync_agreements(ctx: APIContext) -> APIResponse | None: ...
 `TaskTimeouts` needs at least one of the two limits. A limit left out is not
 published, so the platform default applies. The SDK reads its execution
 deadline from the limits the Task publishes, as described in
-[schedules.md](schedules.md#time-limits), and fails the Task with a processing
+[tasks.md](tasks.md#time-limits), and fails the Task with a processing
 timeout reason when the handler exceeds it.
 
 ### Registration rules

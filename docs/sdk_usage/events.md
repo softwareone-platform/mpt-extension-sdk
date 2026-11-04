@@ -21,9 +21,9 @@ async def process_purchase(event, context):
     """Process a non-task order or agreement event."""
 ```
 
-Use `task(...)` for task-backed events. The runtime runs the handler on its
-application-scoped task runner, outside the HTTP request, and completes, fails,
-or reschedules the Marketplace task from the handler outcome.
+Use `task(...)` for task-backed events. The runtime runs the handler as a
+platform Task on its application-scoped runner, outside the HTTP request, and
+completes, fails, or reschedules the Task from the handler outcome.
 
 ```python
 from mpt_extension_sdk import EventRouter
@@ -40,16 +40,13 @@ async def process_order_change(event, context):
     """Process a task-backed event."""
 ```
 
-Task-backed event deliveries follow the same delivery protocol as schedules
-(see [schedules.md](schedules.md#delivery-protocol)). What is specific to
-task-backed events:
+Handler outcomes, time limits, interruptions, `SDK_MAX_CONCURRENT_TASKS`, and
+the delivery protocol are shared with every task-based route and described in
+[tasks.md](tasks.md). What is specific to task-backed events:
 
-- the task identifier comes from `task.id` in the event body, and the context
+- the Task identifier comes from `task.id` in the event body, and the context
   exposes it as `ctx.meta.task_id`; the context has no `ctx.task` handle;
-- the task runs within the time limits the platform publishes on it, and counts
-  towards `SDK_MAX_CONCURRENT_TASKS` with schedules and deferred calls;
-- a `DeferError` reschedules the task, and the next delivery follows the
-  watchdog cadence rather than `delay_seconds`;
+- the Task runs within the time limits the platform publishes on it;
 - the context adapter and the event span work as for non-task events, and the
   span covers the handler execution in the runner.
 
@@ -98,10 +95,6 @@ The SDK validates that the schedule `id` is unique within the extension and that
 `cron` is a five-field expression, and emits each schedule into the generated
 metadata under `schedules` (`id`, `name`, `description`, `cron`, `path`).
 
-The runtime executes schedules: the Extension Framework delivers each schedule
-occurrence to the SDK, which drives the delivery protocol. Every non-final task
-responds with `Defer` on the watchdog cadence, and the event is only `OK`'d once
-the task reaches a final state. The SDK then submits the handler to its
-application-scoped runner.
-
-See [schedules.md](schedules.md) for the full delivery protocol and handler guide.
+The runtime executes schedules as platform Tasks. See
+[schedules.md](schedules.md) for the schedule guide and
+[tasks.md](tasks.md) for the delivery protocol.

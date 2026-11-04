@@ -21,8 +21,12 @@ mpt-ext meta validate
 - `mpt-ext run` registers the extension instance and starts the platform
   runtime (`mrok`/`ziticorn`).
 
-How each mode starts the runtime, and when `meta.yaml` is written, is described
-in [architecture.md](../architecture.md#run-modes).
+Both modes import the exported ASGI app (`runtime/main.py`), which writes
+`meta.yaml` on import. In platform mode the runner registers the instance before
+starting the Ziticorn workers, persists the returned identity, and passes the
+instance id to the workers, which record it on the tasks they claim. Ziticorn
+serves `/bypass/*` over plain HTTP, so platform probes reach the
+[operational endpoints](application.md#operational-endpoints).
 
 ## Metadata (`meta.yaml`)
 

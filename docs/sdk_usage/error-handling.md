@@ -118,19 +118,6 @@ rarely need to construct `CancelError` or `DeferError` directly.
 
 ## Task Transition Mapping
 
-A route that carries a platform task transitions it from the handler outcome:
-
-| Handler outcome | Task transition |
-| --- | --- |
-| returns normally | the task is completed |
-| `DeferError` | the task is rescheduled |
-| any other exception | the task is failed |
-
-Task-backed event, schedule and deferred call handlers run on the task runner,
-so their outcome is a task transition rather than the delivery answer. A
-`DeferError` there reschedules the task without its `delay_seconds`: the next
-delivery follows the watchdog cadence.
-
-Each outcome is logged once on the handler logger: a reschedule or a
-`CancelError` at info level with its reason, and any other error at error level
-with the failure reason and its traceback.
+Task handlers run on the task runner, so their outcome is a platform task
+transition rather than the delivery answer. The mapping is described in
+[tasks.md](tasks.md#handler-outcomes), with how each outcome is logged.

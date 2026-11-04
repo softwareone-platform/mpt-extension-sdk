@@ -2,7 +2,7 @@
 
 This repository follows the shared documentation standard:
 
-- `standards/documentation.md` in `softwareone-platform/mpt-extension-skills`
+- [standards/documentation.md](https://github.com/softwareone-platform/mpt-extension-skills/blob/main/standards/documentation.md) in `softwareone-platform/mpt-extension-skills`
 
 The shared standard owns the general documentation rules. This file documents
 only repository-specific additions and exceptions.
@@ -28,8 +28,7 @@ deciding where content belongs.
 | [`documentation.md`](documentation.md) | this document: the documentation rules and the ownership map above. |
 | [`.github/copilot-instructions.md`](../.github/copilot-instructions.md) | thin tool adapter. Must only point back to [`AGENTS.md`](../AGENTS.md). |
 
-[`pyproject.toml`](../pyproject.toml) uses [`usage.md`](usage.md) as the package
-readme.
+[`pyproject.toml`](../pyproject.toml) uses [`usage.md`](usage.md) as the package readme.
 
 ## Documentation Change Rule
 

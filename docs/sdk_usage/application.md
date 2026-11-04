@@ -1,4 +1,4 @@
-# Application Setup
+# Extension Application
 
 ## Install The SDK
 

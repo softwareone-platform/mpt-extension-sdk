@@ -32,10 +32,6 @@ The standard traces-specific variable `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`
 can be used instead; when set, it also enables the OTLP exporter and takes
 precedence over `OTEL_EXPORTER_OTLP_ENDPOINT`.
 
-The demo environment files may also include integration-specific variables such
-as `MPT_PORTAL_BASE_URL`. Those are example application settings for the
-mock/demo setup rather than core SDK runtime requirements.
-
 ## Runtime Discovery
 
 The runtime discovers the extension package automatically from the current
@@ -66,41 +62,25 @@ SDK_LOCAL_PORT=8080
 LOG_LEVEL=INFO
 ```
 
-## Runtime Notes
+## Setting Rules
 
-- [`mpt_extension_sdk/settings/runtime.py`](../mpt_extension_sdk/settings/runtime.py)
-  loads runtime configuration from environment variables and auto-discovers the
-  extension package.
-- `RuntimeSettings` validates `SDK_EXTENSION_URL`, `SDK_EXTENSION_API_KEY`,
-  `SDK_EXTENSION_ID`, and `MPT_API_BASE_URL` as required
-  environment variables.
-- [`mpt_extension_sdk/runtime/runner.py`](../mpt_extension_sdk/runtime/runner.py)
-  writes `meta.yaml` before startup and selects Uvicorn or Ziticorn depending
-  on the CLI mode.
-- In local `FastAPI + uvicorn` mode, `SDK_LOCAL_RELOAD=true` takes precedence
-  over multi-worker settings. Use reload for local development, or disable
-  reload before increasing `SDK_LOCAL_WORKERS`.
-- Worker count does not duplicate task executions (schedules, task-backed
-  events, deferred calls): they are claimed in the platform, which covers every
-  worker process and every instance, as described in
-  [sdk_usage/schedules.md](sdk_usage/schedules.md#claiming-an-execution).
-- `SDK_MAX_CONCURRENT_TASKS` limits each worker process on its own, so an
-  instance runs up to that value times its worker count. A delivery that
-  arrives while the process is at the limit is answered `Defer` with the
-  watchdog cadence, without claiming its task, so `0` stops the process from
-  running any task. A negative or non-integer value raises `ConfigError` when
-  the runtime settings load.
-- [`mpt_extension_sdk/runtime/bootstrap/registration.py`](../mpt_extension_sdk/runtime/bootstrap/registration.py)
-  registers the running extension instance and persists the returned identity
-  when present. The runner then exports the instance `id` from the registration
-  response as `SDK_EXTENSION_INSTANCE_ID` for the Ziticorn workers, which
-  record it on the tasks they claim. The SDK sets this variable itself and
-  clears any value inherited from the environment, so in local mode, or when
-  registration returns no `id`, it is unset and no instance is recorded.
+- `SDK_EXTENSION_URL`, `SDK_EXTENSION_API_KEY`, `SDK_EXTENSION_ID`, and
+  `MPT_API_BASE_URL` are required; the runtime settings fail to load without
+  them.
+- `SDK_LOCAL_RELOAD=true` takes precedence over `SDK_LOCAL_WORKERS`. Disable
+  reload before increasing the local worker count.
+- `SDK_MAX_CONCURRENT_TASKS` applies to each worker process on its own, so an
+  instance runs up to that value times its worker count; `0` stops the process
+  from running any task. A negative or non-integer value raises `ConfigError`
+  when the runtime settings load. How a delivery at the limit is answered is
+  described in [sdk_usage/tasks.md](sdk_usage/tasks.md#delivery-protocol).
+- `SDK_EXTENSION_INSTANCE_ID` is set by the SDK, not by the deployment: any
+  inherited value is cleared, and it is only set in platform mode when
+  registration returns an instance id (see
+  [sdk_usage/cli.md](sdk_usage/cli.md#running-the-extension)).
 - With `SDK_ZITI_RELOAD=true`, every reloaded worker registers the instance
   again, so plug, event, and schedule metadata changes reach the platform
-  without a full restart. Reload is a development setting; with it off, the
-  runtime registers only at startup as before.
+  without a full restart. Use it only for development.
 
 ## Observability
 

@@ -17,12 +17,13 @@ The repository combines:
 
 The main extension authoring concepts are:
 
-- `ExtensionApp`: the root SDK object for one extension package; it owns route registration, metadata generation, and optional context adaptation
-- route-family routers: `EventRouter`, `APIRouter`, `ScheduleRouter`, `PlugRouter`, and `WebhookRouter` group related handlers under a shared prefix before they are included in the extension app
-- event handlers: task and non-task callbacks registered on `EventRouter` and exposed as FastAPI routes by the runtime
-- pipeline primitives: `ExecutionContext`, specialized order/agreement contexts, `BasePipeline`, and `BaseStep` provide reusable multi-step processing patterns
+- `ExtensionApp`: the root SDK object for one extension package; it includes routers, applies route context adapters, generates metadata, and runs startup hooks
+- route-family routers: `EventRouter`, `APIRouter`, `ScheduleRouter`, and `WebhookRouter` register handlers under a shared prefix, and the runtime exposes each of them as a FastAPI route
+- `PlugRouter`: registers plug providers, which only contribute plug metadata to `meta.yaml` and are not exposed as FastAPI routes
+- handler contexts: `BaseContext` and the context of each route family (`OrderContext`, `AgreementContext`, `ScheduleContext`, `APIContext`, and the webhook contexts); on event and webhook routes, a `ContextAdapter` declared as a router default or on the route can replace it
+- pipeline primitives: `BasePipeline` and `BaseStep` compose multi-step processing over a handler context
 
-Typical extension usage starts with creating an `ExtensionApp`, registering one or more routers, and executing business logic from handlers through pipelines.
+Typical extension usage starts with creating an `ExtensionApp`, including one or more routers, and executing business logic from handlers through pipelines.
 
 ## Package Layout
 
@@ -32,8 +33,8 @@ The main package lives under [`mpt_extension_sdk/`](../mpt_extension_sdk).
 - [`routing/`](../mpt_extension_sdk/routing): route-family routers, route definition models, and route decorators used by the SDK contract
 - [`api/`](../mpt_extension_sdk/api): FastAPI payload models and builder helpers that adapt SDK routes to HTTP
 - [`pipeline/`](../mpt_extension_sdk/pipeline): execution contexts, the route context factory and its context builders, decorators, pipeline base classes, and steps
-- [`runtime/`](../mpt_extension_sdk/runtime): FastAPI app assembly, runtime startup, logging context, and platform bootstrap helpers
-- [`tasks.py`](../mpt_extension_sdk/tasks.py): `TaskHandle`, which gives task-backed handlers such as schedules the platform task id, best-effort task logging and progress reporting, and task parameter updates, without exposing the task lifecycle
+- [`runtime/`](../mpt_extension_sdk/runtime): FastAPI app assembly, runtime startup, the async task runner and task transitions, logging context, and platform bootstrap helpers
+- [`tasks.py`](../mpt_extension_sdk/tasks.py): `TaskHandle`, the handle a task handler uses to report to its platform task
 - [`services/mpt_api_service/`](../mpt_extension_sdk/services/mpt_api_service): Marketplace service layer used by handlers, pipelines, and runtime operations
 - [`services/api_client_v2/`](../mpt_extension_sdk/services/api_client_v2): lower-level async Marketplace API client (`mpt_api_client.py` extends the upstream `AsyncMPTClient` with SDK-owned endpoints under `system/`; standard resources, including integration resources, come from `mpt-api-client`). `MPTAPIService` and its sub-services are constructed with the `AsyncMPTClient` from this layer, so `api_client_v2` is a dependency of `mpt_api_service` rather than a peer
 - [`settings/`](../mpt_extension_sdk/settings): runtime and extension settings discovery
@@ -41,6 +42,7 @@ The main package lives under [`mpt_extension_sdk/`](../mpt_extension_sdk).
 - [`models/`](../mpt_extension_sdk/models): typed Marketplace domain models used across contexts and services, plus `TaskLog` for the log records a task handler writes to its task
 - [`errors/`](../mpt_extension_sdk/errors): runtime, pipeline, and mapping exceptions
 - [`webhooks/`](../mpt_extension_sdk/webhooks): the platform webhook types (`WebhookType`, `WebhookObjectType`), the typed webhook contexts, `WebhookResponse`, `WebhookError`, and the `WebhookError` subclasses the SDK answers with (`EXT001`-`EXT003`)
+- [`cli/`](../mpt_extension_sdk/cli): the `mpt-ext` commands that run the extension and generate or validate `meta.yaml`
 
 ## Main Entry Points
 
@@ -55,104 +57,40 @@ The main package lives under [`mpt_extension_sdk/`](../mpt_extension_sdk).
 
 ## Runtime Model
 
-### Run modes
+The runtime runs locally with `FastAPI + uvicorn` and on the platform with
+`mrok`/`ziticorn`; how each mode starts is described in
+[sdk_usage/cli.md](sdk_usage/cli.md#running-the-extension).
 
-The SDK runtime has two main execution surfaces:
+A request goes through these layers:
 
-- local development through `FastAPI + uvicorn`
-- platform execution through `mrok`/`ziticorn`, after extension registration and identity bootstrap
+1. `runtime/app.py` builds the FastAPI app, loads the extension's `ext_app`, and
+   mounts each route through the builder of its family in `api/builders/`.
+2. The route builder authenticates the request and builds the handler context
+   with `RouteContextFactory` (`pipeline/factory.py`) and the family's
+   `ContextBuilder` (`pipeline/builders/`).
+3. API, webhook and non-task event routes run the handler inside the request.
+   Schedules, task-backed events and deferred API calls are platform tasks: the
+   route claims the task and submits the handler to the application-scoped
+   `AsyncTaskRunner` (`runtime/async_tasks.py`), which transitions the task from
+   the handler outcome (`runtime/task_transitions.py`).
 
-`runtime/main.py` writes `meta.yaml` while the ASGI application is imported, so it happens in both run modes,
-using the metadata-file writer from `runtime/runner.py`. In platform mode `runtime/runner.py` registers the
-extension instance, persists the returned identity when present, and starts the exported ASGI app through Ziticorn.
-Registration runs in the runner process before Ziticorn starts the workers, so the runner hands the registered
-instance id to the workers through the environment (see [configuration.md](configuration.md)).
-Ziticorn serves `/bypass/*` over plain HTTP instead of over the OpenZiti overlay, so platform probes reach the
-operational endpoints.
-
-### Application assembly
-
-`runtime/app.py` assembles the FastAPI app, configures middleware and observability,
-loads the extension's exported `ext_app`, and mounts every registered route through
-the builder of its family in `api/builders/`. It also registers the operational
-endpoints under `/bypass` (see
-[sdk_usage/application.md](sdk_usage/application.md#operational-endpoints)).
-Its lifespan runs the startup hooks registered through `ExtensionApp.on_startup`
-before the app reports itself as ready, so serve-time initialization stays out of
-`app.py` import time and never runs during metadata generation.
-
-### Context building and request execution
-
-Every route family builds its handler context through `RouteContextFactory`
-(`pipeline/factory.py`). The factory checks that the token targets this extension,
-creates the account-scoped and vendor-scoped Marketplace services, and hands them,
-with the settings, to the `ContextBuilder` of the family in `pipeline/builders/`
-(`APIContextBuilder`, `EventContextBuilder`, `ScheduleContextBuilder`,
-`WebhookContextBuilder`). Each route builder creates one factory when the route is mounted and passes it to the code
-that answers the request; the factory reads the process settings on each build, so
-mounting routes does not need them.
-
-Synchronous HTTP routes share `RouteRequestExecutor`
-(`api/builders/request_executor.py`). It authenticates the request, builds the
-context, runs the handler inside the route span, and answers authentication and
-unexpected errors with the family's `RouteErrorResponseBuilder`
-(`api/builders/errors.py`). `APIRequestExecutor` implements it for API routes,
-and `WebhookRequestExecutor` (`api/builders/webhook_execution.py`) for webhook
-routes. `resolve_handler_result` (`api/builders/handlers.py`) lets event, API and
-webhook handlers be sync or async.
-
-### Route families
-
-The `event`, `api`, `schedule`, and `webhook` route families are implemented
-end-to-end in runtime request handling. The `plug` route family is implemented as
-declarative metadata with static asset exposure under `/static`. What each family
-publishes in `meta.yaml` is described in [sdk_usage/cli.md](sdk_usage/cli.md#metadata-metayaml).
-
-Each route family documents its own contract:
-
-- events: [sdk_usage/events.md](sdk_usage/events.md)
-- schedules: [sdk_usage/schedules.md](sdk_usage/schedules.md)
-- API routes, deferrable endpoints included: [sdk_usage/api.md](sdk_usage/api.md)
-- webhooks: [sdk_usage/webhooks.md](sdk_usage/webhooks.md)
-- plugs: [sdk_usage/plugs.md](sdk_usage/plugs.md)
-
-Error mapping for all of them is described in
-[sdk_usage/error-handling.md](sdk_usage/error-handling.md).
-
-### Task execution
-
-Schedule handlers are executed asynchronously by an application-scoped runner,
-so durable dispatch and the claim on an execution stay with the Extension
-Framework and the platform task rather than with the SDK. The same runner executes
-deferred API calls: a deferrable API route serves both modes on one path. A request
-without the `MPT-Task-Id` header runs as a direct call; a request with it is a
-deferred delivery of that platform task, answered with an event response. A route
-restricted to deferred delivery answers a direct call with `405 Method Not Allowed`. The
-declaration and its registration rules are described in
-[sdk_usage/api.md](sdk_usage/api.md#deferrable-endpoints).
-
-Every task the SDK claims, whatever route family delivered it, records the
-instance that ran it: after a successful claim, `runtime/task_transitions.py`
-writes the instance id to the task's `instanceId` parameter. Recording it is best-effort: a failure is logged as a
-warning and the claim still counts.
+How each route family behaves is described in the topic guides indexed from
+[usage.md](usage.md).
 
 ## Boundaries
 
-- Keep extension authoring primitives in `extension_app.py`, `routing/`, and `pipeline/`.
-- Keep FastAPI adapter/builders under `api/`.
-- Keep runtime startup, bootstrap, and application assembly under `runtime/`.
-- Keep Marketplace access logic under `services/mpt_api_service/` instead of duplicating raw client usage in handlers or runtime modules.
+- Keep extension authoring primitives in `extension_app.py`, `context.py`, `tasks.py`, `routing/`, `pipeline/`, and `webhooks/`.
+- Keep the FastAPI adaptation of routes under `api/`.
+- Keep runtime startup, bootstrap, application assembly, task execution, and logging context under `runtime/`.
+- Keep Marketplace access under `services/`: handlers and runtime modules use `mpt_api_service/` instead of raw client calls.
 - Keep configuration loading under `settings/`.
-- Keep tracing and logging concerns under `observability/`.
-- Keep package metadata, tool configuration, and CLI entrypoints in [`pyproject.toml`](../pyproject.toml).
-- Keep SDK usage guidance indexed from [`docs/usage.md`](usage.md), with granular
-  examples under [`docs/sdk_usage/`](sdk_usage/). Repository source documentation
-  belongs in `README.md` and `docs/`.
+- Keep tracing under `observability/`.
+- Keep typed Marketplace data under `models/` and SDK exceptions under `errors/`.
+- Keep the `mpt-ext` commands under `cli/`; [`pyproject.toml`](../pyproject.toml) declares the entrypoint, package metadata, and tool configuration.
 
 ## Model Status Typing
 
-Status fields in [`models/`](../mpt_extension_sdk/models) all follow a single enum
-style.
+Status fields in [`models/`](../mpt_extension_sdk/models) all follow a single enum style.
 
 **Decision: every model status is lenient. The SDK has no strict status enums.**
 A status field is typed as `SomeStatus | str` (`union_mode="left_to_right"`) on the
@@ -165,10 +103,10 @@ validation.
 The rule covers both families of models that carry a status:
 
 - **Marketplace domain models** that mirror Marketplace data (`Order`, `Agreement`,
-  `Subscription`, `Asset`, `Account`, `Licensee`).
+  `Subscription`, `Asset`, `Account`, `Licensee`, `Request`).
 - **Extension-framework models** that are part of the SDK's own contract with the
   platform runtime (`Extension`, `Installation`, `InstallationInvitation`, and
-  `Task` for schedule execution).
+  `Task`).
 
 Rationale: statuses are owned by the platform, not by the SDK, and new members can
 appear at any time in either family. A status the SDK has not been taught about yet
