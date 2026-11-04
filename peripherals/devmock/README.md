@@ -15,7 +15,8 @@ make run-demo
 This starts the extension in local mode (`mpt-ext run --local`, so no platform
 registration) with `MPT_API_BASE_URL` pointing at the devmock (`.env.demo`), plus a
 second instance for the claim scenario below and a Jaeger collector for traces (UI on
-http://localhost:16686).
+http://localhost:16686). Both instances start once the devmock reports healthy, so the
+first API call never reaches a devmock that is still loading its mappings.
 
 ## The two lifecycles
 
@@ -36,7 +37,7 @@ Postman does not deliver the event. It starts the flow, and the devmock does the
 POST {{devmock_url}}/devmock/flows/{use-case}/{task-id}     (once, from Postman)
 POST {{devmock_url}}/devmock/events/{task-id}                (or, for a task-based event)
 POST {{devmock_url}}/devmock/calls/{task-id}                 (or, for a deferred call)
-      → devmock records the flow and delivers the event to the extension
+      → devmock records the flow and asks its delivery stub to deliver the event
       → SDK reads the task, claims it with execute, submits the handler, answers Defer
       → the non-final task-read stub schedules the next delivery
       → handler finishes; the SDK reports complete or fail
@@ -53,10 +54,16 @@ The flip side is that reading a non-final task from outside — a `curl`, a dash
 also queues one delivery. In a demo nothing else reads these tasks, so that is a
 footgun rather than a problem.
 
+Every delivery, first or repeated, goes through one stub,
+`mappings/system/deliver_task.json`. The entry points and the task read never call the
+extension themselves; they call that stub, which builds the request from what the flow
+recorded. So the delivery URL, headers and body are defined once.
+
 ## What it stubs
 
 - `POST /devmock/flows/{use-case}/{task-id}` → the schedule entry point above. Records
-  the use case and the enqueue time for the task id, then fires the first delivery.
+  the schedule path, its object and the enqueue time for the task id, then fires the
+  first delivery.
 - `POST /devmock/calls/{task-id}` with `{"path": "/api/v2/..."}` → the deferred call
   entry point. Records the extension path and the enqueue time for the task id, then
   delivers that path with `MPT-Task-Id`, as the Extension Service does for a call made
@@ -65,16 +72,19 @@ footgun rather than a problem.
   "objectId": "ORD-...", "eventType": "..."}` → the task-based event entry point.
   Records the extension path, the event object and the enqueue time for the task id,
   then delivers a task event with that object to the path, with `MPT-Task-Id`.
+- `POST /devmock/deliveries/{host}/{task-id}` → internal; the entry points and the task
+  read call it. Delivers the recorded path to `{host}` (`app` or `app-secondary`) with
+  `MPT-Task-Id` and the demo `Authorization` header. It sends an event body built from
+  the recorded object when there is one, and no body for a deferred call.
 - `POST /public/v1/integration/installations/-/token` → an unsigned demo JWT
   (`extensionId=EXT-1111-1111`) used by the SDK for its outbound API calls. It is
   assembled by the `base64` template helper from readable claims, in
   `__files/mpt/account_token.json.hbs`, so no token literal is committed. The delivery
-  webhooks build their `Authorization` header the same way.
+  stub builds its `Authorization` header the same way.
 - `GET /public/v1/system/tasks/{id}` → the task, from `__files/system/task.json.hbs`, in
   one of two branches: the status the SDK last reported, or `rescheduled` while it has
-  reported none. The second branch is what schedules the next delivery, to the schedule,
-  the event path or the extension path the flow recorded. A task no flow started reads `{}` and
-  schedules nothing.
+  reported none. The second branch is what schedules the next delivery of the path the
+  flow recorded. A task no flow started reads `{}` and schedules nothing.
 - `POST /public/v1/system/tasks/{id}/execute` → the claim. The first call answers `200`,
   and later calls answer `409` while the claim is held, which is what the platform does.
 - `POST /public/v1/system/tasks/{id}/complete` and `/fail` → record the final status, so
@@ -113,7 +123,8 @@ State lives in memory and expires; `compose.demo.yaml` sets
 default of an hour would drop a settled task's outcome while a demo is still open. A
 restart clears it either way.
 
-Starting a flow or a call whose loop is still running is refused with `409`, so a task
+Starting a flow, an event or a call whose loop is still running is refused with `409`
+by one shared stub, `mappings/system/start_running.json`, so a task
 cannot end up with two chains delivering at once, except by design in the claim scenario
 below. One that has settled can be started again.
 
@@ -125,7 +136,10 @@ task and starts sleeping. Five seconds later the devmock delivers the same task 
 instead of running the handler a second time. That is the guarantee that stops two
 instances, or two worker processes, from executing one task.
 
-Only the `timeout` flow does this, from its own stub in `mappings/system/flow_start.json`.
+Only the `timeout` flow does this. `mappings/system/flow_start.json` sends every flow's
+second delivery to `app-secondary` when the use case is `timeout`, and to `none`
+otherwise; that path matches no delivery stub, so the catch-all answers it and nothing
+is delivered.
 Each of the two deliveries schedules its own re-delivery, so two chains run until the
 task fails on its deadline; both end there.
 
@@ -161,7 +175,7 @@ fails in about one minute. On the platform the SDK answers 300 s for these tasks
 the watchdog delay is derived from the task's own timing and clamps to its 5-minute
 floor; the demo compresses that and changes nothing else about the sequence.
 
-The value is a literal in every webhook of `mappings/system/get_task_pending.json`. It
+The value is a literal in the one webhook of `mappings/system/get_task_pending.json`. It
 has to be: WireMock accepts a template in a webhook's `delay.milliseconds` but never
 evaluates it, firing immediately instead, so the delay cannot be driven from the request.
 

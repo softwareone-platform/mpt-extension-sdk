@@ -1,0 +1,25 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPathPattern": "/devmock/(flows/[^/]+|events|calls)/[^/]+",
+    "customMatcher": {
+      "name": "state-matcher",
+      "parameters": {
+        "hasContext": "{{regexExtract request.path '[^/]+$'}}",
+        "property": {
+          "status": {
+            "absent": true
+          }
+        }
+      }
+    }
+  },
+  "response": {
+    "status": 409,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": "{\"error\":\"a delivery is already running for {{regexExtract request.path '[^/]+$'}}; wait for it to settle or reset the devmock\"}"
+  },
+  "priority": 1
+}

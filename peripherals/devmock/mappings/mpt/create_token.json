@@ -6,8 +6,7 @@
   "response": {
     "status": 201,
     "headers": { "Content-Type": "application/json" },
-    "bodyFileName": "mpt/account_token.json.hbs",
-    "transformers": ["response-template"]
+    "bodyFileName": "mpt/account_token.json.hbs"
   },
   "priority": 5
 }
