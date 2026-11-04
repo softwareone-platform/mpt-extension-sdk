@@ -53,6 +53,11 @@ task-backed events:
 - the context adapter and the event span work as for non-task events, and the
   span covers the handler execution in the runner.
 
+The mock app's `orders-change`
+([`mock_app/api/routes/event.py`](../../mock_app/api/routes/event.py)) is a working
+example. Run it locally as described in
+[`peripherals/devmock/README.md`](../../peripherals/devmock/README.md#task-based-events).
+
 Within one router or app, each route `name` and `path` must be unique. Event
 subscriptions must also be unique among event routes.
 

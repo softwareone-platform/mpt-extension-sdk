@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "mpt-extension-sdk mock_app",
-    "description": "Sample requests for the SDK mock_app running locally on `{{base_url}}` (default `http://localhost:8080`).\n\nAuth is wired automatically:\n\n- A collection-level pre-request script builds a non-prod HS256 JWT from the `extension_id`, `account_id` and `account_type` variables and stores it in `auth_token`.\n- Every authenticated request sends `Authorization: Bearer {{auth_token}}` via collection-level Bearer auth (the `ops` requests opt out).\n\nThe runtime (mpt-extension-sdk) decodes claims without verifying the signature, so the HS256 dummy secret is only there to produce a structurally valid token. Override `extension_id`, `account_id` or `account_type` in the collection variables to test other identities.\n\n`agreements-sync` is deferrable. Without `MPT-Task-Id` it runs as a direct call. The deferred request starts the call on the devmock, which delivers it with `MPT-Task-Id` as the Extension Service does for a call made with `MPT-Async: true`, so run it against `make run-demo`.\n\n`webhook / validate draft order` calls the order validation webhook directly, as the platform does. Every answer is `200`: validation problems are returned on the order, not as an error status.",
+    "description": "Sample requests for the SDK mock_app running locally on `{{base_url}}` (default `http://localhost:8080`).\n\nAuth is wired automatically:\n\n- A collection-level pre-request script builds a non-prod HS256 JWT from the `extension_id`, `account_id` and `account_type` variables and stores it in `auth_token`.\n- Every authenticated request sends `Authorization: Bearer {{auth_token}}` via collection-level Bearer auth (the `ops` requests opt out).\n\nThe runtime (mpt-extension-sdk) decodes claims without verifying the signature, so the HS256 dummy secret is only there to produce a structurally valid token. Override `extension_id`, `account_id` or `account_type` in the collection variables to test other identities.\n\n`agreements-sync` is deferrable. Without `MPT-Task-Id` it runs as a direct call. The deferred request starts the call on the devmock, which delivers it with `MPT-Task-Id` as the Extension Service does for a call made with `MPT-Async: true`, so run it against `make run-demo`.\n\n`event task / orders-change` starts a task-based event on the devmock, which delivers it with its task and keeps re-delivering it until the task settles, so run it against `make run-demo`.\n\n`webhook / validate draft order` calls the order validation webhook directly, as the platform does. Every answer is `200`: validation problems are returned on the order, not as an error status.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -130,7 +130,7 @@
     {
       "name": "event / purchase — supported purchase order (expected OK)",
       "request": {
-        "description": "Delivers an order event to `orders-purchase` directly, as the Extension Framework would. The SDK starts the task, runs `PurchasePipeline` and answers `OK`. Nothing re-delivers it: this request is the whole delivery.",
+        "description": "Delivers an order event to the non-task `orders-purchase` route directly, as the Extension Framework would. The SDK runs `PurchasePipeline` inside the request and answers `OK`. Nothing re-delivers it: this request is the whole delivery.",
         "method": "POST",
         "header": [
           { "key": "Content-Type", "value": "application/json" },
@@ -150,6 +150,26 @@
           "raw": "{{base_url}}/api/v2/events/orders/purchase",
           "host": ["{{base_url}}"],
           "path": ["api", "v2", "events", "orders", "purchase"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "event task / orders-change (expected Defer, then Completed)",
+      "request": {
+        "description": "Starts the SDK example `orders-change` task event on the devmock (`make run-demo`).\n\n1. The devmock answers `202` and delivers the order event with its task.\n2. The SDK reads the task, claims it with `execute`, builds `MockContext` through the route context adapter, runs `PurchasePipeline` on the task runner and answers `Defer`. The SDK completes the task.\n3. About 30 s later the next delivery reads `completed` and is answered `OK`.",
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"path\": \"/api/v2/events/orders/change\", \"objectType\": \"Order\", \"objectId\": \"ORD-7707-5631-5150\", \"eventType\": \"platform.commerce.order.created\"}"
+        },
+        "url": {
+          "raw": "{{devmock_url}}/devmock/events/TSK-0014-6018-1456-2420",
+          "host": ["{{devmock_url}}"],
+          "path": ["devmock", "events", "TSK-0014-6018-1456-2420"]
         }
       },
       "response": []

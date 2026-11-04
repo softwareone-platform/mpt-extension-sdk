@@ -12,7 +12,8 @@ top and starts the whole local harness: the extension in `--local` mode, a secon
 instance used to demonstrate the claim on an execution, a WireMock devmock that
 answers the Marketplace and Tasks APIs, and a Jaeger collector for traces. See
 [`peripherals/devmock/README.md`](../peripherals/devmock/README.md) for the
-endpoints it stubs and how to run the schedule and deferred call demos.
+endpoints it stubs and how to run the schedule, task-based event and deferred
+call demos.
 
 The packaged runtime itself runs in two modes:
 

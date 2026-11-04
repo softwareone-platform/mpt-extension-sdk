@@ -1,9 +1,10 @@
-# Devmock — local schedule harness
+# Devmock — local task delivery harness
 
 [WireMock](https://wiremock.org/) service that stands in for the Marketplace API so
 the schedule demo (`mock_app`) can run end-to-end without a real backend, and that
-also plays the part of the Extension Framework: it delivers a schedule event or a
-deferred call and keeps re-delivering it until the extension acknowledges it.
+also plays the part of the Extension Framework: it delivers a schedule event, a
+task-based event or a deferred call and keeps re-delivering it until the extension
+acknowledges it.
 
 ## Run
 
@@ -18,7 +19,7 @@ http://localhost:16686).
 
 ## The two lifecycles
 
-A schedule execution or a deferred call has two independent lifecycles, and the
+A schedule execution, a task-based event or a deferred call has two independent lifecycles, and the
 harness models them separately:
 
 - **the event** is the delivery. It is answered with `Defer` while its task is not
@@ -33,6 +34,7 @@ Postman does not deliver the event. It starts the flow, and the devmock does the
 
 ```text
 POST {{devmock_url}}/devmock/flows/{use-case}/{task-id}     (once, from Postman)
+POST {{devmock_url}}/devmock/events/{task-id}                (or, for a task-based event)
 POST {{devmock_url}}/devmock/calls/{task-id}                 (or, for a deferred call)
       → devmock records the flow and delivers the event to the extension
       → SDK reads the task, claims it with execute, submits the handler, answers Defer
@@ -59,6 +61,10 @@ footgun rather than a problem.
   entry point. Records the extension path and the enqueue time for the task id, then
   delivers that path with `MPT-Task-Id`, as the Extension Service does for a call made
   with `MPT-Async: true`.
+- `POST /devmock/events/{task-id}` with `{"path": "/api/v2/...", "objectType": "Order",
+  "objectId": "ORD-...", "eventType": "..."}` → the task-based event entry point.
+  Records the extension path, the event object and the enqueue time for the task id,
+  then delivers a task event with that object to the path, with `MPT-Task-Id`.
 - `POST /public/v1/integration/installations/-/token` → an unsigned demo JWT
   (`extensionId=EXT-1111-1111`) used by the SDK for its outbound API calls. It is
   assembled by the `base64` template helper from readable claims, in
@@ -66,8 +72,8 @@ footgun rather than a problem.
   webhooks build their `Authorization` header the same way.
 - `GET /public/v1/system/tasks/{id}` → the task, from `__files/system/task.json.hbs`, in
   one of two branches: the status the SDK last reported, or `rescheduled` while it has
-  reported none. The second branch is what schedules the next delivery, to the schedule
-  or the extension path the flow recorded. A task no flow started reads `{}` and
+  reported none. The second branch is what schedules the next delivery, to the schedule,
+  the event path or the extension path the flow recorded. A task no flow started reads `{}` and
   schedules nothing.
 - `POST /public/v1/system/tasks/{id}/execute` → the claim. The first call answers `200`,
   and later calls answer `409` while the claim is held, which is what the platform does.
@@ -136,6 +142,17 @@ The task the devmock serves publishes a 120 s processing budget, not the 600 s t
 endpoint declares: the declared timeouts go to `meta.yaml` for the platform, while the
 SDK times a delivery from the task it reads.
 
+## Task-based events
+
+`orders-change` is a task-based event (`EventRouter.task`). Run **event task /
+orders-change** from Postman: the devmock delivers the order event with its task, the
+SDK claims the task, builds `MockContext` through the route context adapter, runs
+`PurchasePipeline` on the task runner and answers `Defer`. Once the pipeline returns
+the SDK completes the task, so the next delivery reads it final and is answered `OK`.
+
+The order the SDK reads to build the context comes from the mock app's
+`ExtMPTAPIService`, not from the devmock.
+
 ## Timing
 
 Re-delivery waits 30 s, so a flow finishes while you watch it. The timeout fixture
@@ -144,7 +161,7 @@ fails in about one minute. On the platform the SDK answers 300 s for these tasks
 the watchdog delay is derived from the task's own timing and clamps to its 5-minute
 floor; the demo compresses that and changes nothing else about the sequence.
 
-The value is a literal in both webhooks of `mappings/system/get_task_pending.json`. It
+The value is a literal in every webhook of `mappings/system/get_task_pending.json`. It
 has to be: WireMock accepts a template in a webhook's `delay.milliseconds` but never
 evaluates it, firing immediately instead, so the delay cannot be driven from the request.
 

@@ -53,7 +53,9 @@
               "schedule": "{{request.pathSegments.[2]}}",
               "enqueuedAt": "{{now}}",
               "status": "null",
-              "claimed": "null"
+              "claimed": "null",
+              "call": "null",
+              "event": "null"
             }
           }
         },
@@ -118,7 +120,9 @@
               "schedule": "{{request.pathSegments.[2]}}",
               "enqueuedAt": "{{now}}",
               "status": "null",
-              "claimed": "null"
+              "claimed": "null",
+              "call": "null",
+              "event": "null"
             }
           }
         },
