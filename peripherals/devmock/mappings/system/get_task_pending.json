@@ -98,6 +98,56 @@
           }
         }
       ]
+    },
+    {
+      "request": {
+        "method": "GET",
+        "urlPathPattern": "/public/v1/system/tasks/[^/]+",
+        "customMatcher": {
+          "name": "state-matcher",
+          "parameters": {
+            "hasContext": "{{request.pathSegments.[4]}}",
+            "property": {
+              "status": {
+                "absent": true
+              },
+              "event": {
+                "matches": ".*"
+              }
+            }
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "bodyFileName": "system/task.json.hbs",
+        "transformers": [
+          "response-template"
+        ]
+      },
+      "priority": 3,
+      "serveEventListeners": [
+        {
+          "name": "webhook",
+          "parameters": {
+            "method": "POST",
+            "url": "http://app:8080{{state context=originalRequest.pathSegments.[4] property='event'}}",
+            "headers": {
+              "Content-Type": "application/json",
+              "MPT-Task-Id": "{{originalRequest.pathSegments.[4]}}",
+              "Authorization": "Bearer {{#base64 padding=false}}{\"alg\":\"none\",\"typ\":\"JWT\"}{{/base64}}.{{#base64 padding=false}}{\"https://claims.softwareone.com/extensionId\":\"EXT-1111-1111\",\"https://claims.softwareone.com/accountId\":\"ACC-0000-3453\",\"https://claims.softwareone.com/accountType\":\"Client\",\"https://claims.softwareone.com/modules\":{},\"exp\":2095751649}{{/base64}}."
+            },
+            "body": "{\"id\":\"{{randomValue type='UUID'}}\",\"object\":{\"id\":\"{{state context=originalRequest.pathSegments.[4] property='objectId' default=''}}\",\"name\":\"{{state context=originalRequest.pathSegments.[4] property='objectId' default=''}}\",\"objectType\":\"{{state context=originalRequest.pathSegments.[4] property='objectType' default=''}}\"},\"task\":{\"id\":\"{{originalRequest.pathSegments.[4]}}\"},\"details\":{\"enqueueTime\":\"{{state context=originalRequest.pathSegments.[4] property='enqueuedAt' default=''}}\",\"deliveryTime\":\"{{now}}\",\"eventType\":\"{{state context=originalRequest.pathSegments.[4] property='eventType' default=''}}\"}}",
+            "delay": {
+              "type": "fixed",
+              "milliseconds": 30000
+            }
+          }
+        }
+      ]
     }
   ]
 }

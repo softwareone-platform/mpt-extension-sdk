@@ -61,7 +61,9 @@
               "call": "{{jsonPath request.body '$.path'}}",
               "enqueuedAt": "{{now}}",
               "status": "null",
-              "claimed": "null"
+              "claimed": "null",
+              "schedule": "null",
+              "event": "null"
             }
           }
         },
