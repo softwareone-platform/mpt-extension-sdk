@@ -35,6 +35,26 @@ Consumer action: deployments that relied on the implicit default OTLP endpoint
 `OTEL_EXPORTER_OTLP_ENDPOINT` explicitly. Setups that already declare the
 endpoint (for example a local Jaeger collector) keep working unchanged.
 
+### Task-backed events run on the async task runner
+
+Handlers registered with `EventRouter.task(...)` used to run inside the
+delivery request, and the delivery was answered `OK` or `Cancel` once the
+handler returned. They now run on the application-scoped task runner, like
+schedules and deferred calls, and follow the same delivery protocol: every
+delivery of a non-final task is answered `Defer` on the watchdog cadence, and
+`OK` only once the task is final.
+
+Consumer action: none for the handler signature. Review handlers that relied on
+the previous behavior:
+
+- a handler now runs within the task's processing deadline, and one that
+  exceeds it fails the task;
+- task-backed events count towards `SDK_MAX_CONCURRENT_TASKS`, so raise the
+  limit if it was sized for schedules and deferred calls only;
+- a `DeferError` reschedules the task, and the next delivery follows the
+  watchdog cadence rather than `delay_seconds`;
+- a handler still running at shutdown is cancelled and its task failed.
+
 Add a section here only when this repository introduces a consumer-facing
 compatibility change that requires upgrade guidance.
 

@@ -253,8 +253,8 @@ claimed again. A delivery that finds the task in `Processing` on a process that
 is not running it is therefore answered with `Defer` at the watchdog cadence
 without building the handler context, calling the handler, or changing the
 task state. A claim the platform still rejects, because another execution
-claimed the task after the SDK read it, gets the same answer. Deferred API
-calls follow the same rule.
+claimed the task after the SDK read it, gets the same answer. Task-backed events
+and deferred API calls follow the same rule.
 
 A delivery can reach any instance of the extension, and any of its worker
 processes. Keeping the claim in the platform is what limits a task to one

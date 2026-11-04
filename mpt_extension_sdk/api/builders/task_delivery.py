@@ -35,6 +35,7 @@ class TaskHandlerType(StrEnum):
     """Handler types whose deliveries run as a Platform Task."""
 
     DEFERRED_CALL = "Deferred call"
+    EVENT = "Event"
     SCHEDULE = "Schedule"
 
 
