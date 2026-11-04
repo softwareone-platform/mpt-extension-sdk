@@ -4,11 +4,36 @@ import pytest
 from freezegun import freeze_time
 
 from mpt_extension_sdk.api.builders.task_timing import (
+    EVENT_RETENTION_SECONDS,
     FALLBACK_MAX_TASK_PROCESSING,
     TASK_TIMEOUT_SAFETY_MARGIN,
     delivery_latency_seconds,
     get_execution_deadline,
+    get_schedulable_delay,
 )
+
+ENQUEUED_AT = dt.datetime(2026, 8, 11, 17, 4, tzinfo=dt.UTC)
+
+
+@freeze_time(ENQUEUED_AT + dt.timedelta(minutes=1))
+def test_schedulable_delay_keeps_short_delay():
+    result = get_schedulable_delay(600, ENQUEUED_AT)
+
+    assert result == 600
+
+
+@freeze_time(ENQUEUED_AT + dt.timedelta(seconds=EVENT_RETENTION_SECONDS - 100))
+def test_schedulable_delay_near_expiry():
+    result = get_schedulable_delay(600, ENQUEUED_AT)
+
+    assert result == 40
+
+
+@freeze_time(ENQUEUED_AT + dt.timedelta(seconds=EVENT_RETENTION_SECONDS - 30))
+def test_schedulable_delay_floors_at_one_second():
+    result = get_schedulable_delay(600, ENQUEUED_AT)
+
+    assert result == 1
 
 
 def test_delivery_latency_between_timestamps():

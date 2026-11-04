@@ -4,7 +4,7 @@ from enum import StrEnum
 from mpt_api_client.exceptions import MPTAPIError, MPTError, MPTHttpError
 
 from mpt_extension_sdk.errors.mapping import map_exception_to_event_response
-from mpt_extension_sdk.errors.pipeline import DeferError
+from mpt_extension_sdk.errors.pipeline import CancelError, DeferError
 from mpt_extension_sdk.services.mpt_api_service.task import TaskService
 from mpt_extension_sdk.tasks import TaskHandle
 
@@ -94,15 +94,24 @@ class SafeTaskTransitions:  # noqa: WPS214
             await self._report_lifecycle_rejection(task_id, error)
 
     async def transition_on_error(self, task_id: str, error: Exception) -> None:
-        """Map a handler error to its platform task transition."""
+        """Map a handler error to its platform task transition and log it once.
+
+        A deferred or cancelled execution is an expected outcome and is logged at info
+        level; any other error fails the task and is logged with its traceback.
+        """
         if isinstance(error, DeferError):
             # The retry happens on the next event delivery; the task carries no timing.
-            self.handler_logger.info("Async task %s rescheduled", task_id)
+            self.handler_logger.info("Async task %s rescheduled: %s", task_id, error)
             await self.reschedule(task_id)
             return
 
         outcome = map_exception_to_event_response(error)
-        self.handler_logger.info("Async task %s cancelled: %s", task_id, outcome.cancel_reason)
+        if isinstance(error, CancelError):
+            self.handler_logger.info("Async task %s cancelled: %s", task_id, outcome.cancel_reason)
+        else:
+            self.handler_logger.error(
+                "Async task %s failed: %s", task_id, outcome.cancel_reason, exc_info=error
+            )
         # A Cancel event outcome transitions a task-based execution to Failed.
         await self.fail(task_id, reason=outcome.cancel_reason)
 

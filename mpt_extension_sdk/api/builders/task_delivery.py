@@ -2,6 +2,7 @@ import datetime as dt
 import logging
 from abc import ABC, abstractmethod
 from enum import StrEnum
+from typing import override
 
 from fastapi import Request
 from mpt_api_client.exceptions import MPTError
@@ -15,12 +16,14 @@ from mpt_extension_sdk.api.builders.task_timing import (
     MAX_WATCHDOG_DELAY_SECONDS,
     MIN_WATCHDOG_DELAY_SECONDS,
     get_execution_deadline,
+    get_schedulable_delay,
 )
 from mpt_extension_sdk.api.errors import APIError
-from mpt_extension_sdk.api.models.events import EventResponse
+from mpt_extension_sdk.api.models.events import EventResponse, TaskEvent
 from mpt_extension_sdk.errors.runtime import AsyncTasksRunnerError, ConfigError, ValidationError
 from mpt_extension_sdk.models.task import Task, TaskStatus
 from mpt_extension_sdk.runtime.async_tasks import AsyncTaskHandler, AsyncTaskRunner, TaskExecution
+from mpt_extension_sdk.runtime.logging import set_event_context
 from mpt_extension_sdk.runtime.task_transitions import ClaimOutcome, SafeTaskTransitions
 from mpt_extension_sdk.services.mpt_api_service.task import TaskService
 
@@ -81,6 +84,7 @@ class TaskDeliveryHandler[DeliveryT](ABC):  # noqa: WPS214
         self, *, request: Request, auth: AuthContext, task: Task, delivery: DeliveryT
     ) -> AsyncTaskHandler:
         """Return the call the runner executes for this delivery."""
+        raise NotImplementedError
 
     def can_claim(self, task: Task) -> bool:
         """Return whether no other instance runs the task and the runner has capacity."""
@@ -193,3 +197,22 @@ class TaskDeliveryHandler[DeliveryT](ABC):  # noqa: WPS214
 
         self.handler_logger.error("%s context creation failed", self.handler_type, exc_info=error)
         return EventResponse.reschedule()
+
+
+class TaskEventDeliveryHandler(TaskDeliveryHandler[TaskEvent]):
+    """Answer task deliveries that carry their task event in the body."""
+
+    @override
+    async def execute(
+        self, *, request: Request, task_id: str, delivery: TaskEvent
+    ) -> EventResponse:
+        """Answer the delivery with its event in the logging context."""
+        set_event_context(task_id=task_id, event_id=delivery.id)
+        return await super().execute(request=request, task_id=task_id, delivery=delivery)
+
+    @override
+    def watchdog_delay(self, task: Task, delivery: TaskEvent) -> int:
+        """Return the watchdog delay, capped so the redelivery stays within the event retention."""
+        return get_schedulable_delay(
+            super().watchdog_delay(task, delivery), delivery.details.enqueue_time
+        )

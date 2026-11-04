@@ -24,11 +24,7 @@ def schedule_client(schedule_route, task_service, async_task_runner):
 
 
 @pytest.fixture
-def patch_context(mocker, schedule_context):
-    mocker.patch(
-        "mpt_extension_sdk.api.builders.task_delivery.RequestAuthenticationService.authenticate",
-        autospec=True,
-    )
+def patch_context(mocker, authenticate, schedule_context):
     return mocker.patch(
         "mpt_extension_sdk.pipeline.factory.RouteContextFactory.build",
         autospec=True,

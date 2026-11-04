@@ -3,7 +3,7 @@ import logging
 import pytest
 from mpt_api_client.exceptions import MPTAPIError, MPTError, MPTHttpError
 
-from mpt_extension_sdk.errors.pipeline import CancelError, DeferError
+from mpt_extension_sdk.errors.pipeline import CancelError, DeferError, FailError
 from mpt_extension_sdk.models.task import Task, TaskParameters
 from mpt_extension_sdk.runtime.task_transitions import ClaimOutcome, SafeTaskTransitions
 
@@ -218,3 +218,38 @@ async def test_unexpected_error_fails(transitions, task_service):
     await transitions.transition_on_error("TSK-1", RuntimeError("boom"))  # act
 
     task_service.fail.assert_awaited_once_with("TSK-1", reason="Unexpected error: RuntimeError")
+
+
+async def test_defer_error_not_logged_as_failure(transitions, handler_logger):
+    await transitions.transition_on_error("TSK-1", DeferError("later"))  # act
+
+    handler_logger.error.assert_not_called()
+
+
+async def test_defer_error_logged_with_reason(transitions, handler_logger):
+    error = DeferError("vendor still pending")
+
+    await transitions.transition_on_error("TSK-1", error)  # act
+
+    handler_logger.info.assert_called_once_with("Async task %s rescheduled: %s", "TSK-1", error)
+
+
+async def test_cancel_error_logged_as_cancelled(transitions, handler_logger):
+    await transitions.transition_on_error("TSK-1", CancelError("cancelled"))  # act
+
+    handler_logger.info.assert_called_once_with("Async task %s cancelled: %s", "TSK-1", "cancelled")
+
+
+@pytest.mark.parametrize(
+    ("error", "expected_reason"),
+    [
+        (FailError("vendor rejected"), "vendor rejected"),
+        (RuntimeError("boom"), "Unexpected error: RuntimeError"),
+    ],
+)
+async def test_failure_logged_with_traceback(transitions, handler_logger, error, expected_reason):
+    await transitions.transition_on_error("TSK-1", error)  # act
+
+    handler_logger.error.assert_called_once_with(
+        "Async task %s failed: %s", "TSK-1", expected_reason, exc_info=error
+    )

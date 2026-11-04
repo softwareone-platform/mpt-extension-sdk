@@ -2,10 +2,11 @@ import datetime as dt
 from collections.abc import Callable
 
 import pytest
+from fastapi import Request
 from mpt_api_client.exceptions import MPTAPIError
 
 from mpt_extension_sdk.models.task import Task
-from mpt_extension_sdk.pipeline import ScheduleContext
+from mpt_extension_sdk.pipeline import RouteContextFactory, ScheduleContext
 from mpt_extension_sdk.routing import RouteType, ScheduleRouteDefinition
 from mpt_extension_sdk.runtime.async_tasks import AsyncTaskRunner
 from mpt_extension_sdk.services.mpt_api_service import MPTAPIService
@@ -117,3 +118,28 @@ def api_route_dependencies(mocker, runtime_settings):
         autospec=True,
         return_value=mocker.sentinel.extension_settings,
     )
+
+
+@pytest.fixture
+def authenticate(mocker):
+    return mocker.patch(
+        "mpt_extension_sdk.api.builders.task_delivery.RequestAuthenticationService.authenticate",
+        autospec=True,
+    )
+
+
+@pytest.fixture
+def context_factory(mocker):
+    return mocker.create_autospec(RouteContextFactory, instance=True)
+
+
+@pytest.fixture
+def run(mocker, delivery_handler, task_event):
+    http_request = mocker.Mock(spec=Request)
+
+    async def factory(event=task_event):
+        return await delivery_handler.execute(
+            request=http_request, task_id="TSK-001", delivery=event
+        )
+
+    return factory

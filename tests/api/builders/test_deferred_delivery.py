@@ -11,7 +11,6 @@ from mpt_extension_sdk.api.models.errors import ErrorDetail
 from mpt_extension_sdk.api.models.events import EventResponse
 from mpt_extension_sdk.errors.runtime import AsyncTasksRunnerError, ConfigError
 from mpt_extension_sdk.models.task import Task, TaskStatus
-from mpt_extension_sdk.pipeline import RouteContextFactory
 from mpt_extension_sdk.routing import RouteType
 from mpt_extension_sdk.routing.enums import HTTPMethod
 from mpt_extension_sdk.routing.models import APIRouteDefinition
@@ -30,19 +29,13 @@ def arguments_builder(mocker):
     return builder
 
 
+pytestmark = pytest.mark.usefixtures("authenticate")
+
+
 @pytest.fixture(autouse=True)
-def authenticate(mocker):
-    return mocker.patch(
-        "mpt_extension_sdk.api.builders.task_delivery.RequestAuthenticationService.authenticate",
-        autospec=True,
-    )
-
-
-@pytest.fixture
-def context_factory(mocker):
-    factory = mocker.create_autospec(RouteContextFactory, instance=True)
-    factory.build.return_value = mocker.Mock(spec=APIContext)
-    return factory
+def api_context(mocker, context_factory):
+    context_factory.build.return_value = mocker.Mock(spec=APIContext)
+    return context_factory.build.return_value
 
 
 @pytest.fixture

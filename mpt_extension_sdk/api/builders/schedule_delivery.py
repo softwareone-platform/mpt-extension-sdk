@@ -1,26 +1,20 @@
-import datetime as dt
 import logging
 from typing import override
 
 from fastapi import Request
 
 from mpt_extension_sdk.api.auth import AuthContext
-from mpt_extension_sdk.api.builders.task_delivery import TaskDeliveryHandler, TaskHandlerType
-from mpt_extension_sdk.api.builders.task_timing import (
-    EVENT_RETENTION_SECONDS,
-    TASK_TIMEOUT_SAFETY_MARGIN,
-)
-from mpt_extension_sdk.api.models.events import EventResponse, TaskEvent
+from mpt_extension_sdk.api.builders.task_delivery import TaskEventDeliveryHandler, TaskHandlerType
+from mpt_extension_sdk.api.models.events import TaskEvent
 from mpt_extension_sdk.models.task import Task
 from mpt_extension_sdk.pipeline import RouteContextFactory
 from mpt_extension_sdk.pipeline.builders import ScheduleContextBuilder
 from mpt_extension_sdk.routing import ScheduleRouteDefinition
 from mpt_extension_sdk.runtime.async_tasks import AsyncTaskHandler, AsyncTaskRunner
-from mpt_extension_sdk.runtime.logging import set_event_context
 from mpt_extension_sdk.services.mpt_api_service.task import TaskService
 
 
-class ScheduleDeliveryHandler(TaskDeliveryHandler[TaskEvent]):
+class ScheduleDeliveryHandler(TaskEventDeliveryHandler):
     """Answer schedule deliveries."""
 
     def __init__(  # noqa: WPS211
@@ -59,19 +53,3 @@ class ScheduleDeliveryHandler(TaskDeliveryHandler[TaskEvent]):
             auth,
         )
         return lambda: self.route.callback(context)
-
-    @override
-    async def execute(
-        self, *, request: Request, task_id: str, delivery: TaskEvent
-    ) -> EventResponse:
-        """Answer a schedule delivery with its event in the logging context."""
-        set_event_context(task_id=task_id, event_id=delivery.id)
-        return await super().execute(request=request, task_id=task_id, delivery=delivery)
-
-    @override
-    def watchdog_delay(self, task: Task, delivery: TaskEvent) -> int:
-        """Return the watchdog delay, capped so the redelivery stays within the event retention."""
-        retained = (dt.datetime.now(dt.UTC) - delivery.details.enqueue_time).total_seconds()
-        schedulable = EVENT_RETENTION_SECONDS - retained - TASK_TIMEOUT_SAFETY_MARGIN
-        delay = min(super().watchdog_delay(task, delivery), schedulable)
-        return max(int(delay), 1)
