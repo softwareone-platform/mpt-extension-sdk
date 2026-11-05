@@ -1,5 +1,3 @@
-# Settings shared by both demo instances. The build and volumes repeat the base
-# app's, so app-secondary gets them too; on app they merge with compose.yaml.
 x-demo-app: &demo-app
   build:
     context: .
@@ -21,7 +19,6 @@ x-demo-app: &demo-app
 services:
   app: *demo-app
 
-  # The second instance for the claim scenario, on its own host port.
   app-secondary:
     <<: *demo-app
     ports:

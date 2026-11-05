@@ -1,4 +1,6 @@
 import pytest
+from mpt_api_client.http.mixins import AsyncCollectionMixin
+from mpt_api_client.models.model_collection import ModelCollection
 from mpt_api_client.resources import AsyncCatalog
 from mpt_api_client.resources.catalog.items import AsyncItemsService
 
@@ -75,3 +77,21 @@ async def test_get_items_chunks_when_over_max_page_size(  # noqa: WPS210
     paginate.assert_any_await(filtered_collections[0], ProductItem, limit=100)
     paginate.assert_any_await(filtered_collections[1], ProductItem, limit=100)
     paginate.assert_any_await(filtered_collections[2], ProductItem, limit=50)
+
+
+async def test_get_items_fetches_page_without_select(mocker, product_item_service_factory):
+    service, items_client = product_item_service_factory()
+    filtered_collection = mocker.create_autospec(AsyncCollectionMixin, instance=True)
+    items_client.filter.return_value = filtered_collection
+    filtered_collection.fetch_page.return_value = ModelCollection(
+        resources=[mocker.Mock(spec=["to_dict"]), mocker.Mock(spec=["to_dict"])]
+    )
+    mocker.patch.object(
+        ProductItem, "from_payload", autospec=True, side_effect=["item-1", "item-2"]
+    )
+
+    result = await service.get_product_one_time_items_by_ids("PROD-1", ["ITEM-1", "ITEM-2"])
+
+    assert result == ["item-1", "item-2"]
+    filtered_collection.select.assert_not_called()
+    filtered_collection.fetch_page.assert_awaited_once_with(offset=0, limit=2)

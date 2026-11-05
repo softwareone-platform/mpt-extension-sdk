@@ -260,3 +260,11 @@ def test_route_span_attributes_from_route(mocker, auth_context):
         route_path="/sync",
         route_type=RouteType.API,
     )
+
+
+def test_set_attributes_ignores_unsupported_types(mocker):
+    span = mocker.create_autospec(trace.Span, instance=True)
+
+    tracing.set_attributes(span, {"order.id": "ORD-0001", "order.lines": ["LIN-0001"]})  # act
+
+    span.set_attribute.assert_called_once_with("order.id", "ORD-0001")

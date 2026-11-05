@@ -1,17 +1,13 @@
 import importlib
 import sys
-from collections.abc import Callable
 from dataclasses import replace
-from unittest.mock import MagicMock
 
 import pytest
 
-from mpt_extension_sdk.settings.runtime import RuntimeSettings
-
 
 @pytest.fixture
-def main_patches(mocker) -> Callable[[RuntimeSettings], MagicMock]:
-    def factory(runtime_settings: RuntimeSettings) -> MagicMock:
+def main_patches(mocker):
+    def factory(runtime_settings):
         mocker.patch("mpt_extension_sdk.runtime.app.create_runtime_app", autospec=True)
         mocker.patch("mpt_extension_sdk.runtime.runner.create_meta_file", autospec=True)
         mocker.patch(
