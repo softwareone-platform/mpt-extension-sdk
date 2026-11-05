@@ -1,5 +1,4 @@
 from collections.abc import Callable
-from unittest.mock import call
 
 import pytest
 from fastapi import FastAPI
@@ -214,6 +213,7 @@ def test_create_event_route(mock_callable, make_event_route):
 
 
 def test_event_route_success(
+    mocker,
     auth_headers,
     auth_token,
     fake_context,
@@ -242,8 +242,8 @@ def test_event_route_success(
     )
     set_attributes_mock.assert_called_once_with(event_span, business_attributes)
     assert set_event_context_mock.call_args_list == [
-        call(),
-        call(order_id="ORD-001", agreement_id="AGR-001"),
+        mocker.call(),
+        mocker.call(order_id="ORD-001", agreement_id="AGR-001"),
     ]
 
 

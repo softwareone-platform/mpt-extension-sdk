@@ -4,88 +4,86 @@ from mpt_extension_sdk.context import BaseContext
 from mpt_extension_sdk.pipeline.step import BaseStep
 
 
-class FakeStep(BaseStep):
-    def __init__(self, process_error=None, post_error=None):
-        self.process_error = process_error
-        self.post_error = post_error
-        self.calls = []
-
-    async def pre(self, context_mock):
-        self.calls.append(("pre", context_mock))
-
-    async def process(self, context_mock):
-        self.calls.append(("process", context_mock))
-        if self.process_error is not None:
-            raise self.process_error
-
-    async def post(self, context_mock):
-        self.calls.append(("post", context_mock))
-        if self.post_error is not None:
-            raise self.post_error
-
-
-class FakeMinimalStep(BaseStep):
-    def __init__(self):
-        self.calls = []
-
-    async def process(self, context_mock):
-        self.calls.append(("process", context_mock))
+class FakeDemoStep(BaseStep):
+    async def process(self, ctx):
+        ctx.logger.info("Processing %s", self.name)
 
 
 @pytest.fixture
 def context_mock(mocker):
-    return mocker.Mock(spec=BaseContext)
+    return mocker.create_autospec(BaseContext, instance=True)
 
 
-def test_step_name():
-    result = FakeStep().name
+@pytest.fixture
+def step():
+    return FakeDemoStep()
 
-    assert result == "FakeStep"
+
+@pytest.fixture
+def lifecycle(mocker, step):
+    manager = mocker.Mock()
+    for hook_name in ("pre", "process", "post"):
+        hook = mocker.patch.object(step, hook_name, autospec=True)
+        manager.attach_mock(hook, hook_name)
+    return manager
 
 
-async def test_run_calls_pre_process_post(context_mock):
-    step = FakeStep()
+def test_step_name(step):
+    result = step.name
 
+    assert result == "FakeDemoStep"
+
+
+async def test_run_calls_pre_process_post(mocker, step, lifecycle, context_mock):
     await step.run(context_mock)  # act
 
-    assert step.calls == [("pre", context_mock), ("process", context_mock), ("post", context_mock)]
+    assert lifecycle.mock_calls == [
+        mocker.call.pre(context_mock),
+        mocker.call.process(context_mock),
+        mocker.call.post(context_mock),
+    ]
 
 
-async def test_run_raises_process_error_after_post(context_mock):
-    error = RuntimeError("process failed")
-    step = FakeStep(process_error=error)
+async def test_run_raises_process_error_after_post(mocker, step, lifecycle, context_mock):
+    lifecycle.process.side_effect = RuntimeError("process failed")
 
     with pytest.raises(RuntimeError, match="process failed"):
         await step.run(context_mock)
 
-    assert step.calls == [("pre", context_mock), ("process", context_mock), ("post", context_mock)]
+    assert lifecycle.mock_calls == [
+        mocker.call.pre(context_mock),
+        mocker.call.process(context_mock),
+        mocker.call.post(context_mock),
+    ]
 
 
-async def test_run_raises_post_error(context_mock):
-    error = RuntimeError("post failed")
-    step = FakeStep(post_error=error)
+async def test_run_raises_post_error(mocker, step, lifecycle, context_mock):
+    lifecycle.post.side_effect = RuntimeError("post failed")
 
     with pytest.raises(RuntimeError, match="post failed"):
         await step.run(context_mock)
 
-    assert step.calls == [("pre", context_mock), ("process", context_mock), ("post", context_mock)]
+    assert lifecycle.mock_calls == [
+        mocker.call.pre(context_mock),
+        mocker.call.process(context_mock),
+        mocker.call.post(context_mock),
+    ]
 
 
-async def test_run_chains_post_error_from_process_error(context_mock):
+async def test_run_chains_post_error_from_process_error(step, lifecycle, context_mock):
     process_error = RuntimeError("process failed")
-    post_error = RuntimeError("post failed")
-    step = FakeStep(process_error=process_error, post_error=post_error)
+    lifecycle.process.side_effect = process_error
+    lifecycle.post.side_effect = RuntimeError("post failed")
 
     with pytest.raises(RuntimeError, match="post failed") as exc_info:
         await step.run(context_mock)
 
     assert exc_info.value.__cause__ is process_error
-    assert step.calls == [("pre", context_mock), ("process", context_mock), ("post", context_mock)]
 
 
-async def test_run_uses_default_pre_and_post_hooks(context_mock):
-    step = FakeMinimalStep()
+async def test_run_uses_default_pre_and_post_hooks(mocker, step, context_mock):
+    process = mocker.patch.object(step, "process", autospec=True)
 
     await step.run(context_mock)  # act
 
-    assert step.calls == [("process", context_mock)]
+    process.assert_awaited_once_with(context_mock)

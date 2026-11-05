@@ -4,16 +4,12 @@ from dataclasses import dataclass
 from http import HTTPStatus
 
 import pytest
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
 from opentelemetry.trace import StatusCode
 
-from mpt_extension_sdk.api.builders.webhook import create_webhook_route
 from mpt_extension_sdk.context import ContextAdapter
 from mpt_extension_sdk.extension_app import ExtensionApp
 from mpt_extension_sdk.observability.tracing import RouteSpanAttributes
 from mpt_extension_sdk.routing import WebhookRouter
-from mpt_extension_sdk.runtime import app as runtime_app
 from mpt_extension_sdk.webhooks import (
     OrderWebhookContext,
     WebhookContext,
@@ -60,7 +56,9 @@ def webhook_handler(mocker):
 
 
 @pytest.fixture
-def webhook_client(api_route_dependencies, api_service_type_factory, mock_api_service):
+def webhook_client(
+    api_route_dependencies, api_service_type_factory, mock_api_service, runtime_client_factory
+):
     def factory(
         route_handler,
         webhook_type=WebhookType.VALIDATE_PURCHASE_ORDER_DRAFT,
@@ -78,10 +76,7 @@ def webhook_client(api_route_dependencies, api_service_type_factory, mock_api_se
             context_adapter_type=context_adapter_type,
         )(route_handler)
         extension_app.include_router(webhook_router)
-        app = FastAPI()
-        runtime_app._configure_middlewares(app)
-        app.include_router(create_webhook_route(extension_app.routes[0], extension_app))
-        return TestClient(app)
+        return runtime_client_factory(extension_app)
 
     return factory
 

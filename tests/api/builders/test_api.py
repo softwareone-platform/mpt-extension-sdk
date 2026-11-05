@@ -3,18 +3,14 @@ from contextlib import contextmanager
 from http import HTTPStatus
 
 import pytest
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
 from pydantic import Field
 
 from mpt_extension_sdk.api import APIContext, APIResponse, ForbiddenError, PaginatedResult
 from mpt_extension_sdk.api.auth import AccountType
-from mpt_extension_sdk.api.builders.api import create_api_route
 from mpt_extension_sdk.api.builders.arguments import APIHandlerArgumentsBuilder
 from mpt_extension_sdk.extension_app import ExtensionApp
 from mpt_extension_sdk.observability.tracing import RouteSpanAttributes
 from mpt_extension_sdk.routing import APIRouteDefinition, APIRouter, HTTPMethod, RouteType
-from mpt_extension_sdk.runtime import app as runtime_app
 from mpt_extension_sdk.schemas import BaseSchema
 
 MALFORMED_AUTH_TOKEN = "not-a-jwt"
@@ -95,7 +91,7 @@ def unhandled_error_handler(ctx):
 
 
 @pytest.fixture
-def api_app_factory(api_service_type_factory, mock_api_service):
+def api_app_factory(api_service_type_factory, mock_api_service, runtime_client_factory):
     def factory(
         *,
         route_handler,
@@ -115,10 +111,7 @@ def api_app_factory(api_service_type_factory, mock_api_service):
             route_kwargs["body_validator"] = body_validator
         route_factory(**route_kwargs)(route_handler)
         extension_app.include_router(api_router)
-        app = FastAPI()
-        runtime_app._configure_middlewares(app)
-        app.include_router(create_api_route(extension_app.routes[0], extension_app))
-        return TestClient(app)
+        return runtime_client_factory(extension_app)
 
     return factory
 

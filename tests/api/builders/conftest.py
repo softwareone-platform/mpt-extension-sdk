@@ -3,11 +3,13 @@ from collections.abc import Callable
 
 import pytest
 from fastapi import Request
+from fastapi.testclient import TestClient
 from mpt_api_client.exceptions import MPTAPIError
 
 from mpt_extension_sdk.models.task import Task
 from mpt_extension_sdk.pipeline import RouteContextFactory, ScheduleContext
 from mpt_extension_sdk.routing import RouteType, ScheduleRouteDefinition
+from mpt_extension_sdk.runtime.app import create_runtime_app
 from mpt_extension_sdk.runtime.async_tasks import AsyncTaskRunner
 from mpt_extension_sdk.services.mpt_api_service import MPTAPIService
 from mpt_extension_sdk.services.mpt_api_service.task import TaskService
@@ -118,6 +120,27 @@ def api_route_dependencies(mocker, runtime_settings):
         autospec=True,
         return_value=mocker.sentinel.extension_settings,
     )
+
+
+@pytest.fixture
+def runtime_client_factory(mocker, runtime_settings):
+    def factory(extension_app):
+        mocker.patch("mpt_extension_sdk.runtime.app.setup_logging", autospec=True)
+        mocker.patch(
+            "mpt_extension_sdk.runtime.app.load_extension_app",
+            autospec=True,
+            return_value=extension_app,
+        )
+        mocker.patch(
+            "mpt_extension_sdk.runtime.app.ObservabilityBootstrap.bootstrap", autospec=True
+        )
+        mocker.patch(
+            "mpt_extension_sdk.runtime.app.ObservabilityBootstrap.instrument_fastapi_app",
+            autospec=True,
+        )
+        return TestClient(create_runtime_app(runtime_settings))
+
+    return factory
 
 
 @pytest.fixture

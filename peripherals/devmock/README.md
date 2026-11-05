@@ -15,8 +15,7 @@ make run-demo
 This starts the extension in local mode (`mpt-ext run --local`, so no platform
 registration) with `MPT_API_BASE_URL` pointing at the devmock (`.env.demo`), plus a
 second instance for the claim scenario below and a Jaeger collector for traces (UI on
-http://localhost:16686). Both instances start once the devmock reports healthy, so the
-first API call never reaches a devmock that is still loading its mappings.
+http://localhost:16686).
 
 ## The two lifecycles
 
