@@ -1,0 +1,25 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPathPattern": "/devmock/deliveries/(app|app-secondary)/[^/]+"
+  },
+  "response": {
+    "status": 204
+  },
+  "priority": 2,
+  "serveEventListeners": [
+    {
+      "name": "webhook",
+      "parameters": {
+        "method": "POST",
+        "url": "http://{{originalRequest.pathSegments.[2]}}:8080{{state context=originalRequest.pathSegments.[3] property='path'}}",
+        "headers": {
+          "Content-Type": "application/json",
+          "MPT-Task-Id": "{{originalRequest.pathSegments.[3]}}",
+          "Authorization": "Bearer {{#base64 padding=false}}{\"alg\":\"none\",\"typ\":\"JWT\"}{{/base64}}.{{#base64 padding=false}}{\"https://claims.softwareone.com/extensionId\":\"EXT-1111-1111\",\"https://claims.softwareone.com/accountId\":\"ACC-0000-3453\",\"https://claims.softwareone.com/accountType\":\"Client\",\"https://claims.softwareone.com/modules\":{},\"exp\":2095751649}{{/base64}}."
+        },
+        "body": "{{#assign 'task'}}{{originalRequest.pathSegments.[3]}}{{/assign}}{{#if (state context=task property='objectType' default='')}}{\"id\":\"{{randomValue type='UUID'}}\",\"object\":{\"id\":\"{{state context=task property='objectId'}}\",\"name\":\"{{state context=task property='objectName'}}\",\"objectType\":\"{{state context=task property='objectType'}}\"},\"task\":{\"id\":\"{{task}}\"},\"details\":{\"enqueueTime\":\"{{state context=task property='enqueuedAt' default=''}}\",\"deliveryTime\":\"{{now}}\",\"eventType\":\"{{state context=task property='eventType'}}\"}}{{/if}}"
+      }
+    }
+  ]
+}

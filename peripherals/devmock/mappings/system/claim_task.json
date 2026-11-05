@@ -49,10 +49,7 @@
         "headers": {
           "Content-Type": "application/json"
         },
-        "body": "{\"status\":409,\"title\":\"Conflict\",\"detail\":\"Task {{request.pathSegments.[4]}} is already being executed\"}",
-        "transformers": [
-          "response-template"
-        ]
+        "body": "{\"status\":409,\"title\":\"Conflict\",\"detail\":\"Task {{request.pathSegments.[4]}} is already being executed\"}"
       },
       "priority": 2
     }

@@ -19,10 +19,7 @@
     "headers": {
       "Content-Type": "application/json"
     },
-    "bodyFileName": "system/task.json.hbs",
-    "transformers": [
-      "response-template"
-    ]
+    "bodyFileName": "system/task.json.hbs"
   },
   "priority": 2
 }

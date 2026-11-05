@@ -1,34 +1,29 @@
-services:
-  app:
-    command: "uv run mpt-ext run --local"
-    env_file:
-      - path: .env
-        required: false
-      - path: .env.demo
-        required: true
-    depends_on:
-      devmock:
-        condition: service_started
-      jaeger:
-        condition: service_started
+# Settings shared by both demo instances. The build and volumes repeat the base
+# app's, so app-secondary gets them too; on app they merge with compose.yaml.
+x-demo-app: &demo-app
+  build:
+    context: .
+    target: dev
+  command: "uv run mpt-ext run --local"
+  env_file:
+    - path: .env
+      required: false
+    - path: .env.demo
+      required: true
+  depends_on:
+    devmock:
+      condition: service_healthy
+    jaeger:
+      condition: service_started
+  volumes:
+    - .:/extension
 
+services:
+  app: *demo-app
+
+  # The second instance for the claim scenario, on its own host port.
   app-secondary:
-    build:
-      context: .
-      target: dev
-    command: "uv run mpt-ext run --local"
-    env_file:
-      - path: .env
-        required: false
-      - path: .env.demo
-        required: true
-    depends_on:
-      devmock:
-        condition: service_started
-      jaeger:
-        condition: service_started
-    volumes:
-      - .:/extension
+    <<: *demo-app
     ports:
       - "8081:8080"
 
@@ -41,6 +36,9 @@ services:
     # The image's own healthcheck probes port 8080; this stack serves on 8000.
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8000/__admin/health || exit 1"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
     ports:
       - "8000:8000"
     volumes:
