@@ -1,13 +1,12 @@
 import inspect
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from typing import TYPE_CHECKING
 
 from mpt_extension_sdk.context import ContextAdapter
-from mpt_extension_sdk.routing.decorators import is_only_deferrable
 from mpt_extension_sdk.routing.enums import RouteType
 from mpt_extension_sdk.routing.models import TaskTimeouts
 from mpt_extension_sdk.routing.paths import RoutePath
-from mpt_extension_sdk.routing.types import APIRouteCallback
+from mpt_extension_sdk.routing.types import APIRouteCallback, ScheduleRouteCallback
 from mpt_extension_sdk.schemas import BaseSchema
 from mpt_extension_sdk.webhooks.context import WEBHOOK_CONTEXT_TYPES
 
@@ -47,16 +46,8 @@ class RouteValidator:  # noqa: WPS214
         cls, route_handler: APIRouteCallback, *, deferrable: bool
     ) -> None:
         """Validate that a deferrable API handler can be awaited by the task runner."""
-        unwrapped_handler = inspect.unwrap(
-            route_handler, stop=lambda layer: not is_only_deferrable(layer)
-        )
-        if not deferrable or inspect.iscoroutinefunction(unwrapped_handler):
-            return
-        handler_name = getattr(unwrapped_handler, "__qualname__", repr(unwrapped_handler))
-        raise TypeError(
-            f"Deferrable API handler '{handler_name}' must be a coroutine function "
-            "(async def): the task runner only accepts an awaitable"
-        )
+        if deferrable:
+            cls._validate_awaitable_handler(route_handler, "Deferrable API")
 
     @classmethod
     def validate_deferrable_options(
@@ -109,6 +100,11 @@ class RouteValidator:  # noqa: WPS214
         cls._validate_non_api_route_uniqueness(route, routes, existing_path_routes)
 
     @classmethod
+    def validate_schedule_handler(cls, route_handler: ScheduleRouteCallback) -> None:
+        """Validate that a schedule handler can be awaited by the task runner."""
+        cls._validate_awaitable_handler(route_handler, "Schedule")
+
+    @classmethod
     def validate_webhook_context_adapter_type(
         cls, context_type: type[object] | None, webhook_context_type: type[object]
     ) -> None:
@@ -147,6 +143,17 @@ class RouteValidator:  # noqa: WPS214
             raise ValueError(
                 f"Route path '{route.path}' is already registered for method '{method}'"
             )
+
+    @classmethod
+    def _validate_awaitable_handler(cls, route_handler: Callable[..., object], kind: str) -> None:
+        unwrapped_handler = inspect.unwrap(route_handler)
+        if inspect.iscoroutinefunction(unwrapped_handler):
+            return
+        handler_name = getattr(unwrapped_handler, "__qualname__", repr(unwrapped_handler))
+        raise TypeError(
+            f"{kind} handler '{handler_name}' must be a coroutine function "
+            "(async def): the task runner only accepts an awaitable"
+        )
 
     @classmethod
     def _validate_non_api_route_uniqueness(

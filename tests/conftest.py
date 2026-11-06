@@ -202,6 +202,11 @@ def api_route_factory(mocker):
 
 
 @pytest.fixture
+def async_schedule_handler(mocker):
+    return mocker.AsyncMock()
+
+
+@pytest.fixture
 def dummy_handler():
     def wrapper(event, context):
         return event

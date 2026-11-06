@@ -149,7 +149,7 @@ def test_meta_config_ignores_non_event_routes(dummy_handler):
     assert result.plugs is None
 
 
-def test_meta_config_includes_schedules(dummy_handler):
+def test_meta_config_includes_schedules(async_schedule_handler):
     schedule_router = ScheduleRouter(prefix="/schedule")
     app = ExtensionApp(prefix="/api/v1")
     schedule_router.task(
@@ -158,7 +158,7 @@ def test_meta_config_includes_schedules(dummy_handler):
         name="Daily Sync",
         description="Sync data every day",
         cron="0 0 * * *",
-    )(dummy_handler)
+    )(async_schedule_handler)
     app.include_router(schedule_router)
 
     result = app.to_meta_config()
@@ -173,7 +173,7 @@ def test_meta_config_includes_schedules(dummy_handler):
     }
 
 
-def test_duplicate_schedule_id_across_routers(dummy_handler):
+def test_duplicate_schedule_id_across_routers(async_schedule_handler):
     app = ExtensionApp(prefix="/api/v1")
     first = ScheduleRouter(prefix="/schedule")
     second = ScheduleRouter(prefix="/other")
@@ -183,14 +183,14 @@ def test_duplicate_schedule_id_across_routers(dummy_handler):
         name="First",
         description="First",
         cron="0 0 * * *",
-    )(dummy_handler)
+    )(async_schedule_handler)
     second.task(
         path="/b",
         id="dup",
         name="Second",
         description="Second",
         cron="0 0 * * *",
-    )(dummy_handler)
+    )(async_schedule_handler)
     app.include_router(first)
 
     with pytest.raises(ValueError, match="Schedule id 'dup' is already registered"):

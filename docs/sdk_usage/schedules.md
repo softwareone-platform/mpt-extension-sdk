@@ -29,6 +29,11 @@ async def sync_agreements(ctx: ScheduleContext) -> None:
     await synchronize_agreements(ctx)
 ```
 
+The handler must be a coroutine function (`async def`), because it runs under
+the task runner, which only accepts an awaitable. The SDK rejects a plain `def`
+handler when the route is registered, so the mistake surfaces when the
+extension starts.
+
 Schedule identifiers must be unique within an extension. The SDK validates
 this when routers are included and when extension metadata is validated.
 

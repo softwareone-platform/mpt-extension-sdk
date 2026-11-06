@@ -5,6 +5,7 @@ from mpt_extension_sdk.routing.enums import RouteType
 from mpt_extension_sdk.routing.models import ScheduleRouteDefinition
 from mpt_extension_sdk.routing.routers.base import BaseExtensionRouter
 from mpt_extension_sdk.routing.types import ScheduleRouteCallback
+from mpt_extension_sdk.routing.validators import RouteValidator
 
 
 @dataclass
@@ -24,6 +25,7 @@ class ScheduleRouter(BaseExtensionRouter):
         normalized_path = self._join_paths(self.prefix, path)
 
         def decorator(route_handler: ScheduleRouteCallback) -> ScheduleRouteCallback:
+            RouteValidator.validate_schedule_handler(route_handler)
             self._register_base_route(
                 ScheduleRouteDefinition(
                     name=name,

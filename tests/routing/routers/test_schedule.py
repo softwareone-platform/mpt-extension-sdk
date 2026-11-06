@@ -1,7 +1,9 @@
+import pytest
+
 from mpt_extension_sdk.routing import RouteType, ScheduleRouter
 
 
-def test_schedule_router_registers_task(route_handler):
+def test_schedule_router_registers_task(async_route_handler):
     router = ScheduleRouter(prefix="/schedule")
 
     result = router.task(
@@ -10,9 +12,9 @@ def test_schedule_router_registers_task(route_handler):
         name="Daily Sync",
         description="Sync data every day",
         cron="0 0 * * *",
-    )(route_handler)
+    )(async_route_handler)
 
-    assert result is route_handler
+    assert result is async_route_handler
     assert len(router.routes) == 1
     route = router.routes[0]
     assert (
@@ -30,3 +32,17 @@ def test_schedule_router_registers_task(route_handler):
         "0 0 * * *",
         RouteType.SCHEDULE,
     )
+
+
+def test_schedule_router_rejects_sync_handler(route_handler):
+    router = ScheduleRouter(prefix="/schedule")
+    route_handler.__qualname__ = "sync_agreements"
+
+    with pytest.raises(TypeError, match="'sync_agreements' must be a coroutine function"):
+        router.task(
+            path="daily",
+            id="daily-sync",
+            name="Daily Sync",
+            description="Sync data every day",
+            cron="0 0 * * *",
+        )(route_handler)

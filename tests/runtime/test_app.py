@@ -314,7 +314,7 @@ def test_register_ext_routes_ignores_plugs(plug_extension_app):
     assert all(route.path != "/api/v1/plug_provider" for route in app.routes)
 
 
-def test_register_schedule_ext_routes(dummy_handler):
+def test_register_schedule_ext_routes(async_schedule_handler):
     app = FastAPI()
     extension_app = ExtensionApp(prefix="/api/v1")
     router = ScheduleRouter(prefix="/schedules")
@@ -324,7 +324,7 @@ def test_register_schedule_ext_routes(dummy_handler):
         name="agreements-sync",
         description="Synchronize agreements",
         cron="0 * * * *",
-    )(dummy_handler)
+    )(async_schedule_handler)
     extension_app.include_router(router)
 
     runtime_app.register_extension_routes(app, extension_app)  # act
