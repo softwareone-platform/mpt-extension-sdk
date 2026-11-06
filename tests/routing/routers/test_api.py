@@ -250,16 +250,14 @@ def test_api_router_rejects_sync_only_deferrable(route_handler):
     assert router.routes == []
 
 
-def test_api_router_rejects_sync_wrapper(async_route_handler):
+def test_api_router_accepts_sync_wrapper(async_route_handler):
     router = APIRouter()
-    async_route_handler.__qualname__ = "sync_agreements"
     sync_wrapper = wraps(async_route_handler)(lambda *args, **kwargs: None)
     action = router.post(path="sync", name="agreements-sync")
 
-    with pytest.raises(TypeError, match="'sync_agreements' must be a coroutine function"):
-        action(only_deferrable(sync_wrapper))
+    action(only_deferrable(sync_wrapper))  # act
 
-    assert router.routes == []
+    assert len(router.routes) == 1
 
 
 def test_api_router_rejects_only_deferrable_param(async_route_handler):

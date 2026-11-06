@@ -1,4 +1,6 @@
+import asyncio
 from collections.abc import Callable
+from functools import partial, wraps
 
 import pytest
 
@@ -9,6 +11,46 @@ from mpt_extension_sdk.routing import (
     WebhookRouteDefinition,
 )
 from mpt_extension_sdk.routing.validators import RouteValidator
+
+TASK_RUNNER_VALIDATORS = (
+    pytest.param(RouteValidator.validate_schedule_handler, id="schedule"),
+    pytest.param(
+        partial(RouteValidator.validate_deferrable_handler, deferrable=True), id="deferrable"
+    ),
+)
+
+
+def sync_decorator(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+
+    return wrapper
+
+
+def async_decorator(func):
+    @wraps(func)
+    async def wrapper(*args, **kwargs):
+        return await func(*args, **kwargs)
+
+    return wrapper
+
+
+async def async_handler(ctx):
+    await asyncio.sleep(0)
+
+
+def sync_handler(ctx):
+    return ctx
+
+
+async def async_handler_calling_sync(ctx):
+    await asyncio.sleep(0)
+    return sync_handler(ctx)
+
+
+def sync_handler_calling_async(ctx):
+    return async_handler(ctx)
 
 
 @pytest.fixture
@@ -86,6 +128,61 @@ def test_validate_deferrable_handler_rejects_sync(mocker):
 
     with pytest.raises(TypeError, match="'sync_agreements' must be a coroutine function"):
         RouteValidator.validate_deferrable_handler(route_handler, deferrable=True)
+
+
+def test_validate_schedule_handler_accepts_async(mocker):
+    route_handler = mocker.AsyncMock(spec=Callable)
+
+    result = RouteValidator.validate_schedule_handler(route_handler)
+
+    assert result is None
+
+
+def test_validate_schedule_handler_rejects_sync(mocker):
+    route_handler = mocker.Mock(spec=Callable)
+    route_handler.__qualname__ = "sync_agreements"
+
+    with pytest.raises(TypeError, match="'sync_agreements' must be a coroutine function"):
+        RouteValidator.validate_schedule_handler(route_handler)
+
+
+@pytest.mark.parametrize("validate", TASK_RUNNER_VALIDATORS)
+@pytest.mark.parametrize(
+    "route_handler",
+    [
+        pytest.param(sync_decorator(async_handler), id="sync-decorator"),
+        pytest.param(
+            sync_decorator(sync_decorator(sync_decorator(async_handler))), id="sync-decorators"
+        ),
+        pytest.param(
+            sync_decorator(async_decorator(sync_decorator(async_handler))), id="mixed-decorators"
+        ),
+        pytest.param(async_handler_calling_sync, id="async-calling-sync"),
+    ],
+)
+def test_validate_handler_accepts_async(validate, route_handler):
+    result = validate(route_handler)
+
+    assert result is None
+
+
+@pytest.mark.parametrize("validate", TASK_RUNNER_VALIDATORS)
+@pytest.mark.parametrize(
+    ("route_handler", "handler_name"),
+    [
+        pytest.param(async_decorator(sync_handler), "sync_handler", id="async-decorator"),
+        pytest.param(sync_decorator(sync_handler), "sync_handler", id="sync-decorator"),
+        pytest.param(
+            async_decorator(sync_decorator(sync_handler)), "sync_handler", id="mixed-decorators"
+        ),
+        pytest.param(
+            sync_handler_calling_async, "sync_handler_calling_async", id="sync-calling-async"
+        ),
+    ],
+)
+def test_validate_handler_rejects_sync(validate, route_handler, handler_name):
+    with pytest.raises(TypeError, match=f"'{handler_name}' must be a coroutine function"):
+        validate(route_handler)
 
 
 @pytest.mark.parametrize(
