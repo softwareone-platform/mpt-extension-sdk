@@ -2,7 +2,12 @@ import dataclasses
 from collections.abc import Callable
 
 import pytest
-from fastapi import FastAPI
+from fastapi import APIRouter, FastAPI
+from fastapi.testclient import TestClient
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+from opentelemetry.trace import SpanKind
 
 from mpt_extension_sdk.errors.runtime import ConfigError
 from mpt_extension_sdk.observability.bootstrap import ObservabilityBootstrap
@@ -17,6 +22,29 @@ def bootstrap_config():
 @pytest.fixture
 def fastapi_app():
     return FastAPI()
+
+
+@pytest.fixture
+def span_exporter(mocker):
+    exporter = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(SimpleSpanProcessor(exporter))
+    mocker.patch("opentelemetry.trace.get_tracer_provider", return_value=provider)
+    return exporter
+
+
+@pytest.fixture
+def included_routes_app():
+    app = FastAPI()
+    get_router = APIRouter()
+    post_router = APIRouter()
+    get_router.add_api_route("/items/{item_id}", lambda item_id: {"get": item_id}, methods=["GET"])
+    post_router.add_api_route(
+        "/items/{item_id}", lambda item_id: {"post": item_id}, methods=["POST"]
+    )
+    app.include_router(get_router)
+    app.include_router(post_router)
+    return app
 
 
 @pytest.fixture(autouse=True)
@@ -235,3 +263,26 @@ def test_instrument_fastapi_app_skips_disabled(mocker, fastapi_app):
     ObservabilityBootstrap.instrument_fastapi_app(fastapi_app, config)  # act
 
     instrument_app.assert_not_called()
+
+
+def test_instrumented_app_routes_by_method(span_exporter, bootstrap_config, included_routes_app):
+    ObservabilityBootstrap.instrument_fastapi_app(included_routes_app, bootstrap_config)
+    client = TestClient(included_routes_app, raise_server_exceptions=False)
+
+    result = client.post("/items/42")  # act
+
+    assert result.status_code == 200
+    assert result.json() == {"post": "42"}
+
+
+def test_instrumented_app_route_template(span_exporter, bootstrap_config, included_routes_app):
+    ObservabilityBootstrap.instrument_fastapi_app(included_routes_app, bootstrap_config)
+    client = TestClient(included_routes_app)
+
+    client.get("/items/42")  # act
+
+    server_span = next(
+        span for span in span_exporter.get_finished_spans() if span.kind is SpanKind.SERVER
+    )
+    assert server_span.name == "GET /items/{item_id}"
+    assert server_span.attributes["http.route"] == "/items/{item_id}"
