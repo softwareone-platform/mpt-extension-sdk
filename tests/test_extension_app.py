@@ -207,7 +207,7 @@ def test_meta_config_includes_plugs(mocker):
                     id="adobe",
                     name="Adobe",
                     description="Adobe widget",
-                    icon="adobe.png",
+                    icon="cloud_upload",
                     socket="commerce.agreements.agreement",
                     condition="eq(product.id,'PRD-1234-5677')",
                     href="main-menu.js",
@@ -226,7 +226,7 @@ def test_meta_config_includes_plugs(mocker):
         "id": "adobe",
         "name": "Adobe",
         "description": "Adobe widget",
-        "icon": "/static/adobe.png",
+        "icon": "cloud_upload",
         "socket": "commerce.agreements.agreement",
         "condition": "eq(product.id,'PRD-1234-5677')",
         "href": "/static/main-menu.js",
@@ -286,7 +286,7 @@ def test_meta_config_includes_navigation_plug(mocker):
         name="Learn Extensions",
         socket="portal",
         description="Learning resources",
-        icon="learn.png",
+        icon="school",
     )
     plug_router.register()(
         mocker.MagicMock(
@@ -313,7 +313,7 @@ def test_meta_config_includes_navigation_plug(mocker):
         "id": "learn-extensions",
         "name": "Learn Extensions",
         "description": "Learning resources",
-        "icon": "/static/learn.png",
+        "icon": "school",
         "socket": "portal",
     }
     assert result.plugs[1].socket == "portal.learn-extensions"

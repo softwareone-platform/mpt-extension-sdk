@@ -17,7 +17,7 @@ def register_plugs() -> list[Plug]:
             id="adobe",
             name="Adobe",
             description="Adobe widget",
-            icon="adobe.png",
+            icon="vendor",
             socket="commerce.agreements.agreement",
             condition="eq(product.id,'PRD-1234-5677')",
             href="main-menu.js",
@@ -32,12 +32,21 @@ ext_app.include_router(plug_router)
 The `PlugRouter` instance named `plug_router` owns the `register_plugs`
 provider until `ExtensionApp.include_router` attaches it to the extension app.
 
-`href` and `icon` should be filenames or paths relative to the local `static/`
-folder, such as `main-menu.js` or `images/icon.png`. The SDK normalizes them
-under `/static/` in generated metadata, so `href="main-menu.js"` becomes
-`/static/main-menu.js` and `icon="images/icon.png"` becomes
-`/static/images/icon.png`. The `mpt-ext meta validate` command checks that every
-referenced file exists locally.
+`href` should be a filename or path relative to the local `static/` folder,
+such as `main-menu.js` or `bundles/main-menu.js`. The SDK normalizes it under
+`/static/` in generated metadata, so `href="main-menu.js"` becomes
+`/static/main-menu.js`. See [`mpt-ext meta validate`](cli.md#mpt-ext-meta-validate)
+for how the CLI checks these paths.
+
+`icon` is the code name of an icon in the
+[SoftwareOne design system icon library](https://design.platform.softwareone.com/1233aa9e6/p/27bce1-icons/t/0c0ee8adf6),
+such as `vendor`, which the Portal renders next to the plug. The Portal
+renders only the icons the design system includes: custom icons and image files
+are not supported, and a missing icon must be added to the design system first.
+The SDK only strips surrounding whitespace and rejects a blank value; it writes
+the value to generated metadata unchanged and does not check it against the
+library. A name missing from the library raises no error, and the Portal shows
+no icon for it.
 
 ## Nested navigation
 
@@ -78,8 +87,8 @@ def register_plugs() -> list[Plug | NavigationPlug]:
     ]
 ```
 
-`NavigationPlug` accepts an optional `description` and `icon`; the icon is
-normalized under `/static/` like bundle plug assets. Passing an `href` to a
+`NavigationPlug` accepts an optional `description` and `icon`; the icon is a
+design system icon name, as for `Plug`. Passing an `href` to a
 navigation container raises an error — declare a `Plug` instead when the entry
 renders a bundle.
 
@@ -110,7 +119,7 @@ def register_plugs() -> list[ModalPlug]:
 
 A modal plug declares no `socket`, and generated metadata omits the `socket`
 key for it, so the plug never renders as a page action. `href` is required and
-`description` / `icon` are optional; asset paths are normalized under
-`/static/` like bundle plug assets. Passing a `socket` to a modal plug raises
+`description` / `icon` are optional; `href` is normalized under `/static/` and
+`icon` is a design system icon name, as for `Plug`. Passing a `socket` to a modal plug raises
 an error — declare a `Plug` instead when the entry should mount on a platform
 socket.

@@ -44,11 +44,11 @@ class Plug:
     condition: str | None = None
 
     def __post_init__(self) -> None:
-        """Validate and normalize static asset references."""
+        """Validate fields and normalize the static asset reference."""
         self._validate_required_fields()
         object.__setattr__(self, "href", _normalize_static_path(self.href))
         if self.icon is not None:
-            object.__setattr__(self, "icon", _normalize_static_path(self.icon))
+            object.__setattr__(self, "icon", self.icon.strip())
 
     def _validate_required_fields(self) -> None:
         """Validate required plug fields."""
@@ -64,6 +64,8 @@ class Plug:
                 raise ValueError(f"Plug {field_name} cannot be empty")
         if self.condition is not None and not self.condition.strip():
             raise ValueError("Plug condition cannot be empty")
+        if self.icon is not None and not self.icon.strip():
+            raise ValueError("Plug icon cannot be empty")
 
 
 @dataclass(frozen=True)
@@ -81,12 +83,12 @@ class ModalPlug:
     icon: str | None = None
 
     def __post_init__(self) -> None:
-        """Validate fields and normalize static asset references."""
+        """Validate fields and normalize the static asset reference."""
         self._validate_fields()
         object.__setattr__(self, "id", self.id.strip())
         object.__setattr__(self, "href", _normalize_static_path(self.href))
         if self.icon is not None:
-            object.__setattr__(self, "icon", _normalize_static_path(self.icon))
+            object.__setattr__(self, "icon", self.icon.strip())
 
     def _validate_fields(self) -> None:
         """Validate modal plug fields."""
@@ -100,6 +102,8 @@ class ModalPlug:
                 raise ValueError(f"Modal plug {field_name} cannot be empty")
         if self.description is not None and not self.description.strip():
             raise ValueError("Modal plug description cannot be empty")
+        if self.icon is not None and not self.icon.strip():
+            raise ValueError("Modal plug icon cannot be empty")
 
 
 @dataclass(frozen=True)
@@ -117,12 +121,12 @@ class NavigationPlug:
     icon: str | None = None
 
     def __post_init__(self) -> None:
-        """Validate fields and normalize structural identifiers and the optional icon."""
+        """Validate fields and strip structural identifiers and the optional icon."""
         self._validate_fields()
         object.__setattr__(self, "id", self.id.strip())
         object.__setattr__(self, "socket", self.socket.strip())
         if self.icon is not None:
-            object.__setattr__(self, "icon", _normalize_static_path(self.icon))
+            object.__setattr__(self, "icon", self.icon.strip())
 
     @property
     def nested_socket(self) -> str:
@@ -141,3 +145,5 @@ class NavigationPlug:
                 raise ValueError(f"Navigation plug {field_name} cannot be empty")
         if self.description is not None and not self.description.strip():
             raise ValueError("Navigation plug description cannot be empty")
+        if self.icon is not None and not self.icon.strip():
+            raise ValueError("Navigation plug icon cannot be empty")

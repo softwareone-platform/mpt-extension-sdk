@@ -67,7 +67,7 @@ plugs:
   - id: adobe
     name: Adobe
     description: Adobe widget
-    icon: /static/adobe.png
+    icon: vendor
     socket: commerce.agreements.agreement
     href: /static/main-menu.js
 deferrables:
@@ -93,8 +93,8 @@ checked-in metadata after changing routes or plugs.
 
 Validates the extension metadata and exits non-zero on any failure. It:
 
-- validates that every plug `href` and `icon` resolves to an existing file under
-  the local `static/` folder
+- validates that every plug `href` resolves to an existing file under the local
+  `static/` folder; plug icons are design system icon names and are not checked
 - compares the checked-in `meta.yaml` against the metadata generated from the
   extension app
 

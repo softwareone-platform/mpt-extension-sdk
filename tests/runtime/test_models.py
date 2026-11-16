@@ -88,7 +88,7 @@ def test_meta_config_supports_plugs(metadata_path):
                         "id": "adobe",
                         "name": "Adobe",
                         "description": "Adobe widget",
-                        "icon": "/static/adobe.png",
+                        "icon": "cloud_upload",
                         "socket": "commerce.agreements.agreement",
                         "href": "/static/main-menu.js",
                     }
@@ -106,7 +106,7 @@ def test_meta_config_supports_plugs(metadata_path):
             id="adobe",
             name="Adobe",
             description="Adobe widget",
-            icon="/static/adobe.png",
+            icon="cloud_upload",
             socket="commerce.agreements.agreement",
             href="/static/main-menu.js",
         )

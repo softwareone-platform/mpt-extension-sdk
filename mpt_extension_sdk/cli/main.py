@@ -71,13 +71,11 @@ def validate() -> None:  # noqa: WPS213
 
 
 def validate_plug_static_assets(meta_config: MetaConfig, static_root: Path | None = None) -> None:
-    """Validate local static assets referenced by registered plugs."""
+    """Validate the local static bundles that registered plugs reference in ``href``."""
     asset_root = static_root or Path.cwd() / "static"
     for plug in getattr(meta_config, "plugs", None) or []:
         if plug.href is not None:
             _validate_static_asset(plug.href, asset_root)
-        if plug.icon is not None:
-            _validate_static_asset(plug.icon, asset_root)
 
 
 def _validate_static_asset(asset_path: str, static_root: Path) -> None:
