@@ -14,6 +14,21 @@ The `migrations` topic here covers SDK compatibility changes that require consum
 
 ## Current Migration Notes
 
+### Plug icons are design system icon names
+
+`Plug`, `NavigationPlug`, and `ModalPlug` used to treat `icon` as a file under
+`static/`: the SDK rewrote it to `/static/<icon>`, and `mpt-ext meta validate`
+required that file to exist. The Portal does not render image files; it renders
+plug icons by name from the SoftwareOne design system icon library. The SDK now
+writes `icon` to the metadata unchanged, and `meta validate` no longer checks
+it. `href` keeps its
+`/static/` normalization and file check.
+
+Consumer action: replace file icons such as `icon="adobe.png"` with a design
+system icon name such as `icon="vendor"`, run `mpt-ext meta generate`, and
+remove the unused icon files from `static/`. Drop any workaround that overwrote
+the normalized value, such as `object.__setattr__(plug, "icon", ...)`.
+
 ### `APIRouter.endpoint` is deprecated
 
 `APIRouter.endpoint` now emits a `DeprecationWarning` when a route is

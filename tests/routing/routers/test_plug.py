@@ -21,18 +21,29 @@ def list_plug_provider() -> Callable[[], list[Plug]]:
     return factory
 
 
-def test_plug_normalizes_static_asset_paths():
+def test_plug_normalizes_href_and_keeps_icon():
     result = Plug(
         id="adobe",
         name="Adobe",
         description="Adobe widget",
-        icon="assets/adobe.png",
+        icon=" cloud_upload ",
         socket="commerce.agreements.agreement",
-        href="/static/main-menu.js",
+        href="main-menu.js",
     )
 
-    assert result.icon == "/static/assets/adobe.png"
-    assert result.href == "/static/main-menu.js"
+    assert (result.href, result.icon) == ("/static/main-menu.js", "cloud_upload")
+
+
+def test_plug_blank_icon_fails():
+    with pytest.raises(ValueError, match="Plug icon cannot be empty"):
+        Plug(
+            id="adobe",
+            name="Adobe",
+            description="Adobe widget",
+            icon=" ",
+            socket="commerce.agreements.agreement",
+            href="main-menu.js",
+        )
 
 
 def test_plug_rejects_path_traversal():
@@ -60,16 +71,16 @@ def test_plug_rejects_static_root_path(href):
         )
 
 
-def test_navigation_plug_normalizes_icon_path():
+def test_navigation_plug_keeps_icon():
     result = NavigationPlug(
         id="learn-extensions",
         name="Learn Extensions",
         socket="portal",
         description="Learning resources",
-        icon="assets/learn.png",
+        icon=" school ",
     )
 
-    assert result.icon == "/static/assets/learn.png"
+    assert result.icon == "school"
     assert result.description == "Learning resources"
 
 
@@ -105,6 +116,11 @@ def test_navigation_plug_blank_description_fails():
         )
 
 
+def test_navigation_plug_blank_icon_fails():
+    with pytest.raises(ValueError, match="Navigation plug icon cannot be empty"):
+        NavigationPlug(id="learn-extensions", name="Learn Extensions", socket="portal", icon=" ")
+
+
 def test_navigation_plug_rejects_href():
     plug_fields = {
         "id": "learn-extensions",
@@ -117,18 +133,15 @@ def test_navigation_plug_rejects_href():
         NavigationPlug(**plug_fields)
 
 
-def test_modal_plug_normalizes_static_asset_paths():
+def test_modal_plug_keeps_icon():
     result = ModalPlug(
         id="confirm-dialog",
         name="Confirm Dialog",
         href="dialogs/confirm.js",
-        icon="assets/confirm.png",
+        icon=" help ",
     )
 
-    assert (result.href, result.icon) == (
-        "/static/dialogs/confirm.js",
-        "/static/assets/confirm.png",
-    )
+    assert (result.href, result.icon) == ("/static/dialogs/confirm.js", "help")
 
 
 def test_modal_plug_strips_id():
@@ -149,6 +162,11 @@ def test_modal_plug_rejects_empty_fields(field_name):
 def test_modal_plug_blank_description_fails():
     with pytest.raises(ValueError, match="Modal plug description cannot be empty"):
         ModalPlug(id="confirm-dialog", name="Confirm Dialog", href="confirm.js", description=" ")
+
+
+def test_modal_plug_blank_icon_fails():
+    with pytest.raises(ValueError, match="Modal plug icon cannot be empty"):
+        ModalPlug(id="confirm-dialog", name="Confirm Dialog", href="confirm.js", icon=" ")
 
 
 def test_modal_plug_rejects_socket():

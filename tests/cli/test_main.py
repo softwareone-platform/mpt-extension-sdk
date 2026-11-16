@@ -40,7 +40,7 @@ def plug_meta():
                 id="adobe",
                 name="Adobe",
                 description="Adobe widget",
-                icon="/static/assets/adobe.png",
+                icon="cloud_upload",
                 socket="commerce.agreements.agreement",
                 href="/static/main-menu.js",
             )
@@ -108,8 +108,7 @@ def test_validate_checks_plug_static_assets(
     runtime_settings_factory, cli_runner, mocker, monkeypatch, plug_meta, tmp_path
 ):
     static_dir = tmp_path / "static"
-    (static_dir / "assets").mkdir(parents=True)
-    (static_dir / "assets" / "adobe.png").write_text("icon", encoding="utf-8")
+    static_dir.mkdir()
     (static_dir / "main-menu.js").write_text("plug", encoding="utf-8")
     monkeypatch.chdir(tmp_path)
     settings = runtime_settings_factory(
@@ -164,7 +163,6 @@ def test_validate_plug_assets_rejects_traversal(plug_meta, tmp_path):
 def test_validate_assets_skips_container_href(tmp_path):
     static_dir = tmp_path / "static"
     static_dir.mkdir()
-    (static_dir / "learn.png").write_text("icon", encoding="utf-8")
     container_meta = MetaConfig(
         version="1.0.0",
         openapi="/bypass/openapi.json",
@@ -173,7 +171,7 @@ def test_validate_assets_skips_container_href(tmp_path):
             MetaPlug(
                 id="learn-extensions",
                 name="Learn Extensions",
-                icon="/static/learn.png",
+                icon="school",
                 socket="portal",
             )
         ],
@@ -182,25 +180,27 @@ def test_validate_assets_skips_container_href(tmp_path):
     validate_plug_static_assets(container_meta, static_dir)  # act
 
 
-def test_validate_assets_checks_container_icon(tmp_path):
+def test_validate_assets_skips_icon(tmp_path):
     static_dir = tmp_path / "static"
     static_dir.mkdir()
-    container_meta = MetaConfig(
+    (static_dir / "main-menu.js").write_text("plug", encoding="utf-8")
+    icon_meta = MetaConfig(
         version="1.0.0",
         openapi="/bypass/openapi.json",
         events=[],
         plugs=[
             MetaPlug(
-                id="learn-extensions",
-                name="Learn Extensions",
+                id="adobe",
+                name="Adobe",
+                description="Adobe widget",
                 icon="/static/missing.png",
-                socket="portal",
+                socket="commerce.agreements.agreement",
+                href="/static/main-menu.js",
             )
         ],
     )
 
-    with pytest.raises(ConfigError, match="Plug asset file was not found"):
-        validate_plug_static_assets(container_meta, static_dir)
+    validate_plug_static_assets(icon_meta, static_dir)  # act
 
 
 def test_validate_generates_missing_meta_file(
