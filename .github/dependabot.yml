@@ -33,11 +33,8 @@ updates:
         versions: ["*"]
       - dependency-name: "opentelemetry-exporter-otlp-proto-*"
         versions: ["*"]
-      # mrok caps fastapi <0.137 (0.137 reworked router.routes and breaks
-      # fastapi-pagination) and typer <0.27; ignore newer versions until mrok
-      # lifts these caps, otherwise the grouped update is unresolvable again.
-      - dependency-name: "fastapi"
-        versions: [">=0.137"]
+      # mrok caps typer <0.27; ignore newer versions until mrok lifts the cap,
+      # otherwise the grouped update is unresolvable again.
       - dependency-name: "typer"
         versions: [">=0.27"]
   - package-ecosystem: "docker"

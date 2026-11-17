@@ -4,6 +4,7 @@ from types import ModuleType
 
 import pytest
 from fastapi import FastAPI
+from fastapi.routing import iter_route_contexts
 from fastapi.testclient import TestClient
 
 from mpt_extension_sdk import (
@@ -244,13 +245,15 @@ def test_ready_follows_app_lifespan(built_runtime_app):
 def test_create_runtime_app_registers_ext_routes(built_runtime_app):
     result = built_runtime_app
 
-    assert "/api/v1/events/orders/purchase" in {route.path for route in result.routes}
+    assert "/api/v1/events/orders/purchase" in {
+        route.path for route in iter_route_contexts(result.routes)
+    }
 
 
 def test_create_runtime_app_mounts_static(built_runtime_app):
     result = built_runtime_app
 
-    assert "/static" in {route.path for route in result.routes}
+    assert "/static" in {route.path for route in iter_route_contexts(result.routes)}
 
 
 def test_register_ext_routes(dummy_handler):
@@ -263,7 +266,7 @@ def test_register_ext_routes(dummy_handler):
 
     runtime_app.register_extension_routes(app, extension_app)  # act
 
-    paths = {route.path for route in app.routes}
+    paths = {route.path for route in iter_route_contexts(app.routes)}
     assert "/api/v1/events/orders/purchase" in paths
     assert "/api/v1/events/orders/change" in paths
 
@@ -273,7 +276,9 @@ def test_register_api_ext_routes(api_extension_app):
 
     runtime_app.register_extension_routes(app, api_extension_app)  # act
 
-    api_route = next(route for route in app.routes if route.path == "/api/v1/auth/fake")
+    api_route = next(
+        route for route in iter_route_contexts(app.routes) if route.path == "/api/v1/auth/fake"
+    )
     assert "GET" in api_route.methods
 
 
@@ -311,7 +316,7 @@ def test_register_ext_routes_ignores_plugs(plug_extension_app):
 
     runtime_app.register_extension_routes(app, plug_extension_app)  # act
 
-    assert all(route.path != "/api/v1/plug_provider" for route in app.routes)
+    assert all(route.path != "/api/v1/plug_provider" for route in iter_route_contexts(app.routes))
 
 
 def test_register_schedule_ext_routes(async_schedule_handler):
@@ -329,7 +334,9 @@ def test_register_schedule_ext_routes(async_schedule_handler):
 
     runtime_app.register_extension_routes(app, extension_app)  # act
 
-    assert "/api/v1/schedules/agreements" in {route.path for route in app.routes}
+    assert "/api/v1/schedules/agreements" in {
+        route.path for route in iter_route_contexts(app.routes)
+    }
 
 
 def test_register_not_supported_ext_routes(dummy_handler):
@@ -365,7 +372,7 @@ def test_register_webhook_routes(dummy_handler):
 
     runtime_app.register_extension_routes(app, extension_app)  # act
 
-    assert "/webhooks/orders/validate" in {route.path for route in app.routes}
+    assert "/webhooks/orders/validate" in {route.path for route in iter_route_contexts(app.routes)}
 
 
 def test_middlewares_propagate_request_headers(middleware_test_app):
